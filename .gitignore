@@ -1,0 +1,15 @@
+# Dependencies (reinstall with `npm install` in /client and /server)
+node_modules/
+
+# Secrets - never commit the real API key or database URI
+.env
+
+# Uploaded student work stays local for privacy - never in git
+server/uploads/
+
+# Build output
+client/dist/
+
+# OS noise
+.DS_Store
+Thumbs.db

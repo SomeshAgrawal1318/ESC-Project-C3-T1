@@ -1,0 +1,51 @@
+/* src/index.css
+   --------------
+   The design system's foundation: Tailwind, our colour tokens, the Lexend
+   font, and a few global rules for readability and accessibility.
+
+   Because LexiPath is a tool about a reading difficulty, readability is a
+   core feature here, not decoration: a low-glare warm background, generous
+   line-height, slightly opened letter-spacing, and strong focus outlines. */
+
+@import 'tailwindcss';
+
+/* @theme is how Tailwind v4 learns our custom design tokens. Each token
+   automatically becomes a family of utility classes - for example
+   --color-paper gives us bg-paper, text-paper, border-paper, and so on. */
+@theme {
+  /* Lexend first, sensible fallbacks after. --font-sans is Tailwind's
+     default font token, so the whole app picks this up automatically. */
+  --font-sans: 'Lexend', ui-sans-serif, system-ui, sans-serif;
+
+  /* A very light warm off-white - softer on the eyes than stark white. */
+  --color-paper: #faf9f7;
+
+  /* A soft cream used by the "reading comfort" mode. */
+  --color-comfort: #f9f2e4;
+
+  /* The calm teal used for primary actions and accents. */
+  --color-primary: #0f766e;
+  --color-primary-dark: #115e59;
+  --color-primary-soft: #f0fdfa;
+}
+
+/* Base font size 17px: Tailwind's sizes are all in rem (multiples of this
+   root size), so the entire interface scales from this one number. The
+   reading-comfort toggle uses exactly that fact - see App.jsx. */
+html {
+  font-size: 17px;
+}
+
+body {
+  line-height: 1.6;
+  letter-spacing: 0.015em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A clear, consistent focus outline on every focusable element, so
+   keyboard users can always see where they are. */
+:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
