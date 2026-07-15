@@ -43,9 +43,9 @@ function UploadScreen({ onCancel, onUploaded }) {
     if (!file) {
       return
     }
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
     if (!allowedTypes.includes(file.type)) {
-      setProblemMessage('Please choose a JPG, PNG or WebP image of the work.')
+      setProblemMessage('Please choose a JPG, PNG, WebP or PDF scan of the work.')
       return
     }
     setProblemMessage('')
@@ -147,11 +147,17 @@ function UploadScreen({ onCancel, onUploaded }) {
           >
             {previewUrl ? (
               <>
-                <img
-                  src={previewUrl}
-                  alt="Preview of the chosen scan"
-                  className="max-h-56 rounded-lg border border-stone-200 shadow-sm"
-                />
+                {selectedFile.type === 'application/pdf' ? (
+                  <div className="rounded-lg border border-stone-200 bg-white px-6 py-8 text-stone-700 shadow-sm">
+                    PDF scan selected
+                  </div>
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Preview of the chosen scan"
+                    className="max-h-56 rounded-lg border border-stone-200 shadow-sm"
+                  />
+                )}
                 <span className="text-sm text-stone-500">
                   {selectedFile.name} — click to choose a different file
                 </span>
@@ -160,16 +166,16 @@ function UploadScreen({ onCancel, onUploaded }) {
               <>
                 <ImagePlus size={34} aria-hidden="true" className="text-stone-400" />
                 <span className="font-medium text-stone-700">
-                  Drop the image here, or click to choose a file
+                  Drop the scan here, or click to choose a file
                 </span>
-                <span className="text-sm text-stone-500">JPG, PNG or WebP</span>
+                <span className="text-sm text-stone-500">JPG, PNG, WebP or PDF</span>
               </>
             )}
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
             onChange={handleFilePicked}
             className="hidden"
           />

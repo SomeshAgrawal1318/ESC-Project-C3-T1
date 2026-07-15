@@ -4,8 +4,8 @@
 // never needs to know how the AI is called.
 //
 // The public function is analyseImage(imagePath, answerKey): it sends the
-// scanned image plus our prompt to a free-tier Gemini Flash vision model,
-// in ONE request, and returns the flagged errors.
+// scanned image/PDF plus our prompt to a Gemini Flash vision model in ONE
+// request and returns Team 1's raw/corrected transcription handoff.
 //
 // SDK note: this uses @google/genai (Google's current official Node SDK) and
 // its stable `models.generateContent` method. The SDK also has a newer
@@ -17,7 +17,6 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { config } from "../config/config.js";
 import { buildPromptWithAnswerKey } from "./geminiPrompt.js";
-import { ERROR_CATEGORIES } from "../models/Sample.js";
 
 // One shared client for the whole app, created on FIRST USE rather than at
 // startup - analyseImage checks the key exists first, so a missing key gives
@@ -43,11 +42,12 @@ function getMimeType(imagePath) {
     ".jpeg": "image/jpeg",
     ".png": "image/png",
     ".webp": "image/webp",
+    ".pdf": "application/pdf",
   };
   const mimeType = mimeTypes[extension];
   if (!mimeType) {
     throw new Error(
-      `Unsupported image type "${extension}". Please upload a JPG, PNG or WebP file.`
+      `Unsupported file type "${extension}". Please upload a JPG, PNG, WebP or PDF file.`
     );
   }
   return mimeType;
@@ -115,7 +115,7 @@ async function callGeminiWithRetry(requestContents) {
 // Gemini is asked to return only JSON, but models sometimes wrap their
 // answer in ```json ... ``` code fences anyway. Strip those before parsing,
 // and fail with a clear message if what remains still isn't valid JSON.
-function parseGeminiJson(rawText) {
+export function parseTranscriptionResponse(rawText) {
   if (!rawText || rawText.trim() === "") {
     throw new Error("Gemini returned an empty response. Please try again.");
   }
@@ -126,46 +126,36 @@ function parseGeminiJson(rawText) {
     .trim();
 
   try {
-    return JSON.parse(withoutFences);
+    const parsed = JSON.parse(withoutFences);
+    const keys = Object.keys(parsed).sort();
+    if (keys.length !== 2 || keys[0] !== "corrected_text" || keys[1] !== "raw_text") {
+      throw new Error(
+        "Gemini must return only raw_text and corrected_text. Please try the analysis again."
+      );
+    }
+    if (typeof parsed.raw_text !== "string" || typeof parsed.corrected_text !== "string") {
+      throw new Error(
+        "Gemini must return raw_text and corrected_text as strings. Please try the analysis again."
+      );
+    }
+    return parsed;
   } catch (parseError) {
+    if (parseError.message.includes("raw_text and corrected_text")) {
+      throw parseError;
+    }
     throw new Error(
-      "Gemini's response was not valid JSON, so the errors could not be " +
-        "read. This is usually a one-off - please try the analysis again."
+      "Gemini's transcription was not valid JSON with raw_text and corrected_text. " +
+        "This is usually a one-off - please try the analysis again."
     );
   }
-}
-
-// The AI's output crosses a trust boundary here: before anything reaches the
-// database, make sure each error has the fields we expect and a category
-// from our fixed vocabulary (anything unrecognised becomes "unsure").
-function cleanUpErrors(parsedErrors) {
-  if (!Array.isArray(parsedErrors)) {
-    return [];
-  }
-
-  return parsedErrors
-    .filter((error) => error && typeof error.written === "string" && error.written !== "")
-    .map((error) => {
-      const category = ERROR_CATEGORIES.includes(error.category)
-        ? error.category
-        : "unsure";
-      return {
-        written: error.written, // exactly as the child wrote it - never touched
-        intended: typeof error.intended === "string" ? error.intended : "",
-        category: category,
-        note: typeof error.note === "string" ? error.note : "",
-        dismissed: false, // every fresh AI result starts un-dismissed
-      };
-    });
 }
 
 // ---------------------------------------------------------------------------
 // The public function
 // ---------------------------------------------------------------------------
 
-// Sends the child's scanned work to Gemini and returns:
-//   { errors: [...], illegibleNote: "..." }
-// One image, one API call - the analysis happens in a single step.
+// Sends the child's scanned work to Gemini and returns the strict Team 1
+// handoff: { raw_text: "...", corrected_text: "..." }.
 export async function analyseImage(imagePath, answerKey) {
   if (!config.geminiApiKey) {
     throw new Error(
@@ -186,11 +176,5 @@ export async function analyseImage(imagePath, answerKey) {
   ];
 
   const responseText = await callGeminiWithRetry(requestContents);
-  const parsed = parseGeminiJson(responseText);
-
-  return {
-    errors: cleanUpErrors(parsed.errors),
-    illegibleNote:
-      typeof parsed.illegible_parts === "string" ? parsed.illegible_parts : "",
-  };
+  return parseTranscriptionResponse(responseText);
 }

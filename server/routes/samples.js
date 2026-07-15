@@ -22,6 +22,7 @@ import { fileURLToPath } from "url";
 import { Student } from "../models/Student.js";
 import { Sample } from "../models/Sample.js";
 import { analyseImage } from "../services/gemini.js";
+import { buildErrorPatternReport } from "../services/ErrorPatternAnalysisEngine.js";
 
 export const samplesRouter = express.Router();
 
@@ -49,16 +50,26 @@ const storage = multer.diskStorage({
   },
 });
 
+const SUPPORTED_UPLOAD_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+
+export function isSupportedUploadMimeType(mimeType) {
+  return SUPPORTED_UPLOAD_MIME_TYPES.includes(mimeType);
+}
+
 const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB is plenty for a scan
   fileFilter: (request, file, callback) => {
     // Only accept the image types the Gemini service understands.
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedTypes.includes(file.mimetype)) {
+    if (isSupportedUploadMimeType(file.mimetype)) {
       callback(null, true);
     } else {
-      callback(new Error("Please upload a JPG, PNG or WebP image."));
+      callback(new Error("Please upload a JPG, PNG, WebP or PDF file."));
     }
   },
 });
@@ -128,11 +139,18 @@ samplesRouter.post("/:id/analyse", async (request, response) => {
         .json({ message: "That sample could not be found." });
     }
 
-    // The single AI step: image in, flagged errors out.
-    const analysis = await analyseImage(sample.imagePath, sample.answerKey);
+    // Team 1 transcribes in one VLM call; Team 2 then performs a deterministic
+    // character diff and attaches primitive target tracks.
+    const transcription = await analyseImage(sample.imagePath, sample.answerKey);
 
-    sample.errors = analysis.errors;
-    sample.illegibleNote = analysis.illegibleNote;
+    sample.raw_text = transcription.raw_text;
+    sample.corrected_text = transcription.corrected_text;
+    sample.errorPatternReport = buildErrorPatternReport(
+      transcription.raw_text,
+      transcription.corrected_text
+    );
+    sample.errors = [];
+    sample.illegibleNote = "";
     sample.status = "ANALYSED";
     await sample.save();
 

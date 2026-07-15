@@ -115,16 +115,22 @@ function ReviewScreen({ sampleId, onBackToList }) {
     </button>
   )
 
+  const scanUrl = scanImageUrl(sample)
+  const isPdf = scanUrl.toLowerCase().split('?')[0].endsWith('.pdf')
+  const reviewLayoutClasses = isPdf
+    ? 'grid items-start gap-6'
+    : 'grid items-start gap-6 lg:grid-cols-2'
+
   if (isAnalysing) {
     return (
       <div>
         {backButton}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={reviewLayoutClasses}>
           <ImageViewer
-            imageUrl={scanImageUrl(sample)}
+            imageUrl={scanUrl}
             altText="Scan of the student's handwritten work"
           />
-          <LoadingMessage message="Reading and analysing the handwriting… this takes a few seconds." />
+          <LoadingMessage message="Transcribing and comparing the handwriting… this takes a few seconds." />
         </div>
       </div>
     )
@@ -151,6 +157,17 @@ function ReviewScreen({ sampleId, onBackToList }) {
   const illegibleNote = (sample.illegibleNote || '').trim()
   const hasIllegibleParts =
     illegibleNote !== '' && illegibleNote.toLowerCase() !== 'none'
+
+  const patternReport = sample.errorPatternReport
+  const structuredPatternReport =
+    patternReport && !Array.isArray(patternReport) ? patternReport : null
+  const patternSummary = structuredPatternReport?.summary || null
+  const patternErrors = structuredPatternReport
+    ? structuredPatternReport.errors || []
+    : Array.isArray(patternReport)
+      ? patternReport.filter((token) => token.category !== 'correct_match')
+      : []
+  const hasPatternReport = Boolean(structuredPatternReport) || patternErrors.length > 0
 
   // Which categories actually appear, for the filter row.
   const presentCategories = CATEGORY_ORDER.filter((category) =>
@@ -179,10 +196,7 @@ function ReviewScreen({ sampleId, onBackToList }) {
       <div className="mb-5 flex gap-3 rounded-2xl border border-primary/30 bg-primary-soft p-4 text-stone-700 print:hidden">
         <Info size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-primary" />
         <p>
-          The AI read the scan and flagged these mistakes on its own. It can
-          misread messy handwriting or flag something that isn't really wrong —
-          please check each one against the image and dismiss any that aren't
-          genuine mistakes.
+          Please check the transcription against the original.
         </p>
       </div>
 
@@ -227,20 +241,117 @@ function ReviewScreen({ sampleId, onBackToList }) {
         </div>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        {/* Left: the scan. Sticky, so it stays in view while the educator
-            scrolls the error list - they belong side by side. Hidden when
-            printing (the printout is the error report). */}
-        <div className="lg:sticky lg:top-4 print:hidden">
+      <div className={reviewLayoutClasses}>
+        {/* The source stays beside image reports on wide screens. PDF reports
+            stack below the embedded document so both retain a useful width.
+            Hidden when printing (the printout is the error report). */}
+        <div className={isPdf ? 'print:hidden' : 'lg:sticky lg:top-4 print:hidden'}>
           <ImageViewer
-            imageUrl={scanImageUrl(sample)}
+            imageUrl={scanUrl}
             altText="Scan of the student's handwritten work"
           />
         </div>
 
         {/* Right: summary, notices, filters, and the error cards. */}
         <div className="flex flex-col gap-4">
-          <SummaryPanel errors={sample.errors} />
+          {hasPatternReport ? (
+            <>
+              <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-3 text-lg font-semibold text-stone-900">
+                  Team 1 transcription handoff
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h3 className="mb-1 text-sm font-semibold text-stone-600">Raw text</h3>
+                    <pre className="whitespace-pre-wrap rounded-xl bg-stone-50 p-3 font-sans text-stone-800">
+                      {sample.raw_text}
+                    </pre>
+                  </div>
+                  <div>
+                    <h3 className="mb-1 text-sm font-semibold text-stone-600">
+                      Corrected text
+                    </h3>
+                    <pre className="whitespace-pre-wrap rounded-xl bg-stone-50 p-3 font-sans text-stone-800">
+                      {sample.corrected_text}
+                    </pre>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                <h2 className="mb-1 text-lg font-semibold text-stone-900">
+                  ErrorPatternReport
+                </h2>
+                {patternSummary && (
+                  <dl className="my-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-stone-50 p-3">
+                      <dt className="text-sm text-stone-500">Characters analysed</dt>
+                      <dd className="text-xl font-semibold text-stone-900">
+                        {patternSummary.total_characters_analyzed}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3">
+                      <dt className="text-sm text-stone-500">Total errors</dt>
+                      <dd className="text-xl font-semibold text-stone-900">
+                        {patternSummary.total_errors}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3">
+                      <dt className="text-sm text-stone-500">Error percentage</dt>
+                      <dd className="text-xl font-semibold text-stone-900">
+                        {patternSummary.error_percentage}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-stone-50 p-3">
+                      <dt className="text-sm text-stone-500">Primary prevention track</dt>
+                      <dd className="font-semibold text-stone-900">
+                        {patternSummary.primary_prevention_track
+                          ? `${patternSummary.primary_prevention_track.trackId} — ${patternSummary.primary_prevention_track.label}`
+                          : 'None'}
+                      </dd>
+                    </div>
+                  </dl>
+                )}
+                <p className="mb-4 text-sm text-stone-500">
+                  {patternErrors.length} changed character token{patternErrors.length === 1 ? '' : 's'}
+                </p>
+                {patternErrors.length === 0 ? (
+                  <p className="text-stone-600">No character differences were found.</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {patternErrors.map((token, index) => (
+                      <li
+                        key={`${token.category}-${index}`}
+                        className="rounded-xl border border-stone-200 bg-stone-50 p-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <code className="rounded bg-white px-2 py-1 text-stone-900">
+                            {JSON.stringify(token.value)}
+                          </code>
+                          <span className="rounded-full bg-primary-soft px-2.5 py-1 text-sm font-medium text-primary-dark">
+                            {token.category}
+                          </span>
+                        </div>
+                        {token.track && (
+                          <p className="mt-2 text-sm text-stone-600">
+                            Target track: {token.track.trackId} — {token.track.label}
+                          </p>
+                        )}
+                        {token.context_snippet && (
+                          <p className="mt-2 rounded-lg bg-white p-2 text-sm text-stone-700">
+                            <span className="font-medium">Context:</span>{' '}
+                            {token.context_snippet}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </>
+          ) : (
+            <SummaryPanel errors={sample.errors} />
+          )}
 
           {hasIllegibleParts && (
             <div className="flex gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-stone-700">
@@ -255,7 +366,7 @@ function ReviewScreen({ sampleId, onBackToList }) {
             </div>
           )}
 
-          {sample.errors.length > 0 && (
+          {!hasPatternReport && sample.errors.length > 0 && (
             <div
               className="flex flex-wrap gap-2 print:hidden"
               role="group"
@@ -294,7 +405,7 @@ function ReviewScreen({ sampleId, onBackToList }) {
             </div>
           )}
 
-          {sample.errors.length === 0 ? (
+          {hasPatternReport ? null : sample.errors.length === 0 ? (
             <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center text-stone-600 shadow-sm">
               The AI found no spelling or writing errors in this sample.
               Do double-check the scan — the AI can miss things too.

@@ -61,6 +61,23 @@ function ImageViewer({ imageUrl, altText }) {
   const buttonClasses =
     'rounded-lg border border-stone-300 bg-white p-2 text-stone-700 shadow-sm transition-colors hover:border-primary hover:text-primary'
 
+  const isPdf = imageUrl.toLowerCase().split('?')[0].endsWith('.pdf')
+
+  if (isPdf) {
+    return (
+      <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <iframe
+          src={imageUrl}
+          title={altText}
+          className="h-[70vh] w-full"
+        />
+        <p className="border-t border-stone-200 px-4 py-2 text-center text-sm text-stone-500">
+          Use the PDF viewer controls to zoom and move between pages
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 shadow-sm">
       {/* The zoom controls float over the image, top-right. */}

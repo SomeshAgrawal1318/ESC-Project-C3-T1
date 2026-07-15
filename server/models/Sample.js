@@ -53,6 +53,51 @@ const errorSchema = new mongoose.Schema(
   { _id: false } // sub-documents don't need their own database ids
 );
 
+const interventionTrackSchema = new mongoose.Schema(
+  {
+    trackId: { type: String, required: true },
+    label: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+// Only changed tokens are persisted; correct matches are used by the engine
+// solely to maintain the raw-text position.
+const errorPatternTokenSchema = new mongoose.Schema(
+  {
+    value: { type: String, required: true },
+    category: {
+      type: String,
+      enum: ["omission_error", "addition_error"],
+      required: true,
+    },
+    track: { type: interventionTrackSchema, required: true },
+    context_snippet: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const errorPatternSummarySchema = new mongoose.Schema(
+  {
+    total_characters_analyzed: { type: Number, required: true },
+    total_errors: { type: Number, required: true },
+    error_percentage: { type: String, required: true },
+    primary_prevention_track: {
+      type: interventionTrackSchema,
+      default: null,
+    },
+  },
+  { _id: false }
+);
+
+const errorPatternReportSchema = new mongoose.Schema(
+  {
+    summary: { type: errorPatternSummarySchema, required: true },
+    errors: { type: [errorPatternTokenSchema], default: [] },
+  },
+  { _id: false, suppressReservedKeysWarning: true }
+);
+
 const sampleSchema = new mongoose.Schema(
   {
     // A reference ("foreign key") to the Student who wrote this work.
@@ -95,6 +140,16 @@ const sampleSchema = new mongoose.Schema(
 
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
+
+    // Team 1's exact VLM transcription handoff.
+    raw_text: { type: String, default: "" },
+    corrected_text: { type: String, default: "" },
+
+    // Team 2's persisted contextual error report and summary analytics.
+    errorPatternReport: {
+      type: errorPatternReportSchema,
+      default: null,
+    },
 
     // Anything the AI could not read on the page, in its own words.
     // "none" or empty means everything was legible.
