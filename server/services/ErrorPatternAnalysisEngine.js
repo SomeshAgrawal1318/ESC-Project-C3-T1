@@ -14,67 +14,162 @@ export const interventionTracks = Object.freeze({
     trackId: "TRK_2",
     label: "Letter Accuracy Review",
   }),
+  substitution_error: Object.freeze({
+    trackId: "TRK_3",
+    label: "Spelling Review",
+  }),
 });
 
-const CONTEXT_RADIUS = 15;
+function isWordCharacter(character) {
+  return Boolean(character && /[\p{L}\p{N}'’-]/u.test(character));
+}
 
-function buildContextSnippet(rawText, errorStart, errorLength) {
-  const start = Math.max(0, errorStart - CONTEXT_RADIUS);
-  const end = Math.min(
-    rawText.length,
-    errorStart + errorLength + CONTEXT_RADIUS
-  );
-  const prefix = start > 0 ? "..." : "";
-  const suffix = end < rawText.length ? "..." : "";
+function findWord(text, index) {
+  if (!text) return "";
 
-  return `${prefix}${rawText.slice(start, end)}${suffix}`;
+  let anchor = Math.min(Math.max(index, 0), text.length - 1);
+  if (!isWordCharacter(text[anchor])) {
+    if (anchor > 0 && isWordCharacter(text[anchor - 1])) {
+      anchor -= 1;
+    } else {
+      while (anchor < text.length && !isWordCharacter(text[anchor])) anchor += 1;
+    }
+  }
+  if (anchor >= text.length) return "";
+
+  let start = anchor;
+  let end = anchor + 1;
+  while (start > 0 && isWordCharacter(text[start - 1])) start -= 1;
+  while (end < text.length && isWordCharacter(text[end])) end += 1;
+  return text.slice(start, end);
+}
+
+function findSentence(text, index) {
+  if (!text) return "";
+
+  let start = Math.min(Math.max(index, 0), text.length);
+  while (start > 0 && !/[.!?]/.test(text[start - 1])) start -= 1;
+
+  let end = Math.min(Math.max(index, 0), text.length);
+  while (end < text.length && !/[.!?]/.test(text[end])) end += 1;
+  if (end < text.length) end += 1;
+
+  return text.slice(start, end).trim();
+}
+
+function wordComparison(raw, corrected, rawIndex, correctedIndex, tokens) {
+  const rawToken = tokens.find((token) => token.removed);
+  const correctedToken = tokens.find((token) => token.added);
+  let rawWord = findWord(raw, rawIndex) || rawToken?.value || "∅";
+  let correctedWord =
+    findWord(corrected, correctedIndex) || correctedToken?.value || "∅";
+
+  if (rawWord === correctedWord) {
+    if (rawToken?.value.trim()) rawWord = `${rawToken.value}${rawWord}`;
+    if (correctedToken?.value.trim()) {
+      correctedWord = `${correctedToken.value}${correctedWord}`;
+    }
+  }
+
+  return `${rawWord} → ${correctedWord}`;
 }
 
 export function buildErrorPatternReport(rawText, correctedText) {
   const raw = typeof rawText === "string" ? rawText : "";
   const corrected = typeof correctedText === "string" ? correctedText : "";
+  const diffTokens = Diff.diffChars(raw, corrected);
   const errors = [];
   const categoryCounts = {
     omission_error: 0,
     addition_error: 0,
+    substitution_error: 0,
   };
   let currentRawIndex = 0;
+  let currentCorrectedIndex = 0;
 
-  for (const token of Diff.diffChars(raw, corrected)) {
-    if (token.added) {
-      const category = "omission_error";
-      errors.push({
-        value: token.value,
-        category,
-        track: interventionTracks[category],
-        context_snippet: buildContextSnippet(raw, currentRawIndex, 0),
-      });
-      categoryCounts[category] += 1;
-      continue;
-    }
+  for (let index = 0; index < diffTokens.length; index += 1) {
+    const token = diffTokens[index];
 
-    if (token.removed) {
-      const category = "addition_error";
-      errors.push({
-        value: token.value,
-        category,
-        track: interventionTracks[category],
-        context_snippet: buildContextSnippet(
-          raw,
-          currentRawIndex,
-          token.value.length
-        ),
-      });
-      categoryCounts[category] += 1;
+    if (!token.added && !token.removed) {
       currentRawIndex += token.value.length;
+      currentCorrectedIndex += token.value.length;
       continue;
     }
 
-    currentRawIndex += token.value.length;
+    const nextToken = diffTokens[index + 1];
+    const isSubstitution = Boolean(
+      nextToken &&
+        ((token.removed && nextToken.added) ||
+          (token.added && nextToken.removed))
+    );
+    const errorTokens = isSubstitution ? [token, nextToken] : [token];
+    const category = isSubstitution
+      ? "substitution_error"
+      : token.added
+        ? "omission_error"
+        : "addition_error";
+    const rawLength = errorTokens.reduce(
+      (length, errorToken) =>
+        length + (errorToken.removed ? errorToken.value.length : 0),
+      0
+    );
+    const correctedLength = errorTokens.reduce(
+      (length, errorToken) =>
+        length + (errorToken.added ? errorToken.value.length : 0),
+      0
+    );
+
+    if (errorTokens.every((errorToken) => !errorToken.value.trim())) {
+      currentRawIndex += rawLength;
+      currentCorrectedIndex += correctedLength;
+      if (isSubstitution) index += 1;
+      continue;
+    }
+
+    const error = {
+      value: wordComparison(
+        raw,
+        corrected,
+        currentRawIndex,
+        currentCorrectedIndex,
+        errorTokens
+      ),
+      category,
+      track: interventionTracks[category],
+      context_snippet: findSentence(raw, currentRawIndex),
+    };
+    const previousError = errors.at(-1);
+    const matchesPreviousWord =
+      previousError &&
+      previousError.value === error.value &&
+      previousError.context_snippet === error.context_snippet;
+
+    if (matchesPreviousWord) {
+      if (
+        previousError.category !== error.category &&
+        previousError.category !== "substitution_error"
+      ) {
+        categoryCounts[previousError.category] -= 1;
+        previousError.category = "substitution_error";
+        previousError.track = interventionTracks.substitution_error;
+        categoryCounts.substitution_error += 1;
+      }
+    } else {
+      errors.push(error);
+      categoryCounts[category] += 1;
+    }
+
+    currentRawIndex += rawLength;
+    currentCorrectedIndex += correctedLength;
+    if (isSubstitution) index += 1;
   }
 
   let primaryCategory = null;
-  for (const category of ["omission_error", "addition_error"]) {
+  for (const category of [
+    "omission_error",
+    "addition_error",
+    "substitution_error",
+  ]) {
     if (
       categoryCounts[category] > 0 &&
       (!primaryCategory ||

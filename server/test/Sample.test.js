@@ -9,14 +9,14 @@ test("Sample stores the Team 1 handoff and structured ErrorPatternReport", () =>
       total_characters_analyzed: 11,
       total_errors: 1,
       error_percentage: "9.1%",
-      primary_prevention_track: { trackId: "TRK_1", label: "Phonics Review" },
+      primary_prevention_track: { trackId: "TRK_3", label: "Spelling Review" },
     },
     errors: [
       {
-        value: "e",
-        category: "omission_error",
-        track: { trackId: "TRK_1", label: "Phonics Review" },
-        context_snippet: "I hav a cat",
+        value: "Bay → Day",
+        category: "substitution_error",
+        track: { trackId: "TRK_3", label: "Spelling Review" },
+        context_snippet: "Bay is here.",
       },
     ],
   };

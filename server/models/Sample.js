@@ -68,7 +68,7 @@ const errorPatternTokenSchema = new mongoose.Schema(
     value: { type: String, required: true },
     category: {
       type: String,
-      enum: ["omission_error", "addition_error"],
+      enum: ["omission_error", "addition_error", "substitution_error"],
       required: true,
     },
     track: { type: interventionTrackSchema, required: true },

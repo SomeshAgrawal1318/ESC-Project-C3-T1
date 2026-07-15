@@ -325,11 +325,11 @@ function ReviewScreen({ sampleId, onBackToList }) {
                         className="rounded-xl border border-stone-200 bg-stone-50 p-3"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <code className="rounded bg-white px-2 py-1 text-stone-900">
-                            {JSON.stringify(token.value)}
-                          </code>
+                          <span className="rounded bg-white px-2 py-1 font-mono font-medium text-stone-900">
+                            {token.value}
+                          </span>
                           <span className="rounded-full bg-primary-soft px-2.5 py-1 text-sm font-medium text-primary-dark">
-                            {token.category}
+                            {token.category.replaceAll('_', ' ')}
                           </span>
                         </div>
                         {token.track && (
