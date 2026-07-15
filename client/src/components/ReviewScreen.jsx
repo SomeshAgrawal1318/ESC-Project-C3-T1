@@ -158,6 +158,8 @@ function ReviewScreen({ sampleId, onBackToList }) {
   const hasIllegibleParts =
     illegibleNote !== '' && illegibleNote.toLowerCase() !== 'none'
 
+  // New records store a structured report object; the array branch keeps
+  // reports created before that schema change readable during migration.
   const patternReport = sample.errorPatternReport
   const structuredPatternReport =
     patternReport && !Array.isArray(patternReport) ? patternReport : null

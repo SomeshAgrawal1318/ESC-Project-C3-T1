@@ -63,6 +63,8 @@ const interventionTrackSchema = new mongoose.Schema(
 
 // Only changed tokens are persisted; correct matches are used by the engine
 // solely to maintain the raw-text position.
+// This Team 2 schema uses the documented taxonomy and is separate from the
+// legacy educator-review `errors` schema above.
 const errorPatternTokenSchema = new mongoose.Schema(
   {
     value: { type: String, required: true },

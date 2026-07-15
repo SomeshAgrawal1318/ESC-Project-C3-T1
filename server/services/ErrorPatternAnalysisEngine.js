@@ -5,6 +5,9 @@
 
 import * as Diff from "diff";
 
+// The report contract supports all five taxonomy labels. The current MVP
+// diff rules emit phonological, orthographic, and spelling; morphological and
+// grammar remain available for future classifiers with linguistic context.
 export const interventionTracks = Object.freeze({
   phonological: Object.freeze({
     trackId: "TRK_1",
@@ -32,6 +35,9 @@ function isWordCharacter(character) {
   return Boolean(character && /[\p{L}\p{N}'’-]/u.test(character));
 }
 
+// A diff index can land on punctuation or just beyond a changed word. Prefer
+// the character to its left before searching forward so cards contain the
+// learner's complete word rather than a neighbouring word or partial token.
 function findWord(text, index) {
   if (!text) return "";
 
@@ -52,6 +58,8 @@ function findWord(text, index) {
   return text.slice(start, end);
 }
 
+// OCR often inserts line breaks inside a sentence, so only punctuation marks
+// terminate the context shown with an error card.
 function findSentence(text, index) {
   if (!text) return "";
 
@@ -97,6 +105,10 @@ export function buildErrorPatternReport(rawText, correctedText) {
   let currentRawIndex = 0;
   let currentCorrectedIndex = 0;
 
+  // Unchanged tokens advance both positions. Removed tokens consume only raw
+  // text, while added tokens consume only corrected text. The primitive MVP
+  // mapping classifies added as phonological, removed as orthographic, and a
+  // neighbouring remove/add pair as spelling.
   for (let index = 0; index < diffTokens.length; index += 1) {
     const token = diffTokens[index];
 
@@ -129,6 +141,8 @@ export function buildErrorPatternReport(rawText, correctedText) {
       0
     );
 
+    // Spacing and line-wrap differences are OCR layout changes, not learner
+    // errors, but their lengths must still advance the corresponding indexes.
     if (errorTokens.every((errorToken) => !errorToken.value.trim())) {
       currentRawIndex += rawLength;
       currentCorrectedIndex += correctedLength;
@@ -148,6 +162,9 @@ export function buildErrorPatternReport(rawText, correctedText) {
       track: interventionTracks[category],
       context_snippet: findSentence(raw, currentRawIndex),
     };
+    // diffChars can split one changed word into multiple segments around a
+    // shared unchanged character. Collapse matching word/context cards and
+    // classify mixed operations as one spelling error.
     const previousError = errors.at(-1);
     const matchesPreviousWord =
       previousError &&
@@ -174,6 +191,8 @@ export function buildErrorPatternReport(rawText, correctedText) {
     if (isSubstitution) index += 1;
   }
 
+  // Counts replace the winner only when strictly greater, so this order is
+  // also the deterministic tie-break order for the primary track.
   let primaryCategory = null;
   for (const category of [
     "phonological",

@@ -60,7 +60,7 @@ The responsibilities are now separated:
 
 ## 2. Files changed since the original codebase
 
-The error-recognition implementation adds or changes 14 functional files compared with `origin/main`. A later readability pass also shortened comments in existing shared files without changing their behavior:
+Compared with `origin/main`, 14 files were added or modified:
 
 ```text
 client/src/components/ImageViewer.jsx
