@@ -5,7 +5,17 @@ import {
   interventionTracks,
 } from "../services/ErrorPatternAnalysisEngine.js";
 
-test("omission errors show whole words and a complete sentence", () => {
+test("intervention tracks use the documented dyslexia taxonomy", () => {
+  assert.deepEqual(Object.keys(interventionTracks), [
+    "phonological",
+    "orthographic",
+    "morphological",
+    "spelling",
+    "grammar",
+  ]);
+});
+
+test("added diff tokens use the phonological taxonomy", () => {
   const report = buildErrorPatternReport(
     "I have a cat. It is cute.",
     "I have a cart. It is cute."
@@ -14,8 +24,8 @@ test("omission errors show whole words and a complete sentence", () => {
   assert.deepEqual(report.errors, [
     {
       value: "cat → cart",
-      category: "omission_error",
-      track: interventionTracks.omission_error,
+      category: "phonological",
+      track: interventionTracks.phonological,
       context_snippet: "I have a cat.",
     },
   ]);
@@ -23,11 +33,11 @@ test("omission errors show whole words and a complete sentence", () => {
     total_characters_analyzed: 25,
     total_errors: 1,
     error_percentage: "4.0%",
-    primary_prevention_track: interventionTracks.omission_error,
+    primary_prevention_track: interventionTracks.phonological,
   });
 });
 
-test("addition errors show whole words without cutting context words", () => {
+test("removed diff tokens use the orthographic taxonomy", () => {
   const report = buildErrorPatternReport(
     "Before sentence. I was So ahchen\nthat I peed after class. Next sentence.",
     "Before sentence. I was So achen\nthat I peed after class. Next sentence."
@@ -36,32 +46,32 @@ test("addition errors show whole words without cutting context words", () => {
   assert.deepEqual(report.errors, [
     {
       value: "ahchen → achen",
-      category: "addition_error",
-      track: interventionTracks.addition_error,
+      category: "orthographic",
+      track: interventionTracks.orthographic,
       context_snippet: "I was So ahchen\nthat I peed after class.",
     },
   ]);
 });
 
-test("adjacent addition and omission tokens become one substitution card", () => {
+test("adjacent added and removed tokens use the spelling taxonomy", () => {
   const report = buildErrorPatternReport("Bay is here.", "Day is here.");
 
   assert.deepEqual(report.errors, [
     {
       value: "Bay → Day",
-      category: "substitution_error",
-      track: interventionTracks.substitution_error,
+      category: "spelling",
+      track: interventionTracks.spelling,
       context_snippet: "Bay is here.",
     },
   ]);
   assert.equal(report.summary.total_errors, 1);
   assert.equal(
     report.summary.primary_prevention_track,
-    interventionTracks.substitution_error
+    interventionTracks.spelling
   );
 });
 
-test("multiple character changes in one word remain one substitution card", () => {
+test("multiple character changes in one word remain one spelling card", () => {
   const report = buildErrorPatternReport(
     "Her face turned pail.",
     "Her face turned pale."
@@ -70,8 +80,8 @@ test("multiple character changes in one word remain one substitution card", () =
   assert.deepEqual(report.errors, [
     {
       value: "pail → pale",
-      category: "substitution_error",
-      track: interventionTracks.substitution_error,
+      category: "spelling",
+      track: interventionTracks.spelling,
       context_snippet: "Her face turned pail.",
     },
   ]);

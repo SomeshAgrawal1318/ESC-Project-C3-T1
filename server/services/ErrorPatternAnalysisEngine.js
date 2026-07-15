@@ -6,17 +6,25 @@
 import * as Diff from "diff";
 
 export const interventionTracks = Object.freeze({
-  omission_error: Object.freeze({
+  phonological: Object.freeze({
     trackId: "TRK_1",
     label: "Phonics Review",
   }),
-  addition_error: Object.freeze({
+  orthographic: Object.freeze({
     trackId: "TRK_2",
     label: "Letter Accuracy Review",
   }),
-  substitution_error: Object.freeze({
+  morphological: Object.freeze({
+    trackId: "TRK_4",
+    label: "Word Structure Review",
+  }),
+  spelling: Object.freeze({
     trackId: "TRK_3",
     label: "Spelling Review",
+  }),
+  grammar: Object.freeze({
+    trackId: "TRK_5",
+    label: "Grammar Review",
   }),
 });
 
@@ -80,9 +88,11 @@ export function buildErrorPatternReport(rawText, correctedText) {
   const diffTokens = Diff.diffChars(raw, corrected);
   const errors = [];
   const categoryCounts = {
-    omission_error: 0,
-    addition_error: 0,
-    substitution_error: 0,
+    phonological: 0,
+    orthographic: 0,
+    morphological: 0,
+    spelling: 0,
+    grammar: 0,
   };
   let currentRawIndex = 0;
   let currentCorrectedIndex = 0;
@@ -104,10 +114,10 @@ export function buildErrorPatternReport(rawText, correctedText) {
     );
     const errorTokens = isSubstitution ? [token, nextToken] : [token];
     const category = isSubstitution
-      ? "substitution_error"
+      ? "spelling"
       : token.added
-        ? "omission_error"
-        : "addition_error";
+        ? "phonological"
+        : "orthographic";
     const rawLength = errorTokens.reduce(
       (length, errorToken) =>
         length + (errorToken.removed ? errorToken.value.length : 0),
@@ -147,12 +157,12 @@ export function buildErrorPatternReport(rawText, correctedText) {
     if (matchesPreviousWord) {
       if (
         previousError.category !== error.category &&
-        previousError.category !== "substitution_error"
+        previousError.category !== "spelling"
       ) {
         categoryCounts[previousError.category] -= 1;
-        previousError.category = "substitution_error";
-        previousError.track = interventionTracks.substitution_error;
-        categoryCounts.substitution_error += 1;
+        previousError.category = "spelling";
+        previousError.track = interventionTracks.spelling;
+        categoryCounts.spelling += 1;
       }
     } else {
       errors.push(error);
@@ -166,9 +176,11 @@ export function buildErrorPatternReport(rawText, correctedText) {
 
   let primaryCategory = null;
   for (const category of [
-    "omission_error",
-    "addition_error",
-    "substitution_error",
+    "phonological",
+    "orthographic",
+    "morphological",
+    "spelling",
+    "grammar",
   ]) {
     if (
       categoryCounts[category] > 0 &&

@@ -60,7 +60,7 @@ The responsibilities are now separated:
 
 ## 2. Files changed since the original codebase
 
-Compared with `origin/main`, 14 files were added or modified:
+The error-recognition implementation adds or changes 14 functional files compared with `origin/main`. A later readability pass also shortened comments in existing shared files without changing their behavior:
 
 ```text
 client/src/components/ImageViewer.jsx
@@ -247,9 +247,11 @@ buildErrorPatternReport(
 The tracks are intentionally hardcoded MVP routing data:
 
 ```js
-omission_error     -> TRK_1 / Phonics Review
-addition_error     -> TRK_2 / Letter Accuracy Review
-substitution_error -> TRK_3 / Spelling Review
+phonological  -> TRK_1 / Phonics Review
+orthographic  -> TRK_2 / Letter Accuracy Review
+morphological -> TRK_4 / Word Structure Review
+spelling      -> TRK_3 / Spelling Review
+grammar       -> TRK_5 / Grammar Review
 ```
 
 They are not a complete recommendation system.
@@ -319,9 +321,11 @@ const diffTokens = Diff.diffChars(raw, corrected)
 
 Direction matters:
 
-- `token.added` means the character exists in corrected text but not raw text, so the student omitted it: `omission_error`.
-- `token.removed` means the character exists in raw text but not corrected text, so the student added it: `addition_error`.
+- `token.added` means the character exists in corrected text but not raw text: `phonological`.
+- `token.removed` means the character exists in raw text but not corrected text: `orthographic`.
 - Unchanged tokens are correct matches.
+
+This is a primitive hardcoded split for the MVP. It keeps the report within the documented taxonomy; it does not infer a clinical category from linguistic context.
 
 #### Step 3: maintain two indexes
 
@@ -336,7 +340,7 @@ The two indexes allow the engine to locate the corresponding whole word in both 
 
 #### Step 4: consolidate substitutions
 
-Immediately adjacent removed and added diff tokens are merged into one `substitution_error`.
+Immediately adjacent removed and added diff tokens are merged into one `spelling` error.
 
 Multiple changes that resolve to the same word comparison and sentence are also consolidated. This handles cases such as:
 
@@ -357,7 +361,7 @@ Each final error contains:
 ```json
 {
   "value": "pail → pale",
-  "category": "substitution_error",
+  "category": "spelling",
   "track": {
     "trackId": "TRK_3",
     "label": "Spelling Review"
@@ -380,7 +384,7 @@ The report includes:
 Current tie behaviour follows category order:
 
 ```text
-omission_error, addition_error, substitution_error
+phonological, orthographic, morphological, spelling, grammar
 ```
 
 ### Output contract
@@ -399,7 +403,7 @@ omission_error, addition_error, substitution_error
   "errors": [
     {
       "value": "pail → pale",
-      "category": "substitution_error",
+      "category": "spelling",
       "track": {
         "trackId": "TRK_3",
         "label": "Spelling Review"
@@ -443,9 +447,11 @@ errorPatternReport: {
   errors: [
     {
       value: String,
-      category: "omission_error" |
-                "addition_error" |
-                "substitution_error",
+      category: "phonological" |
+                "orthographic" |
+                "morphological" |
+                "spelling" |
+                "grammar",
       track: {
         trackId: String,
         label: String
@@ -600,7 +606,7 @@ Covers:
 
 ### `server/test/Sample.test.js`
 
-Validates that MongoDB can store the Team 1 handoff and the structured report, including `substitution_error` and `TRK_3`.
+Validates that MongoDB can store the Team 1 handoff and the structured report, including the `spelling` label and `TRK_3`.
 
 ### `server/test/geminiTranscription.test.js`
 

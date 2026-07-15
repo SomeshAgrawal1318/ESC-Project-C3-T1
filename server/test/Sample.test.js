@@ -14,7 +14,7 @@ test("Sample stores the Team 1 handoff and structured ErrorPatternReport", () =>
     errors: [
       {
         value: "Bay → Day",
-        category: "substitution_error",
+        category: "spelling",
         track: { trackId: "TRK_3", label: "Spelling Review" },
         context_snippet: "Bay is here.",
       },
