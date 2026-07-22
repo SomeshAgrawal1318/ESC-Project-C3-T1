@@ -1,40 +1,20 @@
-// src/App.jsx
-// ------------
-// The root component. It decides which of the three screens is visible and
-// owns the two pieces of state they all share.
-//
-// How the screens flow into each other:
-//
-//   SamplesList  --"Upload new sample"-->  UploadScreen
-//   UploadScreen --after a successful upload-->  ReviewScreen (which runs
-//                                                the AI analysis)
-//   ReviewScreen --"Back to samples"-->  SamplesList
-//
-// There is no URL router here on purpose: three screens driven by one piece
-// of state is simpler to read than a routing library, and this module
-// doesn't need shareable URLs.
+// Root component - picks which screen is showing. No router; a few screens
+// driven by one state value is simpler here and we don't need shareable URLs.
 
 import { useState, useEffect } from 'react'
 import Header from './components/Header.jsx'
 import SamplesList from './components/SamplesList.jsx'
 import UploadScreen from './components/UploadScreen.jsx'
 import ReviewScreen from './components/ReviewScreen.jsx'
+import StudentProfile from './pages/StudentProfile.jsx'
 
 function App() {
-  // Which screen is showing: 'list', 'upload' or 'review'.
+  // 'list' | 'upload' | 'review' | 'profile'
   const [screen, setScreen] = useState('list')
-
-  // Which sample the review screen should show (null until one is chosen).
   const [currentSampleId, setCurrentSampleId] = useState(null)
-
-  // The reading-comfort preference. Kept in React state (not browser
-  // storage), so it simply resets on refresh.
   const [readingComfort, setReadingComfort] = useState(false)
 
-  // Reading comfort works by nudging the ROOT font size up. Tailwind sizes
-  // are in rem - multiples of the root size - so this one change scales the
-  // whole interface at once. The wrapper div below adds the cream background
-  // and the extra line/letter spacing.
+  // Tailwind sizes are in rem, so bumping the root font size scales everything at once.
   useEffect(() => {
     document.documentElement.style.fontSize = readingComfort ? '18.5px' : '17px'
   }, [readingComfort])
@@ -53,6 +33,10 @@ function App() {
     setScreen('review')
   }
 
+  function showStudentProfile() {
+    setScreen('profile')
+  }
+
   const comfortClasses = readingComfort
     ? 'bg-comfort leading-loose tracking-wide'
     : 'bg-paper'
@@ -63,6 +47,7 @@ function App() {
         readingComfort={readingComfort}
         onToggleReadingComfort={() => setReadingComfort(!readingComfort)}
         onGoHome={showSamplesList}
+        onOpenStudents={showStudentProfile}
       />
 
       <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
@@ -85,6 +70,10 @@ function App() {
             sampleId={currentSampleId}
             onBackToList={showSamplesList}
           />
+        )}
+
+        {screen === 'profile' && (
+          <StudentProfile onOpenSample={showReviewScreen} />
         )}
       </main>
     </div>
