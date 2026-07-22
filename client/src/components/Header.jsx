@@ -1,11 +1,8 @@
-// src/components/Header.jsx
-// --------------------------
-// The bar across the top of every screen: the LexiPath name (click it to go
-// back to the samples list) and the reading-comfort toggle.
+// Top bar shown on every screen: logo/home link, students link, reading-comfort toggle.
 
-import { BookOpenCheck, Eye } from 'lucide-react'
+import { BookOpenCheck, Eye, Users } from 'lucide-react'
 
-function Header({ readingComfort, onToggleReadingComfort, onGoHome }) {
+function Header({ readingComfort, onToggleReadingComfort, onGoHome, onOpenStudents }) {
   return (
     <header className="mb-8 border-b border-stone-200 bg-white/60 print:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
@@ -27,21 +24,32 @@ function Header({ readingComfort, onToggleReadingComfort, onGoHome }) {
           </span>
         </button>
 
-        {/* aria-pressed tells screen readers this button is an on/off
-            toggle, and whether it is currently on. */}
-        <button
-          type="button"
-          onClick={onToggleReadingComfort}
-          aria-pressed={readingComfort}
-          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-            readingComfort
-              ? 'border-primary bg-primary text-white'
-              : 'border-stone-300 bg-white text-stone-700 hover:border-primary hover:text-primary'
-          }`}
-        >
-          <Eye size={17} aria-hidden="true" />
-          Reading comfort {readingComfort ? 'on' : 'off'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onOpenStudents}
+            className="flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:border-primary hover:text-primary"
+          >
+            <Users size={17} aria-hidden="true" />
+            Students
+          </button>
+
+          {/* aria-pressed tells screen readers this button is an on/off
+              toggle, and whether it is currently on. */}
+          <button
+            type="button"
+            onClick={onToggleReadingComfort}
+            aria-pressed={readingComfort}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+              readingComfort
+                ? 'border-primary bg-primary text-white'
+                : 'border-stone-300 bg-white text-stone-700 hover:border-primary hover:text-primary'
+            }`}
+          >
+            <Eye size={17} aria-hidden="true" />
+            Reading comfort {readingComfort ? 'on' : 'off'}
+          </button>
+        </div>
       </div>
     </header>
   )
