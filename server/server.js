@@ -4,14 +4,20 @@ dotenv.config();
 import connectDB from './config/dbConnection.js';
 import samples from './routes/samples.js';
 import students from './routes/students.js';
+import recommendation from './routes/recommendation.js';
+import errorHandler from './middleware/errorHandler.js';
 
 const port = process.env.PORT || 5000;
 const app = express();
 connectDB();
 
+app.use(express.json());
 app.use('/samples', samples);
 app.use('/students', students);
-app.use('/recommendation')
+app.use('/recommendation', recommendation);
+app.use(errorHandler);
+
+
 
 app.listen(port, ()=>{
     console.log(`Server running on port ${port}`);
@@ -19,3 +25,7 @@ app.listen(port, ()=>{
 
 
 // GET http://localhost:4000/students/
+// req.body.
+// res.status(404);
+// throw new Error("asdfasdf");
+
