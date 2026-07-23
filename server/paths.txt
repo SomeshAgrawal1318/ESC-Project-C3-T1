@@ -169,7 +169,7 @@ Notes:
 ERROR CORRECTION
 ================================================================================
 
-PATCH /api/reports/:reportId/errors/:errorId
+PATCH /reports/:reportId/errors/:errorId
 --------------------------------------------
 Applies a therapist's correction to a single detected error.
 
@@ -225,6 +225,13 @@ Notes:
     dashboard quietly disagree with the review screen.
   - Only samples with analysisStatus = COMPLETE contribute.
 
+================================================================================
+Recommendation
+================================================================================
+GET /recommendation/:studentId
+
+
+PATCH /recommendation/:studentID
 
 ================================================================================
 NOTES AND DEFERRED
