@@ -1,184 +1,841 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+/* ==================================================================
+   LexiPath — component & page styles.
 
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+   Tokens/reset live in index.css; the design rules live in DESIGN.md
+   (read it before changing anything here — the geometry, status and
+   motif decisions were explicitly approved by the project owner).
+
+   Class names are flat (BEM-ish) to keep selector specificity even.
+   Sections, in reading order:
+     1. Shell (sidebar + centered content column)
+     2. Navy sidebar (brand, comfort toggle, nav, therapist)
+     3. Buttons
+     4. Page header patterns (eyebrow, band, grade chip)
+     5. Samples list + sample rows
+     6. Status margin notes
+     7. Empty state (1b)
+     8. Students list + search
+     9. Feedback + skeletons
+    10. Styleguide page
+    11. Responsive
+   ================================================================== */
+
+/* ---- 1. Shell -------------------------------------------------------- */
+/* Sidebar is a fixed column; the content column centers itself, so the
+   app fits any monitor width (no left-pinned dead space — DESIGN.md §2). */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100svh;
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
+.content {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: clamp(22px, 4vw, 48px) clamp(18px, 4vw, 52px) 56px;
 }
 
-#center {
+/* ---- 2. Navy sidebar -------------------------------------------------- */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100svh;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
+  gap: 20px;
+  padding: 26px 18px 20px;
+  background: linear-gradient(178deg, var(--ink) 0%, var(--ink-deep) 100%);
+  color: var(--shell-text);
 }
 
-#next-steps {
+/* Focus rings on the dark shell need a light outline to stay visible. */
+.sidebar :focus-visible {
+  outline-color: var(--shell-active-text);
+}
+
+.brand {
   display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
+  align-items: center;
+  gap: 11px;
+  padding: 2px 8px;
+}
+.brand__mark {
+  flex: none;
+}
+.brand__name {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+/* Reading-comfort card, restyled for the dark surface */
+.comfort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--radius);
+  background: rgba(247, 245, 239, 0.04);
+}
+.comfort__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.comfort__label {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.comfort__hint {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--shell-muted);
 }
 
-#next-steps ul {
-  list-style: none;
+/* Accessible switch (role=switch in ComfortToggle.jsx) */
+.switch {
+  flex: none;
+  width: 42px;
+  height: 24px;
   padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
+  border: 1.5px solid var(--shell-line);
+  border-radius: var(--radius);
+  background: rgba(247, 245, 239, 0.08);
   position: relative;
-  width: 100%;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.switch--on {
+  background: var(--sage);
+  border-color: var(--sage);
+}
+.switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: var(--radius-chip);
+  background: var(--shell-muted);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.switch--on .switch__knob {
+  transform: translateX(18px);
+  background: #fff;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: var(--radius);
+  color: var(--shell-muted);
+  font-weight: 500;
+  font-size: 14.5px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav__item:hover {
+  background: var(--shell-hover);
+  color: var(--shell-text);
+}
+/* Active item: sage-tinted fill + inset sage edge (mirrors the logo bowl) */
+.nav__item--active {
+  background: var(--shell-active-bg);
+  color: var(--shell-active-text);
+  box-shadow: inset 2.5px 0 0 var(--sage);
+}
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
+/* Signed-in therapist, pinned to the sidebar foot */
+.therapist {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 8px 2px;
+  border-top: 1px solid var(--shell-line);
+}
+.therapist__avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  /* bowl corner — the one big curve, from the logo's sage bowl */
+  border-radius: 5px 16px 5px 5px;
+  background: var(--shell-active-bg);
+  color: var(--shell-active-text);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+.therapist__meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.therapist__name {
+  font-weight: 500;
+  font-size: 13.5px;
+}
+.therapist__role {
+  font-size: 11.5px;
+  font-weight: 300;
+  color: var(--shell-muted);
+}
+
+/* ---- 3. Buttons -------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  font-family: var(--body);
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.05s ease;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+/* Primary: navy fill with a crisp inner keyline (no soft glow) */
+.btn--primary {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(247, 245, 239, 0.18);
+}
+.btn--primary:hover {
+  background: var(--ink-soft);
+}
+.btn--secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+.btn--secondary:hover {
+  border-color: var(--sage);
+  color: var(--accent-ink);
+}
+.btn--tertiary {
+  background: transparent;
+  color: var(--muted);
+}
+/* Locked actions stay visible but clearly inert (dashed, never hidden) */
+.btn--disabled {
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 65%, transparent);
+  border: 1.5px dashed var(--border-strong);
+  cursor: not-allowed;
+}
+
+/* ---- 4. Page header patterns ----------------------------------------- */
+/* Every screen opens: eyebrow → title → meta chip → actions (DESIGN.md §9) */
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sage-strong);
+}
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* The header band — ruled exercise-book paper with a sage margin line.
+   The motif appears ONLY here, in the empty state, and on thumbnails. */
+.profile__head {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 26px 28px 24px 84px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-band);
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.55)),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 30px,
+      var(--rule-line) 30px 31px
+    );
+  background-color: var(--band-bg);
+  box-shadow: 0 1px 3px rgba(26, 36, 51, 0.07),
+    0 16px 34px -20px rgba(26, 36, 51, 0.35);
+}
+.profile__head::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 56px;
+  width: 2px;
+  background: var(--margin-line);
+}
+
+.profile__id {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profile__name {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(28px, 3.6vw, 40px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.grade {
+  align-self: flex-start;
+  padding: 4px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+}
+.profile__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---- 5. Samples list (1a) --------------------------------------------- */
+
+.samples {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.samples__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.samples__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 21px;
+}
+.samples__meta {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.samples__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.samples__hint {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+  padding-top: 2px;
+}
+
+.sample-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  min-height: 72px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+.sample-row--ready:hover {
+  border-color: var(--sage);
+  box-shadow: var(--shadow-card-hover);
+}
+.sample-row--ready:active {
+  transform: translateY(1px);
+}
+/* Still analysing: dashed and quiet, not clickable */
+.sample-row--waiting {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+/* Thumbnail = a miniature ruled page (motif, allowed spot #3) */
+.sample-row__thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 50px;
+  flex: none;
+  border-radius: 4px 16px 4px 4px; /* bowl corner */
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 9px,
+      rgba(26, 36, 51, 0.12) 9px 10px
+    ),
+    #fdfcf8;
+  color: var(--sage-strong);
+}
+.sample-row__thumb::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 1.5px;
+  background: rgba(123, 143, 122, 0.55);
+}
+.sample-row__count {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-chip);
+  background: var(--ink);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.sample-row__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sample-row__title {
+  font-weight: 500;
+  font-size: 16px;
+}
+.sample-row__date {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.sample-row__go {
+  flex: none;
+  color: var(--border-strong);
+}
+.sample-row--ready:hover .sample-row__go {
+  color: var(--sage-strong);
+}
+
+/* ---- 6. Status margin notes ------------------------------------------- */
+/* A teacher's annotation, not a badge: tracked caps in the status ink
+   with a slightly tilted underline. Status ink NEVER fills a shape.
+   Tone classes are produced by StatusPill.jsx from lib/status.js. */
+
+.status-note {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  flex: none;
+  padding: 0 3px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--st);
+}
+.status-note::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 2px;
+  bottom: 2px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
+  transform: rotate(-1.2deg);
+}
+.status-note--done {
+  --st: var(--done);
+}
+.status-note--pending {
+  --st: var(--pending);
+}
+.status-note--failed {
+  --st: var(--failed);
+}
+
+/* ---- 7. Empty state (1b) ----------------------------------------------- */
+/* A fresh ruled page waiting for writing (motif, allowed spot #2) */
+
+.empty {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: clamp(44px, 7vw, 64px) 32px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-band);
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 30px,
+      var(--rule-line) 30px 31px
+    ),
+    var(--band-bg);
+}
+.empty::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: clamp(28px, 8vw, 96px);
+  width: 2px;
+  background: rgba(123, 143, 122, 0.4);
+}
+.empty__mark {
+  color: var(--sage-strong);
+}
+.empty__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 24px;
+}
+.empty__text {
+  max-width: 44ch;
+  color: var(--muted);
+  font-weight: 300;
+  font-size: 15.5px;
+}
+.empty .btn {
+  margin-top: 6px;
+  min-height: 50px;
+  font-size: 15.5px;
+}
+
+/* ---- 8. Students list (entry) ------------------------------------------ */
+
+.students {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.students__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+.students__id {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.students__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(28px, 3.5vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.students__sub {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+
+/* Search — filters the caseload client-side as you type */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 1 320px;
+  min-width: 240px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 2px rgba(26, 36, 51, 0.04);
+  color: var(--sage-strong);
+}
+.search:focus-within {
+  border-color: var(--sage);
+}
+.search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--ink);
+}
+.search__input::placeholder {
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.students__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 13px;
+}
+.student-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.student-card:hover {
+  border-color: var(--sage);
+  box-shadow: var(--shadow-card-hover);
+}
+.student-card__avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 5px 20px 5px 5px; /* bowl corner */
+  background: var(--accent-wash);
+  color: var(--sage-strong);
+  font-weight: 600;
+  font-size: 14px;
+}
+.student-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.student-card__name {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 17.5px;
+}
+.student-card__grade {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.student-card__go {
+  color: var(--border-strong);
+}
+.student-card:hover .student-card__go {
+  color: var(--sage-strong);
+}
+
+/* ---- 9. Feedback + skeletons ------------------------------------------- */
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 40px 0;
+}
+.feedback__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 26px;
+}
+.feedback__text {
+  color: var(--muted);
+  max-width: 52ch;
+}
+.feedback--error {
+  color: var(--failed);
+}
+
+.skel {
+  border-radius: var(--radius);
+  background: linear-gradient(
+    100deg,
+    var(--border) 30%,
+    color-mix(in srgb, var(--border) 40%, var(--surface)) 50%,
+    var(--border) 70%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.3s ease infinite;
+}
+.skel--title {
+  width: 260px;
+  height: 40px;
+}
+.skel--pill {
+  width: 90px;
+  height: 24px;
+}
+.skel--btn {
+  width: 180px;
+  height: 44px;
+}
+.skel--row {
+  height: 72px;
+}
+.skel--card {
+  height: 80px;
+}
+@keyframes skel-shimmer {
+  to {
+    background-position: -200% 0;
   }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+}
+
+/* ---- 10. Styleguide page ------------------------------------------------ */
+/* Living reference at /styleguide — keep it in sync with DESIGN.md. */
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+.guide__intro {
+  max-width: 62ch;
+  color: var(--muted);
+  font-weight: 300;
+}
+.guide__section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+.guide__row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: stretch;
+}
+.guide__row > .sample-row {
+  flex: 1 1 100%;
+}
+.guide__note {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+  max-width: 58ch;
+}
+.guide__swatch {
+  width: 132px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.guide__chip {
+  height: 52px;
+}
+.guide__swatch-meta {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.guide__swatch-meta code {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* ---- 11. Responsive ------------------------------------------------------ */
+
+/* Narrower desktops: slimmer sidebar, tighter paddings */
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: 200px 1fr;
+  }
+  .sidebar {
+    padding: 20px 12px 16px;
+  }
+  .profile__head {
+    padding-left: 76px;
+  }
+  .profile__head::before {
+    left: 48px;
+  }
+}
+
+/* Phones / small tablets: sidebar becomes a wrapping top bar */
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .comfort {
+    order: 3;
+    flex: 1 1 100%;
+  }
+  .nav {
+    flex-direction: row;
+  }
+  .therapist {
+    margin: 0 0 0 auto;
+    border-top: none;
+    padding: 0;
+  }
+  .content {
+    padding: 22px 16px 40px;
+  }
+  /* The band loses its margin line when space is tight */
+  .profile__head {
+    padding: 20px 20px 18px;
+  }
+  .profile__head::before {
+    display: none;
   }
 }

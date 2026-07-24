@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-  width="64" height="64" viewBox="0 0 64 64"
-  role="img" aria-label="LexiPath favicon">
+  width="512" height="512" viewBox="0 0 512 512"
+  role="img" aria-label="LexiPath dark app icon">
 
-  <rect width="64" height="64" rx="14" fill="#F7F5EF"/>
-  <g transform="translate(8 8) scale(0.1875)">
-  <path d="M46 18H72V145H143V171H46Z" fill="#1A2433"/>
+  <rect width="512" height="512" rx="106" fill="#1A2433"/>
+  <g transform="translate(128 128)">
+  <path d="M46 18H72V145H143V171H46Z" fill="#FFFFFF"/>
   <path fill-rule="evenodd"
         d="M126 84H167
            C203 84 228 109 228 144
@@ -14,7 +14,7 @@
            C202 124 188 110 167 110
            H126Z"
         fill="#7B8F7A"/>
-  <rect x="119" y="219" width="50" height="25" fill="#1A2433"/>
+  <rect x="119" y="219" width="50" height="25" fill="#FFFFFF"/>
 </g>
 
 </svg>

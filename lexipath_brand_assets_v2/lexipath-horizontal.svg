@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-  width="64" height="64" viewBox="0 0 64 64"
-  role="img" aria-label="LexiPath favicon">
+  width="1050" height="260" viewBox="0 0 1050 260"
+  role="img" aria-label="LexiPath horizontal logo">
 
-  <rect width="64" height="64" rx="14" fill="#F7F5EF"/>
-  <g transform="translate(8 8) scale(0.1875)">
+  <g transform="translate(18 2)">
   <path d="M46 18H72V145H143V171H46Z" fill="#1A2433"/>
   <path fill-rule="evenodd"
         d="M126 84H167
@@ -16,5 +15,9 @@
         fill="#7B8F7A"/>
   <rect x="119" y="219" width="50" height="25" fill="#1A2433"/>
 </g>
+  <text x="314" y="161"
+        fill="#1A2433"
+        font-family="Lexend, Inter, Arial, sans-serif"
+        font-size="98" font-weight="500" letter-spacing="1.6">LexiPath</text>
 
 </svg>
