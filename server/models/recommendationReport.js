@@ -40,7 +40,6 @@ const recommendationReportSchema = new mongoose.Schema(
     // // regenerating - the report stays active, this just silences the flag.
     // outdatedFlagDismissed: { type: Boolean, default: false },
     // commented out by Somesh: I feel it doesn't make sense can just change the status back to CURRENT
-
     // Set on the new report when it replaces an older one (regenerate flow).
     supersedes: {
       type: mongoose.Schema.Types.ObjectId,
@@ -55,3 +54,5 @@ export const RecommendationReport = mongoose.model(
   "RecommendationReport",
   recommendationReportSchema
 );
+
+

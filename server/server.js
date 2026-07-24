@@ -12,9 +12,9 @@ const app = express();
 connectDB();
 
 app.use(express.json());
-app.use('/samples', samples);
-app.use('/students', students);
-app.use('/recommendation', recommendation);
+app.use('/api/samples', samples);
+app.use('/api/students', students);
+app.use('/api/recommendation', recommendation);
 app.use(errorHandler);
 
 

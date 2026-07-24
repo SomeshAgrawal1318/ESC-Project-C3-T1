@@ -71,6 +71,10 @@ const sampleSchema = new mongoose.Schema(
       ref: "Student",
       required: true,
     },
+    title: {
+      type: String, 
+      required: true,
+    },
 
     // Where the uploaded image lives on disk. We store the PATH, not the
     // image bytes - files belong on the filesystem, not in the database.
