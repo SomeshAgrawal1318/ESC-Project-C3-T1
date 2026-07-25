@@ -11,6 +11,7 @@ import { ComfortProvider } from './context/ComfortContext.jsx';
 import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
+import ErrorTrendsPage from './pages/ErrorTrendsPage.jsx';
 import Placeholder from './components/Placeholder.jsx';
 
 createRoot(document.getElementById('root')).render(
@@ -23,7 +24,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="students/:studentId" element={<StudentProfilePage />} />
             <Route
               path="students/:studentId/trends"
-              element={<Placeholder label="Error trends" />}
+              element={<ErrorTrendsPage />}
             />
             <Route
               path="students/:studentId/recommendations"
