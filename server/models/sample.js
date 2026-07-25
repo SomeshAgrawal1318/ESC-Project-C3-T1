@@ -10,7 +10,7 @@
 // end to end. If we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 // The fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
@@ -22,7 +22,7 @@ export const ERROR_CATEGORIES = [
   "punctuation",
   "unsure",
 ];
-const boxSchema = new Mongoose.Schema({
+const boxSchema = new mongoose.Schema({
   x: {type: Number, required: true, min: 0, max: 1},
   y: {type: Number, required: true, min: 0, max: 1},
   z: {type: Number, required: true, min: 0, max: 1},
@@ -48,6 +48,13 @@ const errorSchema = new mongoose.Schema(
       enum: ERROR_CATEGORIES, // "enum" = only these values are allowed
       default: "unsure",
     },
+
+    // How confident the AI is in this category assignment (0-1). Errors
+    // below ErrorClassificationEngine's confidence threshold are surfaced to
+    // the educator as "uncertain" instead of a silent guess. Defaults to 1
+    // (fully confident) so manually-created errors aren't flagged uncertain.
+    confidenceScore: { type: Number, min: 0, max: 1, default: 1 },
+
     locationOnScan: {type: boxSchema, default: null},
     // A short plain-language reason for the category, written by the AI.
     note: { type: String, default: "" },
@@ -99,11 +106,17 @@ const sampleSchema = new mongoose.Schema(
     //   UPLOADED  - image saved, AI has not looked at it yet
     //   ANALYSED  - the AI has flagged errors, awaiting human review
     //   REVIEWED  - an educator has checked the errors against the scan
+    //   FAILED    - the AI could not produce a report; see analysisError
     status: {
       type: String,
-      enum: ["UPLOADED", "ANALYSED", "REVIEWED"],
+      enum: ["UPLOADED", "ANALYSED", "REVIEWED", "FAILED"],
       default: "UPLOADED",
     },
+
+    // Human-readable reason analysis failed (e.g. unreadable file, AI
+    // timeout). Only meaningful when status is FAILED; empty otherwise.
+    // Never a raw stack trace - the educator reads this directly.
+    analysisError: { type: String, default: "" },
 
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
