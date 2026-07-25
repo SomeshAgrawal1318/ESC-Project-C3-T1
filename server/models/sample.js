@@ -10,7 +10,7 @@
 // end to end. If we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 // The fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
@@ -22,7 +22,7 @@ export const ERROR_CATEGORIES = [
   "punctuation",
   "unsure",
 ];
-const boxSchema = new Mongoose.Schema({
+const boxSchema = new mongoose.Schema({
   x: {type: Number, required: true, min: 0, max: 1},
   y: {type: Number, required: true, min: 0, max: 1},
   z: {type: Number, required: true, min: 0, max: 1},
@@ -59,6 +59,21 @@ const errorSchema = new mongoose.Schema(
     dismissed: { type: Boolean, default: false },
   },
   { _id: false } // sub-documents don't need their own database ids
+);
+
+// Up to three worksheets selected immediately after this sample is analysed.
+// The source file path stays inside the recommendation engine; the API stores
+// only Markdown-grounded PDF metadata that is safe to return to the client.
+const worksheetSchema = new mongoose.Schema(
+  {
+    worksheetId: { type: String, required: true },
+    title: { type: String, required: true },
+    pdfPath: { type: String, required: true },
+    pdfPages: { type: String, default: "" },
+    targetCategories: [{ type: String, enum: ERROR_CATEGORIES }],
+    rationale: { type: String, required: true },
+  },
+  { _id: false }
 );
 
 const sampleSchema = new mongoose.Schema(
@@ -107,6 +122,16 @@ const sampleSchema = new mongoose.Schema(
 
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
+
+    recommendedWorksheets: {
+      type: [worksheetSchema],
+      default: [],
+      validate: {
+        validator: value => value.length <= 3,
+        message: "A sample can have at most three recommended worksheets",
+      },
+    },
+    recommendationsGeneratedAt: { type: Date, default: null },
 
     // Anything the AI could not read on the page, in its own words.
     // "none" or empty means everything was legible.

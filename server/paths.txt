@@ -195,9 +195,8 @@ Notes:
     and correctedAt before saving.
   - Returns the whole report rather than the single error because
     recalculateStatistics() has run and the summary panel needs the new numbers.
-  - HOT SEAM: this is where RecommendationReport.markOutdated() will be called
-    once the recommendation leg exists. Leave the hook, even if it is a no-op
-    for now - retrofitting it later means touching this handler again.
+  - After saving the reviewed errors, the student recommendation button may be
+    used to overwrite the student's one latest intervention report.
 
 
 ================================================================================
@@ -228,10 +227,44 @@ Notes:
 ================================================================================
 Recommendation
 ================================================================================
-GET /recommendation/:studentId
 
+POST /api/students/:studentId/recommendations
+------------------------------------------------
+Generates a fresh intervention report from every ANALYSED or REVIEWED sample.
+After the new report is saved, any older reports for that student are deleted.
+Returns: 201 + { report: RecommendationReport }.
+Errors:  404 STUDENT_NOT_FOUND; 422 NO_ACTIVE_ERRORS.
 
-PATCH /recommendation/:studentID
+GET /api/students/:studentId/recommendations/latest
+-----------------------------------------------------
+Returns: 200 + { report: RecommendationReport }.
+Errors: 404 RECOMMENDATION_NOT_FOUND.
+
+POST /api/samples/:sampleId/recommendations
+-------------------------------------------
+Generates zero to three PDF worksheets from this sample's active errors and
+overwrites the sample's previous worksheet list. The upload/analysis workflow
+should invoke the same server function after analysis completes.
+Returns: 201 + { sampleId, generatedAt, worksheets }.
+
+GET /api/samples/:sampleId/recommendations
+------------------------------------------
+Returns the worksheet list already stored for that sample.
+
+Worksheet grounding combines the approved PDFs in Azure's private asset manifest
+with relevant complete Markdown pages retrieved from the private Azure knowledge
+vault. SQLite and local knowledge files are not used. Every returned
+worksheetId/pdfPath pair must occur in the asset manifest, and no single sample
+may receive more than three.
+
+GET /api/worksheets/:worksheetId/file
+---------------------------------------------
+Validates worksheetId against the approved Markdown mapping and streams the
+corresponding private Azure Blob as an inline PDF without exposing the SAS token.
+Errors: 404 WORKSHEET_NOT_FOUND; 500 AZURE_STORAGE_NOT_CONFIGURED;
+        502 AZURE_BLOB_FETCH_FAILED.
+
+All errors use { "error": { "code": String, "message": String } }.
 
 ================================================================================
 NOTES AND DEFERRED
@@ -240,17 +273,6 @@ NOTES AND DEFERRED
 VERTICAL SLICE COVERED BY THE ABOVE
   create student -> upload sample -> poll status -> view report -> correct an
   error -> view trends. That is a complete demoable path with no gaps.
-
-DEFERRED TO THE RECOMMENDATION LEG (PS6) - not built in this slice
-  POST  /api/students/:studentId/recommendations
-        Generates a RecommendationReport. POST, not GET, because it creates a
-        resource. Maps to RecommendationController.generateRecommendations.
-  GET   /api/students/:studentId/recommendations/latest
-        Returns the current report, including whether it is OUTDATED.
-  POST  /api/students/:studentId/recommendations/regenerate
-        Maps to regenerateRecommendations. The old report is marked superseded.
-  PATCH /api/recommendations/:reportId/flag
-        Maps to dismissOutdatedFlag(reportId).
 
 DEFERRED - AUTH
   No login route exists. Teacher is in the domain model but nothing enforces
