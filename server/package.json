@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/**/*.test.js",
+    "test:live": "RUN_LIVE_RECOMMENDATION_TESTS=true RECOMMENDATION_USE_MOCKS=false node --env-file=.env --test test/live-recommendation.test.js",
     "start": "nodemon server.js"
   },
   "keywords": [],
@@ -18,5 +19,8 @@
     "mongoose": "^9.8.0",
     "nodemon": "^3.1.14"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "supertest": "^7.2.2"
+  }
 }
