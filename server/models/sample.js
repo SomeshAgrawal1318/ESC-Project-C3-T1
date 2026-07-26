@@ -1,18 +1,18 @@
 // models/Sample.js
 // -----------------
-// The Sample collection - the heart of the data model. One document per
+// the Sample collection - the heart of the data model. one document per
 // uploaded piece of student work, holding everything about it: the scanned
 // image(s), what kind of task it was, how far through the analysis flow it
 // is, and the errors the AI found (after the educator's review).
 //
-// The errors live INSIDE the sample document ("embedded") rather than in
+// the errors live inside the sample document ("embedded") rather than in
 // their own collection, because this module always works with one sample
-// end to end. If we later need cross-student analytics ("show me every
+// end to end. if we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
 import mongoose from "mongoose";
 
-// The fixed vocabulary of error categories, used everywhere in the app.
+// the fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
 export const ERROR_CATEGORIES = [
   "phonological",
@@ -31,15 +31,15 @@ const boxSchema = new mongoose.Schema({
   {_id: false}
 );
 
-// The shape of one flagged error. This is a sub-schema: it describes the
+// the shape of one flagged error. this is a sub-schema: it describes the
 // objects inside the sample's `errors` array, not a collection of its own.
 const errorSchema = new mongoose.Schema(
   {
-    // The word exactly as the child wrote it. This is sacred - it is never
+    // the word exactly as the child wrote it. this is sacred - it is never
     // auto-corrected anywhere in the app.
     written: { type: String, required: true },
 
-    // The AI's best guess at the word the child meant. The educator can
+    // the AI's best guess at the word the child meant. the educator can
     // correct this guess during review.
     intended: { type: String, default: "" },
 
@@ -49,11 +49,11 @@ const errorSchema = new mongoose.Schema(
       default: "unsure",
     },
     locationOnScan: {type: boxSchema, default: null},
-    // A short plain-language reason for the category, written by the AI.
+    // a short plain-language reason for the category, written by the AI.
     note: { type: String, default: "" },
 
-    // The educator's human-in-the-loop control: true means "the AI flagged
-    // this, but a person decided it is not actually an error". We keep
+    // the educator's human-in-the-loop control: true means "the AI flagged
+    // this, but a person decided it is not actually an error". we keep
     // dismissed errors instead of deleting them, so the decision is visible
     // and reversible.
     dismissed: { type: Boolean, default: false },
@@ -63,8 +63,8 @@ const errorSchema = new mongoose.Schema(
 
 const sampleSchema = new mongoose.Schema(
   {
-    // A reference ("foreign key") to the Student who wrote this work.
-    // Storing just the id keeps the data in one place; .populate() in the
+    // a reference ("foreign key") to the Student who wrote this work.
+    // storing just the id keeps the data in one place; .populate() in the
     // routes swaps the id for the full student document when we need it.
     student: {
       type: mongoose.Schema.Types.ObjectId,
@@ -76,10 +76,10 @@ const sampleSchema = new mongoose.Schema(
       required: true,
     },
 
-    // A sample can be several scanned pages (e.g. a multi-page PDF), so this
+    // a sample can be several scanned pages (e.g. a multi-page PDF), so this
     // is an array, not one path. mimeType is stored per image so the image
     // route can set the right Content-Type without re-reading the file.
-    // The path is a filesystem path, never image bytes, and must never be
+    // the path is a filesystem path, never image bytes, and must never be
     // sent back in a JSON response.
     images: {
       type: [
@@ -97,8 +97,8 @@ const sampleSchema = new mongoose.Schema(
     },
 
     // EDIT_DIAGRAM tasks have one known correct answer; NARRATIVE writing
-    // does not. This matters because closed tasks can give the AI an
-    // answer key as reading context. Not collected on upload right now (no
+    // does not. this matters because closed tasks can give the AI an
+    // answer key as reading context. not collected on upload right now (no
     // task-type picker in the upload modal), so it defaults to ESSAY.
     taskType: {
       type: String,
@@ -106,12 +106,12 @@ const sampleSchema = new mongoose.Schema(
       default: "ESSAY",
     },
 
-    // For closed tasks only: the exercise's correct text. Passed to Gemini
+    // for closed tasks only: the exercise's correct text. passed to Gemini
     // purely to help it read unclear handwriting - never to correct the
     // child's writing toward it.
     answerKey: { type: String, default: "" },
 
-    // How far through the flow this sample is:
+    // how far through the flow this sample is:
     //   UPLOADED  - image saved, AI has not looked at it yet
     //   ANALYSED  - the AI has flagged errors, awaiting human review
     //   REVIEWED  - an educator has checked the errors against the scan
@@ -122,19 +122,19 @@ const sampleSchema = new mongoose.Schema(
       default: "UPLOADED",
     },
 
-    // Human-readable reason analysis failed (e.g. unreadable file, AI
-    // timeout). Only meaningful when status is FAILED; empty otherwise.
-    // Never a raw stack trace - the educator reads this directly.
+    // human-readable reason analysis failed (e.g. unreadable file, AI
+    // timeout). only meaningful when status is FAILED; empty otherwise.
+    // never a raw stack trace - the educator reads this directly.
     analysisError: { type: String, default: "" },
 
-    // Text the AI extracts from the scan, once analysis has run. Empty
+    // text the AI extracts from the scan, once analysis has run. empty
     // until then - nothing in this slice writes it.
     sampleContent: { type: String, default: "" },
 
-    // The flagged errors (see errorSchema above).
+    // the flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
 
-    // Anything the AI could not read on the page, in its own words.
+    // anything the AI could not read on the page, in its own words.
     // "none" or empty means everything was legible.
     illegibleNote: { type: String, default: "" },
   },
@@ -144,7 +144,7 @@ const sampleSchema = new mongoose.Schema(
     timestamps: true,
 
     // Mongoose warns that "errors" is a name it also uses internally (for
-    // validation errors). Our usage - a plain data array we read and write
+    // validation errors). our usage - a plain data array we read and write
     // whole - is safe, so we acknowledge the warning and turn it off.
     suppressReservedKeysWarning: true,
 

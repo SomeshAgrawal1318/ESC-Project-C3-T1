@@ -1,4 +1,4 @@
-// Small inline icon set — no icon dependency, stroke inherits currentColor.
+// small inline icon set - no icon dependency, stroke inherits currentColor.
 
 const PATHS = {
   upload: (

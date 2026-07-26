@@ -10,13 +10,13 @@ import { Sample } from '../models/sample.js';
 let mongod;
 const app = buildTestApp();
 
-// A real 1x1 PNG - file-type reads the actual bytes, not the extension, so
+// a real 1x1 PNG - file-type reads the actual bytes, not the extension, so
 // this has to be a genuine (if tiny) file of that format.
 const PNG_BUFFER = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64'
 );
-// Just the JFIF signature bytes - enough for file-type to recognise it as
+// just the JFIF signature bytes - enough for file-type to recognise it as
 // a jpg, which is all validateSample checks for.
 const JPEG_BUFFER = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
@@ -154,7 +154,7 @@ describe('GET /api/samples/:sampleId', () => {
   });
 
   it('carries the failure reason once analysisStatus is FAILED', async () => {
-    // Nothing in this slice ever sets FAILED itself (that's the analysis
+    // nothing in this slice ever sets FAILED itself (that's the analysis
     // engine's job), so this simulates the hand-off directly to prove the
     // response shape holds up once it does.
     const studentId = await createStudent();

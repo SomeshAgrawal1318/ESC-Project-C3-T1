@@ -1,8 +1,8 @@
 // controllers/sampleController.js
 // --------------------------------
-// The logic behind POST /api/samples: check the uploaded files are really
+// the logic behind POST /api/samples: check the uploaded files are really
 // what they claim to be, write the good ones to disk, and create the
-// Sample. Kept out of routes/samples.js so the route itself stays a thin
+// Sample. kept out of routes/samples.js so the route itself stays a thin
 // list of "which function handles this request".
 
 import fs from "fs";
@@ -13,15 +13,15 @@ import { Sample } from "../models/sample.js";
 import { Student } from "../models/student.js";
 import { triggerAnalysis } from "../services/analysisTrigger.js";
 
-// Only these are accepted - matches the upload modal's copy ("JPG, PNG or
+// only these are accepted - matches the upload modal's copy ("JPG, PNG or
 // PDF only").
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
 
-// Looks at the file's real content (not just its claimed mimetype or
+// looks at the file's real content (not just its claimed mimetype or
 // extension, which are trivial to spoof) and throws if it isn't one of the
-// accepted formats. This is what produces the 422 the upload modal's error
+// accepted formats. this is what produces the 422 the upload modal's error
 // state (wireframe 2d) reads from.
 export async function validateSample(file) {
   const detected = await fileTypeFromBuffer(file.buffer);
@@ -37,14 +37,14 @@ export async function validateSample(file) {
   return detected;
 }
 
-// Derives a title from the first file's name, since the upload modal (2a)
+// derives a title from the first file's name, since the upload modal (2a)
 // doesn't have a title field - see the plan doc for why.
 function deriveTitle(originalFilename) {
   const withoutExtension = originalFilename.replace(/\.[^/.]+$/, "");
   return withoutExtension || "Untitled sample";
 }
 
-// A JPG or PNG is already one raster image. A PDF might be several pages of
+// a JPG or PNG is already one raster image. a PDF might be several pages of
 // one composition, so it gets split into one image per page - a therapist
 // scanning a single-page worksheet and a multi-page essay both end up with
 // the "right" imageCount either way.
@@ -70,7 +70,7 @@ async function toPageBuffers(file, detected) {
   return pages.map((buffer) => ({ buffer, mimeType: "image/png" }));
 }
 
-// Validates every file first (so a bad second file doesn't leave the first
+// validates every file first (so a bad second file doesn't leave the first
 // one already written to disk), splits any PDFs into their pages, then
 // saves the good ones and creates the Sample.
 export async function createSample(studentId, files) {
@@ -117,7 +117,7 @@ export async function createSample(studentId, files) {
     images,
   });
 
-  // Fire and forget - the 202 response has already gone out by the time
+  // fire and forget - the 202 response has already gone out by the time
   // this matters.
   triggerAnalysis(sample);
 

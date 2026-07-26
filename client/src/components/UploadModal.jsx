@@ -1,7 +1,7 @@
 // components/UploadModal.jsx
 // ---------------------------
-// The upload flow (wireframes 2a-2d): pick a file, watch it get analysed,
-// land on success or a clear error. One component, four states - the
+// the upload flow (wireframes 2a-2d): pick a file, watch it get analysed,
+// land on success or a clear error. one component, four states - the
 // state decides which panel renders.
 
 import { useState } from 'react';
@@ -20,7 +20,7 @@ export default function UploadModal({ studentId, onClose, onUploaded }) {
   const [sampleId, setSampleId] = useState(null);
 
   const poll = useSamplePolling(phase === 'analysing' ? sampleId : null);
-  // Success is derived from the poll result rather than its own phase, so
+  // success is derived from the poll result rather than its own phase, so
   // there's no effect needed to sync the two.
   const isSuccess = phase === 'analysing' && poll.status === 'complete';
 
@@ -35,7 +35,7 @@ export default function UploadModal({ studentId, onClose, onUploaded }) {
   async function handleAnalyse() {
     try {
       const sample = await uploadSample(studentId, files);
-      // Real uploads return the raw Sample doc (id in _id); mock mode
+      // real uploads return the raw Sample doc (id in _id); mock mode
       // already returns the friendly sampleId - handle either.
       setSampleId(sample.sampleId ?? sample._id);
       setPhase('analysing');
@@ -87,7 +87,7 @@ export default function UploadModal({ studentId, onClose, onUploaded }) {
   );
 }
 
-// State 2a: drag-and-drop zone, browse, file preview, Cancel / Analyse.
+// state 2a: drag-and-drop zone, browse, file preview, cancel / analyse.
 function PickingPanel({ files, onAddFiles, onRemoveFile, onCancel, onAnalyse }) {
   function handleDrop(event) {
     event.preventDefault();
@@ -151,7 +151,7 @@ function PickingPanel({ files, onAddFiles, onRemoveFile, onCancel, onAnalyse }) 
   );
 }
 
-// State 2b: spinner while polling, plus the FAILED/timeout/error paths the
+// state 2b: spinner while polling, plus the FAILED/timeout/error paths the
 // polling hook can land on.
 function AnalysingPanel({ pollStatus, onClose }) {
   const isTrouble = pollStatus === 'failed' || pollStatus === 'timeout' || pollStatus === 'error';
@@ -190,7 +190,7 @@ function AnalysingPanel({ pollStatus, onClose }) {
   );
 }
 
-// State 2c: success panel.
+// state 2c: success panel.
 function SuccessPanel({ sampleId, onBackToProfile }) {
   return (
     <>
@@ -209,7 +209,7 @@ function SuccessPanel({ sampleId, onBackToProfile }) {
   );
 }
 
-// State 2d: the 422 rejection, naming the offending file.
+// state 2d: the 422 rejection, naming the offending file.
 function ErrorPanel({ message, onTryAgain, onCancel }) {
   return (
     <>

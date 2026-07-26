@@ -51,9 +51,9 @@ router.get('/:sampleId', async (req, res) => {
     throw new Error('Sample not found');
   }
 
-  // The polling target - a summary, not the full document. sampleContent
+  // the polling target - a summary, not the full document. sampleContent
   // and analysisError are only included once they're actually meaningful.
-  // The JSON key stays "analysisStatus" even though the model field is
+  // the JSON key stays "analysisStatus" even though the model field is
   // "status" - that's the name the client side already reads it as.
   res.status(200).json({
     sampleId: sample._id,

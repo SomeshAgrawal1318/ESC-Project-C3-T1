@@ -1,6 +1,6 @@
 // tests/testApp.js
 // -----------------
-// A minimal Express app wired the same way server.js is, just without
+// a minimal Express app wired the same way server.js is, just without
 // dotenv/connectDB/app.listen - tests point mongoose at an in-memory Mongo
 // instance instead (see sample.routes.test.js) and supertest talks to this
 // app object directly, no real port needed.

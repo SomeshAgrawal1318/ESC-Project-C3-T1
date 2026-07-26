@@ -10,8 +10,8 @@ router.route('/')
         res.send('Hi Im a student');
     });
 
-// GET /api/students/:studentId/samples - the summary list a student's
-// profile page renders (newest first). Deliberately a summary, not the
+// get /api/students/:studentId/samples - the summary list a student's
+// profile page renders (newest first). deliberately a summary, not the
 // full Sample - never sends images or sampleContent.
 router.get('/:studentId/samples', async (req, res) => {
   const { studentId } = req.params;

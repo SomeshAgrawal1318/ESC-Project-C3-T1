@@ -1,11 +1,11 @@
 // services/analysisTrigger.js
 // ----------------------------
-// The hand-off point to the AI analysis engine (a different slice - not
-// built yet). This is a no-op for now, left here on purpose so whoever
+// the hand-off point to the AI analysis engine (a different slice - not
+// built yet). this is a no-op for now, left here on purpose so whoever
 // builds the engine only has to replace the body of this function instead
 // of reopening the upload handler in sampleController.js.
 //
-// Once it exists, this is where analyse(sample) gets called after the 202
+// once it exists, this is where analyse(sample) gets called after the 202
 // response has already gone out, and where status eventually moves from
 // UPLOADED to ANALYSED or FAILED.
 

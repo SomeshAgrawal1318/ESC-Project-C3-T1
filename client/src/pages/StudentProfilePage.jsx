@@ -1,7 +1,7 @@
-// Screens 1a and 1b are the SAME route — the difference is data, not
-// navigation. Fetch the student and their samples; render the samples list
+// screens 1a and 1b are the same route - the difference is data, not
+// navigation. fetch the student and their samples; render the samples list
 // (1a) when there are any, or the empty state (1b) when there are none.
-// Trends and Recommendations are only reachable once analysed data exists,
+// trends and recommendations are only reachable once analysed data exists,
 // so they are disabled in the empty state.
 
 import { useEffect, useState } from 'react';
@@ -16,11 +16,11 @@ export default function StudentProfilePage() {
   const { studentId } = useParams();
   const [state, setState] = useState({ status: 'loading' });
   const [showUpload, setShowUpload] = useState(false);
-  // Bumping this re-runs the fetch below without resetting to the loading
+  // bumping this re-runs the fetch below without resetting to the loading
   // skeleton, so a freshly uploaded sample appears in place.
   const [refreshCount, setRefreshCount] = useState(0);
 
-  // Reset to the skeleton the moment the student changes (render-phase reset,
+  // reset to the skeleton the moment the student changes (render-phase reset,
   // React's documented pattern) so switching students never flashes stale data.
   const [loadedFor, setLoadedFor] = useState(studentId);
   if (loadedFor !== studentId) {
@@ -71,7 +71,7 @@ export default function StudentProfilePage() {
 
   return (
     <div className="profile">
-      {/* Header band: eyebrow → name → grade chip, on ruled exercise-book
+      {/* header band: eyebrow → name → grade chip, on ruled exercise-book
           paper (the styling lives on .profile__head in App.css). */}
       <header className="profile__head">
         <div className="profile__id">

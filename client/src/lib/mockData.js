@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------
-// Fixtures that stand in for the backend until the Express routes exist.
-// Shapes mirror server/paths.txt so swapping to the real API is a no-op
-// for the components. Delete or ignore once VITE_USE_MOCKS=false.
+// fixtures that stand in for the backend until the Express routes exist.
+// shapes mirror server/paths.txt so swapping to the real API is a no-op
+// for the components. delete or ignore once VITE_USE_MOCKS=false.
 //
-// analysisStatus values below use the Sample MODEL vocabulary
+// analysisStatus values below use the Sample model vocabulary
 // (UPLOADED / ANALYSED / REVIEWED, see server/models/sample.js).
 // status.js also understands the paths.txt vocabulary
 // (PENDING / PROCESSING / COMPLETE / FAILED), so either is fine.
@@ -16,7 +16,7 @@ export const mockStudents = [
 ];
 
 export const mockSamplesByStudent = {
-  // 1a — a student with several samples (newest first)
+  // 1a - a student with several samples (newest first)
   stu_wei: [
     {
       sampleId: 'smp_501',
@@ -48,7 +48,7 @@ export const mockSamplesByStudent = {
     },
   ],
 
-  // 1b — a student with no samples yet (empty state)
+  // 1b - a student with no samples yet (empty state)
   stu_aisha: [],
 
   stu_daniel: [
@@ -63,8 +63,8 @@ export const mockSamplesByStudent = {
 };
 
 // ------------------------------------------------------------------
-// Mock upload + polling, so the upload modal's states (2a-2d) and the
-// polling loop are demoable without the backend. Not persisted across a
+// mock upload + polling, so the upload modal's states (2a-2d) and the
+// polling loop are demoable without the backend. not persisted across a
 // reload - it's just in-memory state for this mock module.
 // ------------------------------------------------------------------
 
@@ -99,7 +99,7 @@ export function mockCreateSample(studentId, files) {
     pollCount: 0,
   };
 
-  // Show up in the profile's sample list right away, same as a real 202
+  // show up in the profile's sample list right away, same as a real 202
   // response would once the list is refetched.
   mockSamplesByStudent[studentId] = [
     { sampleId, title, uploadedAt, analysisStatus: 'UPLOADED', imageCount: files.length },

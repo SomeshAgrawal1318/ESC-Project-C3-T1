@@ -30,7 +30,7 @@ function fileInput() {
   return document.querySelector('input[type="file"]');
 }
 
-// The Analyse button's onClick triggers handleAnalyse, an async function
+// the analyse button's onClick triggers handleAnalyse, an async function
 // that awaits uploadSample() before updating state. fireEvent.click doesn't
 // wait for that - wrapping it in act() flushes the microtask queue so the
 // resulting state update has actually committed by the time we assert.

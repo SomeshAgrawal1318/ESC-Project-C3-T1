@@ -1,9 +1,9 @@
 // hooks/useSamplePolling.js
 // -------------------------
-// Polls GET /api/samples/:sampleId every 2s until analysis finishes, or
-// gives up. Backs the upload modal's "analysing" state (2b).
+// polls GET /api/samples/:sampleId every 2s until analysis finishes, or
+// gives up. backs the upload modal's "analysing" state (2b).
 //
-// Stops once analysisStatus reads as "done" (via statusFor - handles
+// stops once analysisStatus reads as "done" (via statusFor - handles
 // ANALYSED and REVIEWED both, not just one hardcoded value), on FAILED, or
 // after MAX_ATTEMPTS with no answer - a stuck sample must not spin the UI
 // forever.
@@ -19,7 +19,7 @@ const MAX_ATTEMPTS = 30; // ~1 minute of polling before giving up
 export function useSamplePolling(sampleId) {
   const [state, setState] = useState({ status: 'polling', sample: null });
 
-  // Reset the moment sampleId changes (render-phase reset, same pattern
+  // reset the moment sampleId changes (render-phase reset, same pattern
   // StudentProfilePage.jsx uses) rather than setState inside the effect
   // below, which would cost an extra wasted render.
   const [trackedId, setTrackedId] = useState(sampleId);
@@ -60,7 +60,7 @@ export function useSamplePolling(sampleId) {
 
     poll();
 
-    // Closing the modal only stops this effect from watching - the
+    // closing the modal only stops this effect from watching - the
     // analysis itself runs server-side and keeps going regardless.
     return () => {
       live = false;

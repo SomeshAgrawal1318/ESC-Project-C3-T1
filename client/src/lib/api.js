@@ -1,15 +1,15 @@
 // ------------------------------------------------------------------
-// The single seam between the UI and the backend.
+// the single seam between the UI and the backend.
 //
-// Every function here maps 1:1 to a route in server/paths.txt, so when
+// every function here maps 1:1 to a route in server/paths.txt, so when
 // you build the Express endpoints the client already speaks their shape.
 //
 //   VITE_API_URL   base origin for the API (default "/api", per paths.txt)
 //   VITE_USE_MOCKS "false" to hit the real backend; anything else = mocks
 //
-// While the backend does not exist yet, USE_MOCKS defaults to true and the
-// screens run entirely off src/lib/mockData.js. Flip VITE_USE_MOCKS=false
-// (and point VITE_API_URL at your server) to go live — no component changes.
+// while the backend does not exist yet, USE_MOCKS defaults to true and the
+// screens run entirely off src/lib/mockData.js. flip VITE_USE_MOCKS=false
+// (and point VITE_API_URL at your server) to go live - no component changes.
 // ------------------------------------------------------------------
 
 import {
@@ -22,7 +22,7 @@ import {
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
 
-// Small artificial delay so loading states are exercised in mock mode.
+// small artificial delay so loading states are exercised in mock mode.
 const settle = (value, ms = 250) =>
   new Promise((resolve) => setTimeout(() => resolve(value), ms));
 
@@ -42,13 +42,13 @@ async function request(path) {
   return res.json();
 }
 
-// GET /api/students  ->  Student[]
+// get /api/students  ->  Student[]
 export function getStudents() {
   if (USE_MOCKS) return settle(mockStudents);
   return request('/students');
 }
 
-// GET /api/students/:studentId  ->  { studentId, name, currentGrade }
+// get /api/students/:studentId  ->  { studentId, name, currentGrade }
 export function getStudent(studentId) {
   if (USE_MOCKS) {
     const student = mockStudents.find((s) => s.studentId === studentId);
@@ -57,11 +57,11 @@ export function getStudent(studentId) {
   return request(`/students/${studentId}`);
 }
 
-// GET /api/students/:studentId/samples?status=  ->  Sample summaries
-// Summary shape used by the profile list:
+// get /api/students/:studentId/samples?status=  ->  Sample summaries
+// summary shape used by the profile list:
 //   { sampleId, title, uploadedAt, analysisStatus, imageCount }
-// NOTE for the backend: paths.txt's summary omits `title`, but the Sample
-// model has it and the list needs it — include `title` in this response.
+// note for the backend: paths.txt's summary omits `title`, but the Sample
+// model has it and the list needs it - include `title` in this response.
 export function getStudentSamples(studentId, { status } = {}) {
   if (USE_MOCKS) {
     let list = mockSamplesByStudent[studentId] ?? [];
@@ -72,8 +72,8 @@ export function getStudentSamples(studentId, { status } = {}) {
   return request(`/students/${studentId}/samples${qs}`);
 }
 
-// POST /api/samples (multipart)  ->  202 + the created Sample
-// Doesn't go through request() - this needs a FormData body, and the
+// post /api/samples (multipart)  ->  202 + the created Sample
+// doesn't go through request() - this needs a FormData body, and the
 // server's error body here is { title, message, stackTrace } (not the
 // { error: { message } } shape request() expects), so it's read directly.
 export async function uploadSample(studentId, files) {
@@ -98,9 +98,9 @@ export async function uploadSample(studentId, files) {
   return body;
 }
 
-// GET /api/samples/:sampleId  ->  the polling target used while a sample
+// get /api/samples/:sampleId  ->  the polling target used while a sample
 // is being analysed.
-// Response shape: { sampleId, studentId, uploadedAt, analysisStatus,
+// response shape: { sampleId, studentId, uploadedAt, analysisStatus,
 //                    imageCount, sampleContent?, analysisError? }
 export function getSample(sampleId) {
   if (USE_MOCKS) return settle(mockGetSample(sampleId), 150);

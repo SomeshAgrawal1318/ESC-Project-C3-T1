@@ -1,8 +1,8 @@
 /* ==================================================================
-   LexiPath — component & page styles.
+   LexiPath - component & page styles.
 
-   Tokens/reset live in index.css; the design rules live in DESIGN.md
-   (read it before changing anything here — the geometry, status and
+   tokens/reset live in index.css; the design rules live in DESIGN.md
+   (read it before changing anything here - the geometry, status and
    motif decisions were explicitly approved by the project owner).
 
    Class names are flat (BEM-ish) to keep selector specificity even.
@@ -22,8 +22,8 @@
    ================================================================== */
 
 /* ---- 1. Shell -------------------------------------------------------- */
-/* Sidebar is a fixed column; the content column centers itself, so the
-   app fits any monitor width (no left-pinned dead space — DESIGN.md §2). */
+/* sidebar is a fixed column; the content column centers itself, so the
+   app fits any monitor width (no left-pinned dead space - DESIGN.md §2). */
 
 .shell {
   display: grid;
@@ -53,7 +53,7 @@
   color: var(--shell-text);
 }
 
-/* Focus rings on the dark shell need a light outline to stay visible. */
+/* focus rings on the dark shell need a light outline to stay visible. */
 .sidebar :focus-visible {
   outline-color: var(--shell-active-text);
 }
@@ -74,7 +74,7 @@
   letter-spacing: 0.02em;
 }
 
-/* Reading-comfort card, restyled for the dark surface */
+/* reading-comfort card, restyled for the dark surface */
 .comfort {
   display: flex;
   align-items: center;
@@ -102,7 +102,7 @@
   color: var(--shell-muted);
 }
 
-/* Accessible switch (role=switch in ComfortToggle.jsx) */
+/* accessible switch (role=switch in ComfortToggle.jsx) */
 .switch {
   flex: none;
   width: 42px;
@@ -153,14 +153,14 @@
   background: var(--shell-hover);
   color: var(--shell-text);
 }
-/* Active item: sage-tinted fill + inset sage edge (mirrors the logo bowl) */
+/* active item: sage-tinted fill + inset sage edge (mirrors the logo bowl) */
 .nav__item--active {
   background: var(--shell-active-bg);
   color: var(--shell-active-text);
   box-shadow: inset 2.5px 0 0 var(--sage);
 }
 
-/* Signed-in therapist, pinned to the sidebar foot */
+/* signed-in therapist, pinned to the sidebar foot */
 .therapist {
   margin-top: auto;
   display: flex;
@@ -175,7 +175,7 @@
   width: 36px;
   height: 36px;
   flex: none;
-  /* bowl corner — the one big curve, from the logo's sage bowl */
+  /* bowl corner - the one big curve, from the logo's sage bowl */
   border-radius: 5px 16px 5px 5px;
   background: var(--shell-active-bg);
   color: var(--shell-active-text);
@@ -218,7 +218,7 @@
 .btn:active {
   transform: translateY(1px);
 }
-/* Primary: navy fill with a crisp inner keyline (no soft glow) */
+/* primary: navy fill with a crisp inner keyline (no soft glow) */
 .btn--primary {
   background: var(--ink);
   color: #fff;
@@ -240,7 +240,7 @@
   background: transparent;
   color: var(--muted);
 }
-/* Locked actions stay visible but clearly inert (dashed, never hidden) */
+/* locked actions stay visible but clearly inert (dashed, never hidden) */
 .btn--disabled {
   background: transparent;
   color: color-mix(in srgb, var(--muted) 65%, transparent);
@@ -249,7 +249,7 @@
 }
 
 /* ---- 4. Page header patterns ----------------------------------------- */
-/* Every screen opens: eyebrow → title → meta chip → actions (DESIGN.md §9) */
+/* every screen opens: eyebrow → title → meta chip → actions (DESIGN.md §9) */
 
 .eyebrow {
   font-size: 12px;
@@ -265,8 +265,8 @@
   gap: 30px;
 }
 
-/* The header band — ruled exercise-book paper with a sage margin line.
-   The motif appears ONLY here, in the empty state, and on thumbnails. */
+/* the header band - ruled exercise-book paper with a sage margin line.
+   the motif appears only here, in the empty state, and on thumbnails. */
 .profile__head {
   position: relative;
   display: flex;
@@ -383,7 +383,7 @@
 .sample-row--ready:active {
   transform: translateY(1px);
 }
-/* Still analysing: dashed and quiet, not clickable */
+/* still analysing: dashed and quiet, not clickable */
 .sample-row--waiting {
   background: transparent;
   border-style: dashed;
@@ -391,7 +391,7 @@
   box-shadow: none;
 }
 
-/* Thumbnail = a miniature ruled page (motif, allowed spot #3) */
+/* thumbnail = a miniature ruled page (motif, allowed spot #3) */
 .sample-row__thumb {
   position: relative;
   display: grid;
@@ -460,9 +460,9 @@
 }
 
 /* ---- 6. Status margin notes ------------------------------------------- */
-/* A teacher's annotation, not a badge: tracked caps in the status ink
-   with a slightly tilted underline. Status ink NEVER fills a shape.
-   Tone classes are produced by StatusPill.jsx from lib/status.js. */
+/* a teacher's annotation, not a badge: tracked caps in the status ink
+   with a slightly tilted underline. status ink never fills a shape.
+   tone classes are produced by StatusPill.jsx from lib/status.js. */
 
 .status-note {
   position: relative;
@@ -498,7 +498,7 @@
 }
 
 /* ---- 7. Empty state (1b) ----------------------------------------------- */
-/* A fresh ruled page waiting for writing (motif, allowed spot #2) */
+/* a fresh ruled page waiting for writing (motif, allowed spot #2) */
 
 .empty {
   position: relative;
@@ -581,7 +581,7 @@
   color: var(--muted);
 }
 
-/* Search — filters the caseload client-side as you type */
+/* search - filters the caseload client-side as you type */
 .search {
   display: flex;
   align-items: center;
@@ -727,7 +727,7 @@
 }
 
 /* ---- 10. Styleguide page ------------------------------------------------ */
-/* Living reference at /styleguide — keep it in sync with DESIGN.md. */
+/* living reference at /styleguide - keep it in sync with DESIGN.md. */
 
 .guide {
   display: flex;
@@ -786,8 +786,8 @@
 }
 
 /* ---- 11. Upload modal (2a-2d) ------------------------------------------ */
-/* Deliberately not the ruled-paper motif - that's reserved for the band,
-   empty state and thumbnails only (DESIGN.md §7). Just a plain card. */
+/* deliberately not the ruled-paper motif - that's reserved for the band,
+   empty state and thumbnails only (DESIGN.md §7). just a plain card. */
 
 .modal-overlay {
   position: fixed;
@@ -940,7 +940,7 @@
 
 /* ---- 12. Responsive ------------------------------------------------------ */
 
-/* Narrower desktops: slimmer sidebar, tighter paddings */
+/* narrower desktops: slimmer sidebar, tighter paddings */
 @media (max-width: 1024px) {
   .shell {
     grid-template-columns: 200px 1fr;
@@ -956,7 +956,7 @@
   }
 }
 
-/* Phones / small tablets: sidebar becomes a wrapping top bar */
+/* phones / small tablets: sidebar becomes a wrapping top bar */
 @media (max-width: 760px) {
   .shell {
     grid-template-columns: 1fr;
@@ -985,7 +985,7 @@
   .content {
     padding: 22px 16px 40px;
   }
-  /* The band loses its margin line when space is tight */
+  /* the band loses its margin line when space is tight */
   .profile__head {
     padding: 20px 20px 18px;
   }

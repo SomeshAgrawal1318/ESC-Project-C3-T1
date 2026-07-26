@@ -7,7 +7,7 @@ import '@testing-library/jest-dom/vitest';
 // though the flush still works correctly.
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-// Explicit rather than relying on vitest's `globals: true` - this project
+// explicit rather than relying on vitest's `globals: true` - this project
 // imports test functions directly (describe/it/expect/...), so Testing
 // Library's own auto-cleanup (which hooks into a global afterEach) never
 // registers unless we do it ourselves here.
