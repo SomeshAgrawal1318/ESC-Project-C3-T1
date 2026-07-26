@@ -93,7 +93,7 @@ export async function createSample(studentId, files) {
   const studentDir = path.join(UPLOAD_ROOT, studentId);
   fs.mkdirSync(studentDir, { recursive: true });
 
-  const images = [];
+  const pageEntries = [];
   perFilePages.forEach(({ originalFilename, pages }, fileIndex) => {
     pages.forEach((page, pageIndex) => {
       const extension = page.mimeType === "image/jpeg" ? "jpg" : "png";
@@ -101,8 +101,8 @@ export async function createSample(studentId, files) {
       const filePath = path.join(studentDir, filename);
       fs.writeFileSync(filePath, page.buffer);
 
-      images.push({
-        path: filePath,
+      pageEntries.push({
+        imagePath: filePath,
         originalFilename,
         mimeType: page.mimeType,
       });
@@ -114,7 +114,7 @@ export async function createSample(studentId, files) {
   const sample = await Sample.create({
     student: studentId,
     title: deriveTitle(files[0].originalname),
-    images,
+    pages: pageEntries,
   });
 
   // fire and forget - the 202 response has already gone out by the time

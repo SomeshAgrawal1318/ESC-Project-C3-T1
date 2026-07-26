@@ -77,14 +77,14 @@ const sampleSchema = new mongoose.Schema(
     },
 
     // a sample can be several scanned pages (e.g. a multi-page PDF), so this
-    // is an array, not one path. mimeType is stored per image so the image
+    // is an array, not one path. mimeType is stored per page so the image
     // route can set the right Content-Type without re-reading the file.
-    // the path is a filesystem path, never image bytes, and must never be
+    // imagePath is a filesystem path, never image bytes, and must never be
     // sent back in a JSON response.
-    images: {
+    pages: {
       type: [
         {
-          path: { type: String, required: true },
+          imagePath: { type: String, required: true },
           originalFilename: { type: String, default: "" },
           mimeType: { type: String, required: true },
         },
@@ -92,7 +92,7 @@ const sampleSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (arr) => arr.length > 0,
-        message: "A sample needs at least one image",
+        message: "A sample needs at least one uploaded file",
       },
     },
 
@@ -148,12 +148,12 @@ const sampleSchema = new mongoose.Schema(
     // whole - is safe, so we acknowledge the warning and turn it off.
     suppressReservedKeysWarning: true,
 
-    // images[].path is a filesystem path - it must never leave the server
-    // in a JSON response. Strip it here so every route gets this for free
-    // instead of everyone remembering to do it by hand.
+    // pages[].imagePath is a filesystem path - it must never leave the
+    // server in a JSON response. Strip it here so every route gets this for
+    // free instead of everyone remembering to do it by hand.
     toJSON: {
       transform: (_doc, ret) => {
-        ret.images = ret.images.map(({ path, ...rest }) => rest);
+        ret.pages = ret.pages.map(({ imagePath, ...rest }) => rest);
         return ret;
       },
     },

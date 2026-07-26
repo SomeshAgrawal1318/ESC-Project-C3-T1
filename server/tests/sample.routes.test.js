@@ -57,8 +57,8 @@ describe('POST /api/samples', () => {
 
     expect(res.status).toBe(202);
     expect(res.body.status).toBe('UPLOADED');
-    expect(res.body.images).toHaveLength(1);
-    expect(res.body.images[0].path).toBeUndefined(); // never leak the fs path
+    expect(res.body.pages).toHaveLength(1);
+    expect(res.body.pages[0].imagePath).toBeUndefined(); // never leak the fs path
   });
 
   it('accepts a png and produces imageCount 1', async () => {
@@ -70,7 +70,7 @@ describe('POST /api/samples', () => {
       .attach('images', PNG_BUFFER, { filename: 'page.png', contentType: 'image/png' });
 
     expect(res.status).toBe(202);
-    expect(res.body.images).toHaveLength(1);
+    expect(res.body.pages).toHaveLength(1);
   });
 
   it('splits a multi-page pdf into one image per page', async () => {
@@ -83,7 +83,7 @@ describe('POST /api/samples', () => {
       .attach('images', pdfBuffer, { filename: 'essay.pdf', contentType: 'application/pdf' });
 
     expect(res.status).toBe(202);
-    expect(res.body.images).toHaveLength(3);
+    expect(res.body.pages).toHaveLength(3);
   });
 
   it('rejects an unsupported file with a 422 naming the file', async () => {
@@ -133,7 +133,7 @@ describe('GET /api/samples/:sampleId', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns the polling summary shape, without images or sampleContent', async () => {
+  it('returns the polling summary shape, without pages or sampleContent', async () => {
     const studentId = await createStudent();
     const uploadRes = await request(app)
       .post('/api/samples')
@@ -149,7 +149,7 @@ describe('GET /api/samples/:sampleId', () => {
       analysisStatus: 'UPLOADED',
       imageCount: 1,
     });
-    expect(res.body.images).toBeUndefined();
+    expect(res.body.pages).toBeUndefined();
     expect(res.body.sampleContent).toBeUndefined();
   });
 
@@ -181,7 +181,7 @@ describe('GET /api/students/:studentId/samples', () => {
     expect(res.status).toBe(404);
   });
 
-  it('lists samples newest first without leaking images or sampleContent', async () => {
+  it('lists samples newest first without leaking pages or sampleContent', async () => {
     const studentId = await createStudent();
     await request(app)
       .post('/api/samples')
@@ -198,7 +198,7 @@ describe('GET /api/students/:studentId/samples', () => {
     expect(res.body).toHaveLength(2);
     expect(res.body[0].title).toBe('second'); // newest first
     for (const summary of res.body) {
-      expect(summary.images).toBeUndefined();
+      expect(summary.pages).toBeUndefined();
       expect(summary.sampleContent).toBeUndefined();
     }
   });

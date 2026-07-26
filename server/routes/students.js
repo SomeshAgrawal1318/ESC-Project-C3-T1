@@ -34,7 +34,7 @@ router.get('/:studentId/samples', async (req, res) => {
       title: sample.title,
       uploadedAt: sample.createdAt,
       analysisStatus: sample.status,
-      imageCount: sample.images.length,
+      imageCount: sample.pages.length,
     }))
   );
 });

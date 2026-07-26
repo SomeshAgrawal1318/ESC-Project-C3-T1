@@ -60,7 +60,7 @@ router.get('/:sampleId', async (req, res) => {
     studentId: sample.student,
     uploadedAt: sample.createdAt,
     analysisStatus: sample.status,
-    imageCount: sample.images.length,
+    imageCount: sample.pages.length,
     ...(sample.sampleContent && { sampleContent: sample.sampleContent }),
     ...(sample.status === 'FAILED' && {
       analysisError: sample.analysisError,
@@ -70,15 +70,15 @@ router.get('/:sampleId', async (req, res) => {
 
 router.get('/:sampleId/images/:index', async (req, res) => {
   const sample = await Sample.findById(req.params.sampleId).catch(() => null);
-  const image = sample?.images[req.params.index];
+  const page = sample?.pages[req.params.index];
 
-  if (!image) {
+  if (!page) {
     res.status(constants.NOT_FOUND);
     throw new Error('Image not found');
   }
 
-  res.setHeader('Content-Type', image.mimeType);
-  fs.createReadStream(image.path).pipe(res);
+  res.setHeader('Content-Type', page.mimeType);
+  fs.createReadStream(page.imagePath).pipe(res);
 });
 
 export default router;
