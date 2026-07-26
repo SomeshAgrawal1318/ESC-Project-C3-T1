@@ -53,7 +53,7 @@ describe(
       const sample = await Sample.create({
         student: student._id,
         title: "integration happy path",
-        imagePath: "uploads/integration-sample.png",
+        pages: [{ imagePath: "uploads/integration-sample.png", originalFilename: "sample.png" }],
         taskType: "ESSAY",
       });
 
@@ -69,6 +69,7 @@ describe(
         // full trip through Mongoose validation and MongoDB storage.
         assert.notEqual(detectedError.written.trim(), "");
         assert.equal(typeof detectedError.confidenceScore, "number");
+        assert.equal(detectedError.locationOnScan.page, 0, "the only page in a one-page sample");
         for (const key of ["x", "y", "z", "w"]) {
           const value = detectedError.locationOnScan[key];
           assert.ok(
@@ -76,6 +77,29 @@ describe(
             `locationOnScan.${key} must survive the round-trip in 0-1 range`
           );
         }
+      }
+    });
+
+    test("IT-04: a multi-page sample persists errors tagged with the right page index", async () => {
+      const sample = await Sample.create({
+        student: student._id,
+        title: "integration multi-page",
+        pages: [
+          { imagePath: "uploads/integration-page-0.png", originalFilename: "p0.png" },
+          { imagePath: "uploads/integration-page-1.png", originalFilename: "p1.png" },
+        ],
+        taskType: "ESSAY",
+      });
+
+      await runAnalysis(sample._id);
+
+      const saved = await Sample.findById(sample._id);
+      assert.equal(saved.status, "ANALYSED");
+      const pagesSeen = new Set(saved.errors.map((e) => e.locationOnScan.page));
+      assert.ok(pagesSeen.has(0) && pagesSeen.has(1), "expected errors tagged on both of the sample's pages");
+      for (const detectedError of saved.errors) {
+        const page = detectedError.locationOnScan.page;
+        assert.ok(Number.isInteger(page) && page >= 0 && page < 2, `page ${page} does not exist in this 2-page sample`);
       }
     });
 
@@ -91,7 +115,8 @@ describe(
       const sample = await Sample.create({
         student: student._id,
         title: "integration failure path",
-        imagePath: "uploads/corrupt-integration.png", // "corrupt" triggers the mock failure
+        // "corrupt" triggers the mock failure - on any page, not just the first.
+        pages: [{ imagePath: "uploads/corrupt-integration.png", originalFilename: "corrupt.png" }],
         taskType: "ESSAY",
       });
 

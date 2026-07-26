@@ -24,9 +24,19 @@ import { ERROR_CATEGORIES } from "../models/sample.js";
 // __testing export in errorClassificationEngine.js.
 const { callModelWithRetry, buildPrompt, mimeTypeFor } = __testing;
 
+// A sample is now `pages: [{ imagePath, originalFilename }]`, not a single
+// imagePath - this builds the one-page case tests mostly need.
+function onePageSample(imagePath, overrides = {}) {
+  return {
+    pages: [{ imagePath, originalFilename: "" }],
+    taskType: "ESSAY",
+    ...overrides,
+  };
+}
+
 describe("analyseSample (mock mode)", () => {
   test("returns one error per fixed category with valid fields", async () => {
-    const sample = { imagePath: "uploads/sample-1.png", taskType: "ESSAY" };
+    const sample = onePageSample("uploads/sample-1.png");
     const report = await analyseSample(sample);
 
     assert.equal(typeof report.illegibleNote, "string");
@@ -46,6 +56,7 @@ describe("analyseSample (mock mode)", () => {
       assert.equal(typeof detectedError.confidenceScore, "number");
       assert.ok(detectedError.confidenceScore >= 0 && detectedError.confidenceScore <= 1);
       assert.equal(detectedError.dismissed, false);
+      assert.equal(detectedError.locationOnScan.page, 0, "a one-page sample should only ever report page 0");
       for (const key of ["x", "y", "z", "w"]) {
         assert.equal(typeof detectedError.locationOnScan[key], "number");
         assert.ok(detectedError.locationOnScan[key] >= 0 && detectedError.locationOnScan[key] <= 1);
@@ -54,7 +65,7 @@ describe("analyseSample (mock mode)", () => {
   });
 
   test("includes at least one below-threshold error for the uncertain UI state", async () => {
-    const sample = { imagePath: "uploads/sample-1.png", taskType: "ESSAY" };
+    const sample = onePageSample("uploads/sample-1.png");
     const report = await analyseSample(sample);
 
     const uncertainErrors = report.errors.filter((detectedError) => isUncertain(detectedError));
@@ -62,8 +73,38 @@ describe("analyseSample (mock mode)", () => {
   });
 
   test("simulates a corrupt/unreadable file when imagePath contains 'corrupt'", async () => {
-    const sample = { imagePath: "uploads/corrupt-scan.png", taskType: "ESSAY" };
+    const sample = onePageSample("uploads/corrupt-scan.png");
     await assert.rejects(() => analyseSample(sample), /Could not read the uploaded image/);
+  });
+
+  test("spreads errors across every page of a multi-page sample", async () => {
+    const sample = {
+      pages: [
+        { imagePath: "uploads/page-0.png", originalFilename: "" },
+        { imagePath: "uploads/page-1.png", originalFilename: "" },
+        { imagePath: "uploads/page-2.png", originalFilename: "" },
+      ],
+      taskType: "ESSAY",
+    };
+    const report = await analyseSample(sample);
+
+    const pagesSeen = new Set(report.errors.map((e) => e.locationOnScan.page));
+    assert.ok(pagesSeen.has(0) && pagesSeen.has(1) && pagesSeen.has(2), "expected errors on every page, not just page 0");
+    for (const detectedError of report.errors) {
+      const page = detectedError.locationOnScan.page;
+      assert.ok(Number.isInteger(page) && page >= 0 && page < 3, `page ${page} is out of range for a 3-page sample`);
+    }
+  });
+
+  test("finds a corrupt page even when it isn't the first page", async () => {
+    const sample = {
+      pages: [
+        { imagePath: "uploads/page-0.png", originalFilename: "" },
+        { imagePath: "uploads/corrupt-page.png", originalFilename: "" },
+      ],
+      taskType: "ESSAY",
+    };
+    await assert.rejects(() => analyseSample(sample), /Could not read the uploaded image at "uploads\/corrupt-page\.png"/);
   });
 });
 
@@ -77,7 +118,7 @@ describe("validateAnalysisResult", () => {
         category: "orthographic",
         confidenceScore: 0.9,
         note: "Transposed letters.",
-        locationOnScan: { x: 0.1, y: 0.1, z: 0.05, w: 0.05 },
+        locationOnScan: { page: 0, x: 0.1, y: 0.1, z: 0.05, w: 0.05 },
       },
     ],
   };
@@ -113,6 +154,36 @@ describe("validateAnalysisResult", () => {
   test("rejects a non-array errors field", () => {
     const bad = { illegibleNote: "", errors: "not an array" };
     assert.throws(() => validateAnalysisResult(bad), /errors must be an array/);
+  });
+
+  test("rejects a non-integer page", () => {
+    const bad = structuredClone(validResult);
+    bad.errors[0].locationOnScan.page = 1.5;
+    assert.throws(() => validateAnalysisResult(bad), /page/);
+  });
+
+  test("rejects a negative page", () => {
+    const bad = structuredClone(validResult);
+    bad.errors[0].locationOnScan.page = -1;
+    assert.throws(() => validateAnalysisResult(bad), /page/);
+  });
+
+  test("rejects a page index the caller says doesn't exist", () => {
+    const bad = structuredClone(validResult);
+    bad.errors[0].locationOnScan.page = 2;
+    assert.throws(() => validateAnalysisResult(bad, /* pageCount */ 2), /page/);
+  });
+
+  test("accepts a page index within the caller-provided page count", () => {
+    const ok = structuredClone(validResult);
+    ok.errors[0].locationOnScan.page = 1;
+    assert.doesNotThrow(() => validateAnalysisResult(ok, /* pageCount */ 2));
+  });
+
+  test("without a page count, any non-negative integer page is accepted", () => {
+    const ok = structuredClone(validResult);
+    ok.errors[0].locationOnScan.page = 47;
+    assert.doesNotThrow(() => validateAnalysisResult(ok));
   });
 });
 
@@ -180,19 +251,19 @@ describe("mimeTypeFor", () => {
 
 describe("buildPrompt", () => {
   test("lists every category the model is allowed to choose", () => {
-    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "" });
+    const prompt = buildPrompt(onePageSample("uploads/x.png", { answerKey: "" }));
     for (const category of ERROR_CATEGORIES) {
       assert.ok(prompt.includes(category), `prompt is missing the "${category}" category`);
     }
   });
 
   test("tells the model never to correct the child's spelling", () => {
-    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "" });
+    const prompt = buildPrompt(onePageSample("uploads/x.png", { answerKey: "" }));
     assert.match(prompt, /Do not silently correct/);
   });
 
   test("withholds the answer key on open-ended essays", () => {
-    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "The cat sat on the mat." });
+    const prompt = buildPrompt(onePageSample("uploads/x.png", { answerKey: "The cat sat on the mat." }));
     assert.ok(
       !prompt.includes("The cat sat on the mat."),
       "an essay has no single correct answer, so the key must not be sent"
@@ -200,14 +271,32 @@ describe("buildPrompt", () => {
   });
 
   test("passes the answer key as reading help on closed tasks", () => {
-    const prompt = buildPrompt({ taskType: "SHORT_ANSWER", answerKey: "The cat sat on the mat." });
+    const prompt = buildPrompt({
+      pages: [{ imagePath: "uploads/x.png" }],
+      taskType: "SHORT_ANSWER",
+      answerKey: "The cat sat on the mat.",
+    });
     assert.ok(prompt.includes("The cat sat on the mat."));
     assert.match(prompt, /help you read unclear handwriting/);
   });
 
   test("omits the answer-key section when no key is stored", () => {
-    const prompt = buildPrompt({ taskType: "SHORT_ANSWER", answerKey: "" });
+    const prompt = buildPrompt({ pages: [{ imagePath: "uploads/x.png" }], taskType: "SHORT_ANSWER", answerKey: "" });
     assert.ok(!prompt.includes("help you read unclear handwriting"));
+  });
+
+  test("describes a single page as page 0, not a page count", () => {
+    const prompt = buildPrompt(onePageSample("uploads/x.png"));
+    assert.match(prompt, /single page/);
+  });
+
+  test("tells the model how many pages it's getting and that they're one continuous piece of writing", () => {
+    const prompt = buildPrompt({
+      pages: [{ imagePath: "uploads/p0.png" }, { imagePath: "uploads/p1.png" }, { imagePath: "uploads/p2.png" }],
+      taskType: "ESSAY",
+    });
+    assert.match(prompt, /3 pages/);
+    assert.match(prompt, /one continuous piece of writing/);
   });
 });
 
@@ -221,7 +310,7 @@ describe("callModelWithRetry", () => {
         category: "orthographic",
         confidenceScore: 0.9,
         note: "Transposed letters.",
-        locationOnScan: { x: 0.1, y: 0.1, z: 0.05, w: 0.05 },
+        locationOnScan: { page: 0, x: 0.1, y: 0.1, z: 0.05, w: 0.05 },
       },
     ],
   };
@@ -284,6 +373,17 @@ describe("callModelWithRetry", () => {
 
     // Proves validation runs inside the retry loop: a schema breach is
     // retried rather than persisted.
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 2);
+  });
+
+  test("retries when the model reports a page index that doesn't exist in this sample", async () => {
+    const outOfRange = structuredClone(validPayload);
+    outOfRange.errors[0].locationOnScan.page = 5; // this sample only has 2 pages
+    const ai = fakeModel([reply(outOfRange), reply(validPayload)]);
+
+    const result = await callModelWithRetry(ai, [], config(2), /* pageCount */ 2);
+
     assert.deepEqual(result, validPayload);
     assert.equal(ai.callCount, 2);
   });

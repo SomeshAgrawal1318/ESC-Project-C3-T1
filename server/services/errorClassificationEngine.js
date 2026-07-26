@@ -15,11 +15,17 @@
 //   - Real mode: calls Gemini vision with a structured-output schema so the
 //     response maps directly onto DetectedError fields.
 //
-// Coordinate system for locationOnScan: { x, y, z, w }, all normalised 0-1
-// against the full page image, where x,y is the box's top-left corner and
-// z,w are its width and height. Chosen here in the absence of a written
-// agreement with Person 4 (the review screen owner) - confirm this still
-// matches what they render before wiring the real screen up.
+// Coordinate system for locationOnScan: { page, x, y, z, w }. page is a
+// 0-based index into the sample's `pages` array, matching upload order;
+// x,y,z,w are normalised 0-1 against that one page's image, where x,y is the
+// box's top-left corner and z,w are its width and height. Chosen here in the
+// absence of a written agreement with Person 4 (the review screen owner) -
+// confirm this still matches what they render before wiring the real screen
+// up.
+//
+// A sample can have multiple pages (a multi-page scan or PDF). All pages are
+// sent to Gemini in a single request, in order, so the model can read errors
+// that span a page break - the model reports which page each error is on.
 
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -69,7 +75,10 @@ function readConfig() {
 // ---------------------------------------------------------------------------
 
 // One example per category, plus one deliberately low-confidence entry so
-// the "uncertain" UI state has something real to render against.
+// the "uncertain" UI state has something real to render against. `page` is
+// filled in per-sample below (structuredClone'd fixtures don't know how many
+// pages a given sample has), spread across whatever pages exist so
+// multi-page samples get realistic, non-trivial coverage in tests.
 const MOCK_REPORT = {
   illegibleNote: "",
   errors: [
@@ -126,16 +135,23 @@ const MOCK_REPORT = {
 
 // Mock-mode convention so the FAILED path can be exercised without a real
 // broken file or an API key: a sample whose imagePath or original filename
-// contains "corrupt" (case-insensitive) simulates an unreadable upload.
-// Documented in server/README.md.
+// (on any page) contains "corrupt" (case-insensitive) simulates an unreadable
+// upload. Documented in server/README.md.
 function runMockAnalysis(sample) {
-  const looksCorrupt =
-    /corrupt/i.test(sample.imagePath || "") ||
-    /corrupt/i.test(sample.originalFilename || "");
-  if (looksCorrupt) {
-    throw new Error(`Could not read the uploaded image at "${sample.imagePath}"`);
+  const pages = sample.pages || [];
+  const corruptPage = pages.find(
+    (page) => /corrupt/i.test(page.imagePath || "") || /corrupt/i.test(page.originalFilename || "")
+  );
+  if (corruptPage) {
+    throw new Error(`Could not read the uploaded image at "${corruptPage.imagePath}"`);
   }
-  return structuredClone(MOCK_REPORT);
+
+  const fixture = structuredClone(MOCK_REPORT);
+  const pageCount = Math.max(pages.length, 1);
+  fixture.errors.forEach((detectedError, index) => {
+    detectedError.locationOnScan.page = index % pageCount;
+  });
+  return fixture;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,13 +168,20 @@ function mimeTypeFor(imagePath) {
 
 function buildPrompt(sample) {
   const categoryList = ERROR_CATEGORIES.map((category) => `- ${category}`).join("\n");
+  const pageCount = (sample.pages || []).length || 1;
 
   let answerKeyNote = "";
   if (sample.taskType !== "ESSAY" && sample.answerKey) {
     answerKeyNote = `\nThe expected answer for this task is: "${sample.answerKey}". Use it ONLY to help you read unclear handwriting. Never use it to judge whether the student's answer is "correct", and never let it change the "written" field - "written" must always be exactly what the student wrote, spelling and all.\n`;
   }
 
-  return `You are analysing a scanned page of a child's handwritten schoolwork for a literacy-support tool.
+  const pageNote =
+    pageCount > 1
+      ? `This sample has ${pageCount} pages, provided as ${pageCount} images in order (the first image is page 0, the second is page 1, and so on). Treat them as one continuous piece of writing - an error can start on one page and finish on the next.`
+      : `This sample has a single page, provided as one image (page 0).`;
+
+  return `You are analysing a scanned, possibly multi-page piece of a child's handwritten schoolwork for a literacy-support tool.
+${pageNote}
 Read the handwriting exactly as the child wrote it and flag every spelling, grammar and punctuation error you find. Do not silently correct anything - "written" must always be the child's original text.
 
 For each error, classify it into exactly one of these categories:
@@ -171,9 +194,9 @@ For each error return:
 - category: one of the categories above.
 - confidenceScore: a number from 0 to 1 for how confident you are in this category assignment.
 - note: one short, plain-language sentence explaining the error, written for a teacher.
-- locationOnScan: a bounding box around the error on the page, normalised to the image size (0 to 1), as { x, y, z, w } where x,y is the top-left corner and z,w are the width and height.
+- locationOnScan: a bounding box around the error, as { page, x, y, z, w } - page is the 0-based index of the image the error appears on, and x, y, z, w are normalised to that image's size (0 to 1), where x,y is the top-left corner and z,w are the width and height.
 
-Also return illegibleNote: a short note describing any part of the page you could not read, or an empty string if everything was legible.
+Also return illegibleNote: a short note describing any part of the page(s) you could not read, or an empty string if everything was legible.
 
 Return only the JSON described by the response schema - no extra commentary.`;
 }
@@ -195,12 +218,13 @@ const RESPONSE_SCHEMA = {
           locationOnScan: {
             type: "object",
             properties: {
+              page: { type: "integer" },
               x: { type: "number" },
               y: { type: "number" },
               z: { type: "number" },
               w: { type: "number" },
             },
-            required: ["x", "y", "z", "w"],
+            required: ["page", "x", "y", "z", "w"],
           },
         },
         required: ["written", "intended", "category", "confidenceScore", "locationOnScan"],
@@ -222,7 +246,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function validateAnalysisResult(result) {
+// pageCount is optional: when the caller knows how many pages the sample
+// actually has (real analysis), an out-of-range page index is rejected too.
+// Unit tests that build a result by hand can omit it and just get the
+// looser "is this a valid non-negative integer" check.
+export function validateAnalysisResult(result, pageCount) {
   if (!result || typeof result !== "object" || Array.isArray(result)) {
     throw new Error("Analysis result must be an object");
   }
@@ -252,10 +280,21 @@ export function validateAnalysisResult(result) {
       throw new Error(`errors[${index}].confidenceScore must be a number between 0 and 1`);
     }
     const box = detectedError.locationOnScan;
-    const hasValidBox =
+    const hasValidCoords =
       box && ["x", "y", "z", "w"].every((key) => typeof box[key] === "number" && box[key] >= 0 && box[key] <= 1);
-    if (!hasValidBox) {
+    if (!hasValidCoords) {
       throw new Error(`errors[${index}].locationOnScan must have x, y, z, w numbers between 0 and 1`);
+    }
+    const hasValidPage =
+      box &&
+      Number.isInteger(box.page) &&
+      box.page >= 0 &&
+      (pageCount === undefined || box.page < pageCount);
+    if (!hasValidPage) {
+      throw new Error(
+        `errors[${index}].locationOnScan.page must be a valid page index` +
+          (pageCount === undefined ? "" : ` (0-${pageCount - 1})`)
+      );
     }
   });
   return result;
@@ -266,7 +305,7 @@ export function validateAnalysisResult(result) {
 // `ai.models.generateContent` or the response shape has changed by the time
 // this is wired up for real, check the current Gemini API docs and adjust
 // this function; nothing else in this file depends on the SDK shape.
-async function callModelWithRetry(ai, parts, config) {
+async function callModelWithRetry(ai, parts, config, pageCount) {
   let lastError;
   for (let attempt = 0; attempt <= config.maxRetries; attempt += 1) {
     try {
@@ -282,7 +321,7 @@ async function callModelWithRetry(ai, parts, config) {
         config.timeoutMs
       );
       const parsed = JSON.parse(result.text);
-      return validateAnalysisResult(parsed);
+      return validateAnalysisResult(parsed, pageCount);
     } catch (err) {
       lastError = err;
       if (attempt < config.maxRetries) {
@@ -298,20 +337,28 @@ async function runRealAnalysis(sample, config) {
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  let imageBytes;
-  try {
-    imageBytes = await fs.readFile(sample.imagePath);
-  } catch {
-    throw new Error(`Could not read the uploaded image at "${sample.imagePath}"`);
+  const pages = sample.pages || [];
+
+  // Every page goes into the same request, in upload order, so the model
+  // can read an error that spans a page break and so its reported `page`
+  // index lines up with this order.
+  const imageParts = [];
+  for (const page of pages) {
+    let imageBytes;
+    try {
+      imageBytes = await fs.readFile(page.imagePath);
+    } catch {
+      throw new Error(`Could not read the uploaded image at "${page.imagePath}"`);
+    }
+    imageParts.push({
+      inlineData: { mimeType: mimeTypeFor(page.imagePath), data: imageBytes.toString("base64") },
+    });
   }
 
   const ai = new GoogleGenAI({ apiKey: config.apiKey });
-  const parts = [
-    { text: buildPrompt(sample) },
-    { inlineData: { mimeType: mimeTypeFor(sample.imagePath), data: imageBytes.toString("base64") } },
-  ];
+  const parts = [{ text: buildPrompt(sample) }, ...imageParts];
 
-  return callModelWithRetry(ai, parts, config);
+  return callModelWithRetry(ai, parts, config, pages.length);
 }
 
 // ---------------------------------------------------------------------------

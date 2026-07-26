@@ -10,25 +10,30 @@
 // end to end. If we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 // The fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
 export const ERROR_CATEGORIES = [
-  "phonological",
-  "orthographic",
-  "morphological",
-  "capitalisation",
-  "punctuation",
-  "unsure",
+  'phonological',
+  'orthographic',
+  'morphological',
+  'capitalisation',
+  'punctuation',
+  'unsure',
 ];
-const boxSchema = new mongoose.Schema({
-  x: {type: Number, required: true, min: 0, max: 1},
-  y: {type: Number, required: true, min: 0, max: 1},
-  z: {type: Number, required: true, min: 0, max: 1},
-  w: {type: Number, required: true, min: 0, max: 1},
-},
-  {_id: false}
+const boxSchema = new mongoose.Schema(
+  {
+    // Which page this box belongs to - a 0-based index into the sample's
+    // `pages` array, matching upload order. Without this, x/y/z/w alone are
+    // ambiguous the moment a sample has more than one page.
+    page: { type: Number, required: true, min: 0 },
+    x: { type: Number, required: true, min: 0, max: 1 },
+    y: { type: Number, required: true, min: 0, max: 1 },
+    z: { type: Number, required: true, min: 0, max: 1 },
+    w: { type: Number, required: true, min: 0, max: 1 },
+  },
+  { _id: false }
 );
 
 // The shape of one flagged error. This is a sub-schema: it describes the
@@ -41,12 +46,12 @@ const errorSchema = new mongoose.Schema(
 
     // The AI's best guess at the word the child meant. The educator can
     // correct this guess during review.
-    intended: { type: String, default: "" },
+    intended: { type: String, default: '' },
 
     category: {
       type: String,
       enum: ERROR_CATEGORIES, // "enum" = only these values are allowed
-      default: "unsure",
+      default: 'unsure',
     },
 
     // How confident the AI is in this category assignment (0-1). Errors
@@ -55,9 +60,9 @@ const errorSchema = new mongoose.Schema(
     // (fully confident) so manually-created errors aren't flagged uncertain.
     confidenceScore: { type: Number, min: 0, max: 1, default: 1 },
 
-    locationOnScan: {type: boxSchema, default: null},
+    locationOnScan: { type: boxSchema, default: null },
     // A short plain-language reason for the category, written by the AI.
-    note: { type: String, default: "" },
+    note: { type: String, default: '' },
 
     // The educator's human-in-the-loop control: true means "the AI flagged
     // this, but a person decided it is not actually an error". We keep
@@ -68,6 +73,16 @@ const errorSchema = new mongoose.Schema(
   { _id: false } // sub-documents don't need their own database ids
 );
 
+// One uploaded file ("page") of a sample. A single piece of work can span
+// several photographed/scanned pages, so the sample holds an array of these.
+const pageSchema = new mongoose.Schema(
+  {
+    imagePath: { type: String, required: true },
+    originalFilename: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const sampleSchema = new mongoose.Schema(
   {
     // A reference ("foreign key") to the Student who wrote this work.
@@ -75,32 +90,38 @@ const sampleSchema = new mongoose.Schema(
     // routes swaps the id for the full student document when we need it.
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+      ref: 'Student',
       required: true,
     },
     title: {
-      type: String, 
+      type: String,
       required: true,
     },
 
-    // Where the uploaded image lives on disk. We store the PATH, not the
-    // image bytes - files belong on the filesystem, not in the database.
-    imagePath: { type: String, required: true },
-    originalFilename: { type: String, default: "" },
+    // The uploaded images, one entry per file/page, in upload order. We
+    // store the PATH, not the image bytes - files belong on the filesystem,
+    // not in the database. A sample must have at least one page.
+    pages: {
+      type: [pageSchema],
+      validate: {
+        validator: (pages) => pages.length > 0,
+        message: 'A sample needs at least one uploaded file',
+      },
+    },
 
     // EDIT_DIAGRAM tasks have one known correct answer; NARRATIVE writing
     // does not. This matters because closed tasks can give the AI an
     // answer key as reading context.
     taskType: {
       type: String,
-      enum: ["ESSAY", "LONG_ANSWER", "SHORT_ANSWER"],
+      enum: ['ESSAY', 'LONG_ANSWER', 'SHORT_ANSWER'],
       required: true,
     },
 
     // For closed tasks only: the exercise's correct text. Passed to Gemini
     // purely to help it read unclear handwriting - never to correct the
     // child's writing toward it.
-    answerKey: { type: String, default: "" },
+    answerKey: { type: String, default: '' },
 
     // How far through the flow this sample is:
     //   UPLOADED  - image saved, AI has not looked at it yet
@@ -109,21 +130,21 @@ const sampleSchema = new mongoose.Schema(
     //   FAILED    - the AI could not produce a report; see analysisError
     status: {
       type: String,
-      enum: ["UPLOADED", "ANALYSED", "REVIEWED", "FAILED"],
-      default: "UPLOADED",
+      enum: ['UPLOADED', 'ANALYSED', 'REVIEWED', 'FAILED'],
+      default: 'UPLOADED',
     },
 
     // Human-readable reason analysis failed (e.g. unreadable file, AI
     // timeout). Only meaningful when status is FAILED; empty otherwise.
     // Never a raw stack trace - the educator reads this directly.
-    analysisError: { type: String, default: "" },
+    analysisError: { type: String, default: '' },
 
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
 
     // Anything the AI could not read on the page, in its own words.
     // "none" or empty means everything was legible.
-    illegibleNote: { type: String, default: "" },
+    illegibleNote: { type: String, default: '' },
   },
   {
     // timestamps: true tells Mongoose to maintain createdAt and updatedAt
@@ -134,7 +155,17 @@ const sampleSchema = new mongoose.Schema(
     // validation errors). Our usage - a plain data array we read and write
     // whole - is safe, so we acknowledge the warning and turn it off.
     suppressReservedKeysWarning: true,
+
+    // pages[].imagePath is a filesystem path - it must never leave the
+    // server in a JSON response. Strip it here so every route gets this for
+    // free instead of everyone remembering to do it by hand.
+    toJSON: {
+      transform: (_doc, ret) => {
+        ret.pages = ret.pages.map(({ imagePath, ...rest }) => rest);
+        return ret;
+      },
+    },
   }
 );
 
-export const Sample = mongoose.model("Sample", sampleSchema);
+export const Sample = mongoose.model('Sample', sampleSchema);
