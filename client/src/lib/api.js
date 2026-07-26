@@ -12,7 +12,12 @@
 // (and point VITE_API_URL at your server) to go live — no component changes.
 // ------------------------------------------------------------------
 
-import { mockStudents, mockSamplesByStudent } from './mockData.js';
+import {
+  mockStudents,
+  mockSamplesByStudent,
+  mockCreateSample,
+  mockGetSample,
+} from './mockData.js';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
@@ -65,4 +70,39 @@ export function getStudentSamples(studentId, { status } = {}) {
   }
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// POST /api/samples (multipart)  ->  202 + the created Sample
+// Doesn't go through request() - this needs a FormData body, and the
+// server's error body here is { title, message, stackTrace } (not the
+// { error: { message } } shape request() expects), so it's read directly.
+export async function uploadSample(studentId, files) {
+  if (USE_MOCKS) {
+    await settle(null, 400); // pretend network latency
+    return mockCreateSample(studentId, files);
+  }
+
+  const formData = new FormData();
+  formData.append('studentId', studentId);
+  for (const file of files) formData.append('images', file);
+
+  const res = await fetch(`${BASE}/samples`, { method: 'POST', body: formData });
+  const body = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const error = new Error(body?.message || `Upload failed (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
+
+  return body;
+}
+
+// GET /api/samples/:sampleId  ->  the polling target used while a sample
+// is being analysed.
+// Response shape: { sampleId, studentId, uploadedAt, analysisStatus,
+//                    imageCount, sampleContent?, failureReason? }
+export function getSample(sampleId) {
+  if (USE_MOCKS) return settle(mockGetSample(sampleId), 150);
+  return request(`/samples/${sampleId}`);
 }

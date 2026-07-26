@@ -61,3 +61,72 @@ export const mockSamplesByStudent = {
     },
   ],
 };
+
+// ------------------------------------------------------------------
+// Mock upload + polling, so the upload modal's states (2a-2d) and the
+// polling loop are demoable without the backend. Not persisted across a
+// reload - it's just in-memory state for this mock module.
+// ------------------------------------------------------------------
+
+const ACCEPTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
+const POLLS_UNTIL_ANALYSED = 2; // pretend the AI takes a couple of polls
+
+let mockSampleSeq = 900;
+const mockSamplesById = {};
+
+export function mockCreateSample(studentId, files) {
+  const badFile = files.find(
+    (file) => !ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
+  );
+  if (badFile) {
+    const error = new Error(
+      `"${badFile.name}" is not a supported file. Only JPG, PNG and PDF are accepted.`
+    );
+    error.status = 422;
+    throw error;
+  }
+
+  const sampleId = `smp_mock_${mockSampleSeq++}`;
+  const title = files[0].name.replace(/\.[^/.]+$/, '') || 'Untitled sample';
+  const uploadedAt = new Date().toISOString();
+
+  mockSamplesById[sampleId] = {
+    sampleId,
+    studentId,
+    uploadedAt,
+    analysisStatus: 'PROCESSING',
+    imageCount: files.length,
+    pollCount: 0,
+  };
+
+  // Show up in the profile's sample list right away, same as a real 202
+  // response would once the list is refetched.
+  mockSamplesByStudent[studentId] = [
+    { sampleId, title, uploadedAt, analysisStatus: 'PROCESSING', imageCount: files.length },
+    ...(mockSamplesByStudent[studentId] ?? []),
+  ];
+
+  return { sampleId, studentId, uploadedAt, analysisStatus: 'PROCESSING', imageCount: files.length };
+}
+
+export function mockGetSample(sampleId) {
+  const sample = mockSamplesById[sampleId];
+  if (!sample) return null;
+
+  sample.pollCount += 1;
+  if (sample.pollCount >= POLLS_UNTIL_ANALYSED && sample.analysisStatus === 'PROCESSING') {
+    sample.analysisStatus = 'COMPLETE';
+    const listEntry = mockSamplesByStudent[sample.studentId]?.find(
+      (s) => s.sampleId === sampleId
+    );
+    if (listEntry) listEntry.analysisStatus = 'COMPLETE';
+  }
+
+  return {
+    sampleId: sample.sampleId,
+    studentId: sample.studentId,
+    uploadedAt: sample.uploadedAt,
+    analysisStatus: sample.analysisStatus,
+    imageCount: sample.imageCount,
+  };
+}
