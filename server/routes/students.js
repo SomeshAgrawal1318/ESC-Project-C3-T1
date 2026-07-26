@@ -24,7 +24,7 @@ router.get('/:studentId/samples', async (req, res) => {
   }
 
   const filter = { student: studentId };
-  if (status) filter.analysisStatus = status;
+  if (status) filter.status = status;
 
   const samples = await Sample.find(filter).sort({ createdAt: -1 });
 
@@ -33,7 +33,7 @@ router.get('/:studentId/samples', async (req, res) => {
       sampleId: sample._id,
       title: sample.title,
       uploadedAt: sample.createdAt,
-      analysisStatus: sample.analysisStatus,
+      analysisStatus: sample.status,
       imageCount: sample.images.length,
     }))
   );

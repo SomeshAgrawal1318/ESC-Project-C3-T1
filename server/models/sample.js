@@ -111,18 +111,21 @@ const sampleSchema = new mongoose.Schema(
     // child's writing toward it.
     answerKey: { type: String, default: "" },
 
-    // How far through the flow this sample is. PENDING/PROCESSING are set
-    // by the upload step (this file); COMPLETE/FAILED are set by the
-    // analysis engine once it exists.
-    analysisStatus: {
+    // How far through the flow this sample is:
+    //   UPLOADED  - image saved, AI has not looked at it yet
+    //   ANALYSED  - the AI has flagged errors, awaiting human review
+    //   REVIEWED  - an educator has checked the errors against the scan
+    //   FAILED    - the AI could not produce a report; see analysisError
+    status: {
       type: String,
-      enum: ["PENDING", "PROCESSING", "COMPLETE", "FAILED"],
-      default: "PENDING",
+      enum: ["UPLOADED", "ANALYSED", "REVIEWED", "FAILED"],
+      default: "UPLOADED",
     },
 
-    // Set alongside analysisStatus = FAILED so the UI can show something
-    // better than a spinner that never stops. Empty otherwise.
-    failureReason: { type: String, default: "" },
+    // Human-readable reason analysis failed (e.g. unreadable file, AI
+    // timeout). Only meaningful when status is FAILED; empty otherwise.
+    // Never a raw stack trace - the educator reads this directly.
+    analysisError: { type: String, default: "" },
 
     // Text the AI extracts from the scan, once analysis has run. Empty
     // until then - nothing in this slice writes it.

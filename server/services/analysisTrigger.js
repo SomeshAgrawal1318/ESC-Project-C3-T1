@@ -6,8 +6,8 @@
 // of reopening the upload handler in sampleController.js.
 //
 // Once it exists, this is where analyse(sample) gets called after the 202
-// response has already gone out, and where analysisStatus eventually moves
-// from PROCESSING to COMPLETE or FAILED.
+// response has already gone out, and where status eventually moves from
+// UPLOADED to ANALYSED or FAILED.
 
 export function triggerAnalysis(sample) {
   // no-op until the analysis engine exists

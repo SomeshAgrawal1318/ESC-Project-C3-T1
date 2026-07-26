@@ -56,7 +56,7 @@ describe('POST /api/samples', () => {
       .attach('images', JPEG_BUFFER, { filename: 'page.jpg', contentType: 'image/jpeg' });
 
     expect(res.status).toBe(202);
-    expect(res.body.analysisStatus).toBe('PROCESSING');
+    expect(res.body.status).toBe('UPLOADED');
     expect(res.body.images).toHaveLength(1);
     expect(res.body.images[0].path).toBeUndefined(); // never leak the fs path
   });
@@ -146,7 +146,7 @@ describe('GET /api/samples/:sampleId', () => {
     expect(res.body).toMatchObject({
       sampleId: uploadRes.body._id,
       studentId,
-      analysisStatus: 'PROCESSING',
+      analysisStatus: 'UPLOADED',
       imageCount: 1,
     });
     expect(res.body.images).toBeUndefined();
@@ -164,14 +164,14 @@ describe('GET /api/samples/:sampleId', () => {
       .attach('images', JPEG_BUFFER, { filename: 'page.jpg', contentType: 'image/jpeg' });
 
     await Sample.findByIdAndUpdate(uploadRes.body._id, {
-      analysisStatus: 'FAILED',
-      failureReason: 'Gemini timed out after 3 retries',
+      status: 'FAILED',
+      analysisError: 'Gemini timed out after 3 retries',
     });
 
     const res = await request(app).get(`/api/samples/${uploadRes.body._id}`);
 
     expect(res.body.analysisStatus).toBe('FAILED');
-    expect(res.body.failureReason).toBe('Gemini timed out after 3 retries');
+    expect(res.body.analysisError).toBe('Gemini timed out after 3 retries');
   });
 });
 
@@ -210,17 +210,17 @@ describe('GET /api/students/:studentId/samples', () => {
       .field('studentId', studentId)
       .attach('images', JPEG_BUFFER, { filename: 'page.jpg', contentType: 'image/jpeg' });
 
-    await Sample.findByIdAndUpdate(uploadRes.body._id, { analysisStatus: 'COMPLETE' });
+    await Sample.findByIdAndUpdate(uploadRes.body._id, { status: 'ANALYSED' });
 
-    const stillProcessing = await request(app).get(
-      `/api/students/${studentId}/samples?status=PROCESSING`
+    const stillUploaded = await request(app).get(
+      `/api/students/${studentId}/samples?status=UPLOADED`
     );
-    const nowComplete = await request(app).get(
-      `/api/students/${studentId}/samples?status=COMPLETE`
+    const nowAnalysed = await request(app).get(
+      `/api/students/${studentId}/samples?status=ANALYSED`
     );
 
-    expect(stillProcessing.body).toHaveLength(0);
-    expect(nowComplete.body).toHaveLength(1);
+    expect(stillUploaded.body).toHaveLength(0);
+    expect(nowAnalysed.body).toHaveLength(1);
   });
 });
 

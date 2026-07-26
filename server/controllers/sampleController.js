@@ -109,11 +109,12 @@ export async function createSample(studentId, files) {
     });
   });
 
+  // status defaults to UPLOADED - nothing to set explicitly here, the
+  // analysis engine is what moves it on from there.
   const sample = await Sample.create({
     student: studentId,
     title: deriveTitle(files[0].originalname),
     images,
-    analysisStatus: "PROCESSING",
   });
 
   // Fire and forget - the 202 response has already gone out by the time

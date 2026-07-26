@@ -52,16 +52,18 @@ router.get('/:sampleId', async (req, res) => {
   }
 
   // The polling target - a summary, not the full document. sampleContent
-  // and failureReason are only included once they're actually meaningful.
+  // and analysisError are only included once they're actually meaningful.
+  // The JSON key stays "analysisStatus" even though the model field is
+  // "status" - that's the name the client side already reads it as.
   res.status(200).json({
     sampleId: sample._id,
     studentId: sample.student,
     uploadedAt: sample.createdAt,
-    analysisStatus: sample.analysisStatus,
+    analysisStatus: sample.status,
     imageCount: sample.images.length,
     ...(sample.sampleContent && { sampleContent: sample.sampleContent }),
-    ...(sample.analysisStatus === 'FAILED' && {
-      failureReason: sample.failureReason,
+    ...(sample.status === 'FAILED' && {
+      analysisError: sample.analysisError,
     }),
   });
 });
