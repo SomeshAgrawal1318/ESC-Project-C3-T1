@@ -26,9 +26,8 @@ router.get('/:sampleId/report', async (req, res) => {
     }
 });
 
-// GET /api/samples/:sampleId/image
-// temporary, merge with 2. Sample Upload & Ingestion
-router.get('/:sampleId/image', async (req, res) => {
+// GET /api/samples/:sampleId/images/:index
+router.get('/:sampleId/images/:index', async (req, res) => {
     try {
         const sample = await Sample.findById(req.params.sampleId);
         if (!sample) {
@@ -36,7 +35,14 @@ router.get('/:sampleId/image', async (req, res) => {
                 .status(constants.NOT_FOUND)
                 .json(reportController.errorEnvelope('SAMPLE_NOT_FOUND', `No sample found with id ${req.params.sampleId}`));
         }
-        const absolutePath = path.resolve(sample.imagePath);
+        const index = Number(req.params.index);
+        const page = sample.pages[index];
+        if (!page) {
+            return res
+                .status(constants.NOT_FOUND)
+                .json(reportController.errorEnvelope('PAGE_NOT_FOUND', `Sample has no page at index ${index}`));
+        }
+        const absolutePath = path.resolve(page.imagePath);
         if (!fs.existsSync(absolutePath)) {
             return res
                 .status(constants.NOT_FOUND)

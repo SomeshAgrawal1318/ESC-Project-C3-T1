@@ -71,6 +71,7 @@ export const mockReportsBySample = {
     studentId: 'stu_wei',
     title: 'Composition — "My School Holiday"',
     analysisStatus: 'ANALYSED',
+    pageCount: 1,
     generatedAt: '2026-07-12T09:16:40.000Z',
     statistics: {
       categoryCounts: {
@@ -180,6 +181,7 @@ export const mockReportsBySample = {
     studentId: 'stu_wei',
     title: 'Journal entry — 28 Jun',
     analysisStatus: 'REVIEWED',
+    pageCount: 1,
     generatedAt: '2026-06-28T14:41:10.000Z',
     statistics: {
       categoryCounts: {

@@ -15,6 +15,7 @@ export default function ErrorReportPage() {
   const navigate = useNavigate();
   const [state, setState] = useState({ status: 'loading' });
   const [selectedErrorId, setSelectedErrorId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Render-phase reset (same pattern as StudentProfilePage) so navigating
   // between two samples never flashes the previous report.
@@ -22,6 +23,7 @@ export default function ErrorReportPage() {
   if (loadedFor !== sampleId) {
     setLoadedFor(sampleId);
     setState({ status: 'loading' });
+    setCurrentPage(0);
   }
 
   useEffect(() => {
@@ -113,7 +115,10 @@ export default function ErrorReportPage() {
 
       <div className="report__split">
         <ScanViewer
-          imageUrl={getSampleImageUrl(report.sampleId)}
+          imageUrl={getSampleImageUrl(report.sampleId, currentPage)}
+          pageCount={report.pageCount ?? 0}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
           errors={report.detectedErrors}
           selectedErrorId={selectedErrorId}
           onSelect={setSelectedErrorId}

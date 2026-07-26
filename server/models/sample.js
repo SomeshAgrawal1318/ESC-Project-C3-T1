@@ -10,7 +10,7 @@
 // end to end. If we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 // The fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
@@ -72,6 +72,16 @@ const errorSchema = new mongoose.Schema(
   }
 );
 
+// One uploaded file ("page") of a sample. A single piece of work can span
+// several photographed/scanned pages, so the sample holds an array of these.
+const pageSchema = new mongoose.Schema(
+  {
+    imagePath: { type: String, required: true },
+    originalFilename: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const sampleSchema = new mongoose.Schema(
   {
     // A reference ("foreign key") to the Student who wrote this work.
@@ -87,10 +97,16 @@ const sampleSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Where the uploaded image lives on disk. We store the PATH, not the
-    // image bytes - files belong on the filesystem, not in the database.
-    imagePath: { type: String, required: true },
-    originalFilename: { type: String, default: "" },
+    // The uploaded images, one entry per file/page, in upload order. We
+    // store the PATH, not the image bytes - files belong on the filesystem,
+    // not in the database. A sample must have at least one page.
+    pages: {
+      type: [pageSchema],
+      validate: {
+        validator: (pages) => pages.length > 0,
+        message: 'A sample needs at least one uploaded file',
+      },
+    },
 
     // EDIT_DIAGRAM tasks have one known correct answer; NARRATIVE writing
     // does not. This matters because closed tasks can give the AI an

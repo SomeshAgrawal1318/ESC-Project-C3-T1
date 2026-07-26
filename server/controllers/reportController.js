@@ -80,16 +80,13 @@ async function getErrorReport(sampleId) {
     return {
         sampleId: sample._id.toString(),
         studentId: sample.student.toString(),
-        title: sampleTitle(sample),
+        title: sample.title,
         analysisStatus: sample.status, // UPLOADED | ANALYSED | REVIEWED - see src/lib/status.js on the client
         generatedAt: sample.updatedAt, // no separate SampleReport.generatedAt - reuse the sample's own timestamp
+        pageCount: sample.pages.length,
         statistics: buildStatistics(sample.errors),
         detectedErrors: sample.errors.map(serialiseError),
     };
-}
-
-function sampleTitle(sample) {
-    return sample.title || `${sample.taskType ?? "Writing Sample"}`;
 }
 
 export default {getErrorReport, errorEnvelope, NotFoundError};

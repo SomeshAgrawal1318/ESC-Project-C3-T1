@@ -87,7 +87,7 @@ export function getSampleReport(sampleId) {
 // Not a JSON endpoint - just builds the URL an <img> tag points at.
 // Returns null in mock mode; ScanPanel falls back to a neutral placeholder
 // rather than a broken image.
-export function getSampleImageUrl(sampleId) {
+export function getSampleImageUrl(sampleId, pageIndex=0) {
   if (USE_MOCKS) return null;
-  return `${BASE}/samples/${sampleId}/image`;
+  return `${BASE}/samples/${sampleId}/images/${pageIndex}`;
 }
