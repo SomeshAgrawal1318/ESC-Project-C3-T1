@@ -152,6 +152,27 @@ describe('GET /api/samples/:sampleId', () => {
     expect(res.body.images).toBeUndefined();
     expect(res.body.sampleContent).toBeUndefined();
   });
+
+  it('carries the failure reason once analysisStatus is FAILED', async () => {
+    // Nothing in this slice ever sets FAILED itself (that's the analysis
+    // engine's job), so this simulates the hand-off directly to prove the
+    // response shape holds up once it does.
+    const studentId = await createStudent();
+    const uploadRes = await request(app)
+      .post('/api/samples')
+      .field('studentId', studentId)
+      .attach('images', JPEG_BUFFER, { filename: 'page.jpg', contentType: 'image/jpeg' });
+
+    await Sample.findByIdAndUpdate(uploadRes.body._id, {
+      analysisStatus: 'FAILED',
+      failureReason: 'Gemini timed out after 3 retries',
+    });
+
+    const res = await request(app).get(`/api/samples/${uploadRes.body._id}`);
+
+    expect(res.body.analysisStatus).toBe('FAILED');
+    expect(res.body.failureReason).toBe('Gemini timed out after 3 retries');
+  });
 });
 
 describe('GET /api/students/:studentId/samples', () => {
@@ -180,6 +201,26 @@ describe('GET /api/students/:studentId/samples', () => {
       expect(summary.images).toBeUndefined();
       expect(summary.sampleContent).toBeUndefined();
     }
+  });
+
+  it('filters by ?status= when given', async () => {
+    const studentId = await createStudent();
+    const uploadRes = await request(app)
+      .post('/api/samples')
+      .field('studentId', studentId)
+      .attach('images', JPEG_BUFFER, { filename: 'page.jpg', contentType: 'image/jpeg' });
+
+    await Sample.findByIdAndUpdate(uploadRes.body._id, { analysisStatus: 'COMPLETE' });
+
+    const stillProcessing = await request(app).get(
+      `/api/students/${studentId}/samples?status=PROCESSING`
+    );
+    const nowComplete = await request(app).get(
+      `/api/students/${studentId}/samples?status=COMPLETE`
+    );
+
+    expect(stillProcessing.body).toHaveLength(0);
+    expect(nowComplete.body).toHaveLength(1);
   });
 });
 
