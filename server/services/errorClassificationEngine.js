@@ -358,24 +358,34 @@ export function describeFailure(err) {
 // resolves the sample to ANALYSED or FAILED - it never leaves a sample
 // stuck mid-analysis, even if Gemini errors out after every retry.
 export async function runAnalysis(sampleId) {
-  const sample = await Sample.findById(sampleId);
-  if (!sample) {
-    console.error(`runAnalysis: no sample found for id ${sampleId}`);
-    return;
-  }
-
+  // Outer guard: this runs fire-and-forget, so nothing is waiting to catch a
+  // rejection. Reading the sample or saving it can still fail (unreachable
+  // database, malformed id) and an unhandled rejection would take the whole
+  // server down - so the job logs and gives up quietly instead of throwing.
   try {
-    const { errors, illegibleNote } = await analyseSample(sample);
-    sample.errors = errors;
-    sample.illegibleNote = illegibleNote;
-    sample.analysisError = "";
-    sample.status = "ANALYSED";
-  } catch (err) {
-    sample.status = "FAILED";
-    sample.analysisError = describeFailure(err);
-  }
+    const sample = await Sample.findById(sampleId);
+    if (!sample) {
+      console.error(`runAnalysis: no sample found for id ${sampleId}`);
+      return;
+    }
 
-  await sample.save();
+    // Inner guard: an analysis that fails is a normal outcome, not a crash.
+    // It decides which status gets written, and the save below records it.
+    try {
+      const { errors, illegibleNote } = await analyseSample(sample);
+      sample.errors = errors;
+      sample.illegibleNote = illegibleNote;
+      sample.analysisError = "";
+      sample.status = "ANALYSED";
+    } catch (err) {
+      sample.status = "FAILED";
+      sample.analysisError = describeFailure(err);
+    }
+
+    await sample.save();
+  } catch (err) {
+    console.error(`runAnalysis: could not persist analysis for ${sampleId}:`, err);
+  }
 }
 
 // Not public API. Exposed only so the unit tests can drive the retry,

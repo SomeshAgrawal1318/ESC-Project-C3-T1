@@ -79,6 +79,14 @@ describe(
       }
     });
 
+    test("IT-03: a malformed sample id is swallowed, never an unhandled rejection", async () => {
+      // runAnalysis is called fire-and-forget after the upload response has
+      // already been sent, so nothing is there to catch a rejection. An
+      // unhandled rejection takes the whole server down in Node 15+, so this
+      // must resolve quietly no matter what the database does.
+      await assert.doesNotReject(() => runAnalysis("not-a-valid-object-id"));
+    });
+
     test("IT-02: an unreadable upload persists FAILED with a human-readable reason", async () => {
       const sample = await Sample.create({
         student: student._id,
