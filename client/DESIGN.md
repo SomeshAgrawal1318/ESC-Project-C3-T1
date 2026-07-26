@@ -46,9 +46,9 @@ Defined in `src/index.css` on `:root`. Use the CSS variables, never raw hex, in 
 | `--sage` | `#7B8F7A` | Accent: active-nav inset edge, hover borders, motif margin line |
 | `--sage-strong` | `#566B55` | Sage that passes text contrast on paper — eyebrows, icons on light |
 | `--mist` | `#D6D4CC` | Quiet rules |
-| `--paper` | `#F7F5EF` | Content-area background |
-| `--surface` | `#FFFFFF` | Card faces |
-| `--border` / `--border-strong` | `#E7E3D9` / `#D3CDBD` | Quiet vs emphasized edges |
+| `--paper` | `#EFE9DC` | Content-area background (warm parchment) |
+| `--surface` | `#FBF8F1` | Card faces |
+| `--border` / `--border-strong` | `#E0D8C8` / `#CFC6B2` | Quiet vs emphasized edges |
 | card border | `#d9d2c0` | The firm card edge (between border and border-strong) |
 | `--muted` | `#5C665E` | Secondary text |
 | `--done` / `--pending` / `--failed` | `#4F6B4E` / `#8A6314` / `#A23A26` | Status inks — **annotation color only, never a fill** |
@@ -64,9 +64,10 @@ Navy-shell (sidebar) counterparts — light-on-dark:
 --shell-active-text: #cdd8cc;
 ```
 
-Reading-comfort mode (`:root[data-comfort='on']`, toggled by `ComfortContext`) warms
-`--paper/--surface/--band-bg` and widens line-height/tracking. The navy sidebar is intentionally
-unaffected. Never hardcode a paper tone a comfort override can't reach — route it through a token.
+**The former "reading comfort" mode IS the theme** (owner call, July 2026): the warm parchment
+paper tones and the airier type metrics (line-height 1.9, tracking +0.02em) above are the one and
+only mode. The cooler off-white variant and the sidebar toggle were removed — do not reintroduce a
+theme switch. Never hardcode a paper tone — route it through a token.
 
 ## 4. Typography
 
@@ -76,7 +77,7 @@ Lexend variable (300–700), loaded via Google Fonts in `index.html`. Fallback `
 |---|---|
 | Display / page titles | 500, `clamp(28px, 3.6vw, 40px)`, line-height 1.05, letter-spacing −0.01em |
 | Section titles | 500, 21–22px |
-| Body | 400 (300 for supporting/muted lines), 16px, line-height 1.55 |
+| Body | 400 (300 for supporting/muted lines), 16px, line-height 1.9 |
 | **Eyebrow** | 600, 12px, letter-spacing +0.14em, UPPERCASE, color `--sage-strong` |
 | Status margin note | 600, 11px, letter-spacing +0.13em, UPPERCASE, status ink |
 | Emphasis | 500–600. Avoid 700 for UI chrome — it renders chunky in Lexend |
@@ -123,8 +124,10 @@ The component is `src/components/StatusPill.jsx` (rename to `StatusNote` when co
 
 ## 7. Ruled exercise-book motif
 
-Faint handwriting-practice baselines + one vertical sage margin line. **Allowed in exactly three
-places** — page-header band, empty state, sample thumbnails. Do not add a fourth without updating
+Faint handwriting-practice baselines + one vertical sage margin line. **Allowed in exactly four
+places** — page-header band, empty state, sample/file thumbnails, and the upload drop zone
+(added July 2026 with screens 2a/2b: the drop zone IS the "fresh page waiting for writing"
+pattern, reusing the empty-state ground and dashed border). Do not add a fifth without updating
 this doc.
 
 ```css
@@ -132,7 +135,7 @@ this doc.
 background:
   linear-gradient(0deg, rgba(255,255,255,0.55), rgba(255,255,255,0.55)),
   repeating-linear-gradient(180deg, transparent 0 30px, rgba(26,36,51,0.1) 30px 31px);
-background-color: var(--band-bg); /* #fbf9f3, comfort-mode aware */
+background-color: var(--band-bg); /* #f6f0e3 */
 /* sage margin line = absolutely positioned ::before, 2px wide,
    left: 56px on the band (content padding-left: 84px) */
 
@@ -149,8 +152,8 @@ writing", with the single primary action in it.
 
 - Shell: CSS grid `var(--sidebar-w) 1fr` (sidebar 248px), `min-height: 100svh`.
 - Sidebar: `linear-gradient(178deg, var(--ink) 0%, var(--ink-deep) 100%)`, sticky full-height;
-  order: brand (white-variant logo + wordmark) → comfort toggle → nav → therapist card pinned to
-  the bottom (`margin-top: auto`).
+  order: brand (white-variant logo + wordmark) → nav → therapist card pinned to the bottom
+  (`margin-top: auto`).
   - Active nav item: `background: var(--shell-active-bg); color: var(--shell-active-text);
     box-shadow: inset 2.5px 0 0 var(--sage);`
   - Focus rings on the dark shell need a light outline (`--shell-active-text`), not the default sage.
@@ -158,8 +161,8 @@ writing", with the single primary action in it.
   padding: clamp(22px, 4vw, 48px) clamp(18px, 4vw, 52px) 56px;` — this is what makes the app fit
   any monitor. Never remove the centering.
 - Breakpoints: `≤1024px` sidebar narrows (200px, tighter padding); `≤760px` shell collapses to a
-  single column — sidebar becomes a wrapping top bar (row direction, comfort toggle full-width
-  last, therapist pushed right), band loses its margin line and left padding.
+  single column — sidebar becomes a wrapping top bar (row direction, therapist pushed right),
+  band loses its margin line and left padding.
 
 ## 9. Page header pattern (every screen starts like this)
 
@@ -175,6 +178,24 @@ On the student profile the whole header sits on the ruled **band** (§7). On lis
 white surface, `#d9d2c0` border, 5px radius, 44px min-height, sage-strong search icon,
 placeholder "Search students by name…", filters the grid client-side as you type.
 
+**Form fields** (`.field` / `.field__label` / `.field__input`): the label reuses the
+status-note type style in `--sage-strong` (11px, 600, +0.13em caps); the input matches the
+search box exactly (surface, `#d9d2c0` border, 5px radius, 44px min-height, sage border on
+focus). Forms live on an inline white card, not a modal — a new sheet of paper above the
+content it adds to (see the add-student form on My students).
+
+**Upload flow (screens 2a–2d)** follows from that rule: the wireframes draw it as a modal, but
+it is implemented as a page (`/students/:id/upload`, `src/pages/UploadSamplePage.jsx`) on the
+student band header. State 2a is the card with the ruled drop zone (§7), chosen-file rows
+(60×50 bowl-corner thumbnails; images preview themselves, PDFs reuse the ruled thumbnail) and
+the `.field` inputs; state 2b swaps the card for a quiet centered panel with a sage spinner and
+the single exit action "Close — keep analysing in background". Progress is polled, never faked.
+State 2c (success) reuses the 2b panel with an outlined done-ink check circle (`.done-mark` —
+outline, never a fill) and two exits: "Back to profile" (secondary) and "Open error report"
+(primary). State 2d (unsupported file / failed upload) is not a separate screen: an inline
+`.upload-alert` — failed-ink border, mark and title on a plain surface card — appears above the
+drop zone and the flow loops back to 2a with the form intact.
+
 ## 10. Copy voice
 
 - Sentence case everywhere except eyebrows/status notes (which are structural caps).
@@ -188,7 +209,7 @@ placeholder "Search students by name…", filters the grid client-side as you ty
 
 | Concern | File |
 |---|---|
-| Tokens, reset, base type, comfort mode | `src/index.css` |
+| Tokens, reset, base type | `src/index.css` |
 | All component/page styles (flat BEM-ish classes) | `src/App.css` |
 | Shell (sidebar + routed outlet) | `src/App.jsx`, `src/components/Sidebar.jsx` |
 | Logo (brand + `variant="light"` for navy shell) | `src/components/Logo.jsx` |

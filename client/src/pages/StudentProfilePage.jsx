@@ -62,9 +62,8 @@ export default function StudentProfilePage() {
   const hasSamples = samples.length > 0;
   const firstName = student.name.split(' ')[0];
 
-  // Placeholder until the upload flow (screen 2, POST /api/samples) is built.
-  const handleUpload = () =>
-    alert('Upload flow (screen 2) is not built yet.');
+  // The upload flow (screens 2a/2b) lives on its own route.
+  const uploadTo = `/students/${studentId}/upload`;
 
   return (
     <div className="profile">
@@ -78,7 +77,7 @@ export default function StudentProfilePage() {
         </div>
 
         <div className="profile__actions">
-          <Button variant="primary" icon="upload" onClick={handleUpload}>
+          <Button variant="primary" icon="upload" to={uploadTo}>
             Upload writing sample
           </Button>
           <Button
@@ -121,7 +120,7 @@ export default function StudentProfilePage() {
           </p>
         </section>
       ) : (
-        <EmptyState firstName={firstName} onUpload={handleUpload} />
+        <EmptyState firstName={firstName} uploadTo={uploadTo} />
       )}
     </div>
   );
