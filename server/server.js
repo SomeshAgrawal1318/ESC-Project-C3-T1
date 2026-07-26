@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 dotenv.config();
 import connectDB from './config/dbConnection.js';
@@ -11,6 +12,7 @@ const port = process.env.PORT || 5000;
 const app = express();
 connectDB();
 
+app.use(cors());
 app.use(express.json());
 app.use('/api/samples', samples);
 app.use('/api/students', students);
