@@ -2,154 +2,133 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
+import {
+  getErrorTrendsByStudentName,
+  getStudent,
+} from '../lib/api.js';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const CHART_CATEGORIES = [
+  {
+    key: 'phonological',
+    label: 'Phonological',
+    marker: 'diamond',
+    className: 'trend-series--phonological',
+  },
+  {
+    key: 'orthographic',
+    label: 'Orthographic',
+    marker: 'circle',
+    className: 'trend-series--orthographic',
+  },
+  {
+    key: 'morphological',
+    label: 'Morphological',
+    marker: 'triangle',
+    className: 'trend-series--morphological',
+  },
+  {
+    key: 'capitalisation',
+    label: 'Capitalisation',
+    marker: 'square',
+    className: 'trend-series--capitalisation',
+  },
+  {
+    key: 'punctuation',
+    label: 'Punctuation',
+    marker: 'plus',
+    className: 'trend-series--punctuation',
+  },
+];
 
-function ErrorTrendsPage() {
+export default function ErrorTrendsPage() {
   const { studentId } = useParams();
-
-  const [trends, setTrends] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [state, setState] = useState({ status: 'loading' });
 
   useEffect(() => {
-  async function loadTrends() {
-    try {
-      console.log('Sending request to backend...');
+    let live = true;
 
-      const response = await fetch(
-        'http://localhost:5000/api/error-trend'
-      );
+    async function loadPage() {
+      try {
+        setState({ status: 'loading' });
 
-      console.log('Response status:', response.status);
+        // The existing student screens can continue using mockData.
+        // We only use the returned name to find this student's live MongoDB reports.
+        const student = await getStudent(studentId);
 
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
+        if (!student) {
+          if (live) setState({ status: 'notfound' });
+          return;
+        }
 
-      const data = await response.json();
+        const trends = await getErrorTrendsByStudentName(student.name);
+        const sortedTrends = [...trends].sort(
+          (first, second) => new Date(first.date) - new Date(second.date),
+        );
 
-      console.log('Received trend data:', data);
-
-      if (!Array.isArray(data)) {
-        throw new Error('Backend response is not an array');
-      }
-
-      const sortedData = [...data].sort(
-        (a, b) => new Date(a.date) - new Date(b.date)
-      );
-
-      setTrends(sortedData);
-    } catch (error) {
-      console.error('Failed to load error trends:', error);
-      setErrorMessage(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  loadTrends();
-}, []);
-
-  const summary = useMemo(() => {
-    if (trends.length === 0) {
-      return null;
-    }
-
-    const totalErrors = trends.reduce(
-      (total, trend) =>
-        total + Number(trend.totalErrors || 0),
-      0
-    );
-
-    const categoryCounts = {};
-
-    trends.forEach((trend) => {
-      const category = trend.commonErrorType || 'unsure';
-
-      categoryCounts[category] =
-        (categoryCounts[category] || 0) + 1;
-    });
-
-    const mostCommonCategory =
-      Object.entries(categoryCounts).sort(
-        (first, second) => second[1] - first[1]
-      )[0]?.[0] || 'unsure';
-
-    const latestSample = trends[trends.length - 1];
-    const previousSample = trends[trends.length - 2];
-
-    let progress = 'Not enough information';
-
-    if (previousSample) {
-      const latestErrors = Number(
-        latestSample.totalErrors || 0
-      );
-
-      const previousErrors = Number(
-        previousSample.totalErrors || 0
-      );
-
-      if (latestErrors < previousErrors) {
-        progress = 'Improving';
-      } else if (latestErrors > previousErrors) {
-        progress = 'Errors increased';
-      } else {
-        progress = 'No change';
+        if (live) {
+          setState({
+            status: 'ready',
+            student,
+            trends: sortedTrends,
+          });
+        }
+      } catch (error) {
+        if (live) {
+          setState({
+            status: 'error',
+            message: error.message,
+          });
+        }
       }
     }
 
-    return {
-      totalErrors,
-      mostCommonCategory,
-      progress,
-      studentName: trends[0]?.studentName || 'Student',
+    loadPage();
+
+    return () => {
+      live = false;
     };
-  }, [trends]);
+  }, [studentId]);
 
-  if (loading) {
+  if (state.status === 'loading') {
     return (
       <div className="feedback">
-        <h2 className="feedback__title">
-          Loading error trends…
-        </h2>
-
+        <h2 className="feedback__title">Loading error trends…</h2>
         <p className="feedback__text">
-          Retrieving the records from the database.
+          Retrieving the selected student&apos;s reports from MongoDB.
         </p>
       </div>
     );
   }
 
-  if (errorMessage) {
+  if (state.status === 'notfound') {
     return (
-      <div className="feedback feedback--error">
-        <h2 className="feedback__title">
-          Something went wrong
-        </h2>
-
-        <p className="feedback__text">{errorMessage}</p>
-      </div>
+      <Feedback
+        title="Student not found"
+        text="The selected student could not be found in the current caseload."
+      />
     );
   }
 
-  /*
-   * 4b: insufficient-data screen.
-   * Displayed when fewer than two records are returned.
-   */
+  if (state.status === 'error') {
+    return (
+      <Feedback
+        title="Couldn’t load error trends"
+        text={state.message}
+        tone="error"
+      />
+    );
+  }
+
+  const { student, trends } = state;
+
   if (trends.length < 2) {
     return (
       <div className="profile">
-        <section className="profile__head">
+        <header className="profile__head">
           <div className="profile__id">
-            <span className="eyebrow">
-              Error trends
-            </span>
-
-            <h1 className="profile__name">
-              {trends[0]?.studentName || 'Student'}
-            </h1>
+            <span className="eyebrow">Error trends</span>
+            <h1 className="profile__name">{student.name}</h1>
+            <span className="grade">{student.currentGrade}</span>
           </div>
 
           <div className="profile__actions">
@@ -161,346 +140,489 @@ function ErrorTrendsPage() {
               Back to student
             </Button>
           </div>
-        </section>
+        </header>
 
         <section className="empty">
-          <div
-            className="empty__mark"
-            aria-hidden="true"
-          >
+          <div className="empty__mark" aria-hidden="true">
             <Icon name="trends" size={42} />
           </div>
-
           <h2 className="empty__title">
             Not enough samples for a trend yet
           </h2>
-
           <p className="empty__text">
-            Trends require at least two analysed samples.
-            Upload and analyse another writing sample to see
-            how the student&apos;s errors change over time.
+            At least two analysed writing samples are needed before a trend can
+            be drawn.
           </p>
-
-          <Button
-            variant="primary"
-            icon="upload"
-            disabled
-            disabledHint="The upload page is not connected yet."
-          >
-            Upload writing sample
-          </Button>
         </section>
       </div>
     );
   }
 
-  /*
-   * 4a: populated trends screen.
-   * Displayed when at least two records are returned.
-   */
   return (
-    <div className="profile">
-      <section className="profile__head">
-        <div className="profile__id">
-          <span className="eyebrow">
-            Error trends
-          </span>
+    <PopulatedTrends
+      studentId={studentId}
+      student={student}
+      trends={trends}
+    />
+  );
+}
 
-          <h1 className="profile__name">
-            {summary.studentName}
-          </h1>
+function PopulatedTrends({ studentId, student, trends }) {
+  const samplePoints = useMemo(
+    () => trends.map(createSamplePoint),
+    [trends],
+  );
 
-          <span className="grade">
-            Errors across analysed samples
-          </span>
+  const summary = useMemo(
+    () => createSummary(samplePoints),
+    [samplePoints],
+  );
+
+  const displayedName = student.name || trends[0]?.studentName || 'Student';
+
+  return (
+    <div className="trend-page">
+      <header className="trend-header">
+        <Button
+          variant="secondary"
+          icon="chevronLeft"
+          to={`/students/${studentId}`}
+        >
+          {displayedName}
+        </Button>
+
+        <div className="trend-header__title">
+          <h1>Error trends</h1>
+          <p>Errors per category, across analysed samples in date order</p>
         </div>
 
-        <div className="profile__actions">
-          <Button
-            variant="secondary"
-            icon="chevronLeft"
-            to={`/students/${studentId}`}
-          >
-            Back
-          </Button>
+        <Button
+          variant="secondary"
+          icon="recommendations"
+          to={`/students/${studentId}/recommendations`}
+        >
+          View recommendations
+        </Button>
+      </header>
 
-          <Button
-            variant="secondary"
-            icon="recommendations"
-            to={`/students/${studentId}/recommendations`}
-          >
-            View recommendations
-          </Button>
-        </div>
-      </section>
-
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '14px',
-        }}
-      >
+      <section className="trend-summary" aria-label="Trend summary">
         <SummaryCard
           title="Samples analysed"
-          value={trends.length}
-          detail={`${formatDate(
-            trends[0].date
-          )} – ${formatDate(
-            trends[trends.length - 1].date
+          value={samplePoints.length}
+          detail={`${formatShortDate(samplePoints[0].date)} – ${formatDate(
+            samplePoints[samplePoints.length - 1].date,
           )}`}
         />
 
         <SummaryCard
-          title="Total errors"
-          value={summary.totalErrors}
-          detail="Across all analysed samples"
+          title="Most frequent category"
+          value={capitalise(summary.mostCommonCategory)}
+          valuePrefix="◆"
+          detail={`${summary.mostCommonCount} of ${summary.taggedErrorCount} tagged errors`}
         />
 
         <SummaryCard
-          title="Most common category"
-          value={capitalise(
-            summary.mostCommonCategory
-          )}
-          detail={summary.progress}
+          title="vs previous sample"
+          value={summary.progressLabel}
+          valuePrefix={summary.progressSymbol}
+          detail={`${summary.previousTotal} errors → ${summary.latestTotal} errors overall`}
         />
       </section>
 
-      <section className="samples">
-        <div className="samples__head">
-          <h2 className="samples__title">
-            Total errors over time
-          </h2>
-
-          <span className="samples__meta">
-            Earliest sample to latest sample
+      <section className="trend-filters" aria-label="Displayed samples">
+        <div className="trend-filter trend-filter--range">
+          <span className="trend-filter__label">Date range</span>
+          <span className="trend-range-control">
+            Last 3 months <span aria-hidden="true">⌄</span>
           </span>
         </div>
 
-        <SimpleTrendChart trends={trends} />
+        <div className="trend-filter trend-filter--samples">
+          <span className="trend-filter__label">Samples included</span>
+          <div className="trend-filter__chips">
+            {samplePoints.map((sample) => (
+              <span
+                className="trend-sample-chip trend-sample-chip--selected"
+                key={sample._id || sample.date}
+              >
+                <span aria-hidden="true">☑</span>
+                {formatShortDate(sample.date)}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="samples">
-        <div className="samples__head">
-          <h2 className="samples__title">
-            Error breakdown
-          </h2>
-
-          <span className="samples__meta">
-            Data received from MongoDB
-          </span>
-        </div>
-
-        <div className="samples__list">
-          {trends.map((trend) => (
-            <article
-              className="sample-row sample-row--ready"
-              key={trend._id || trend.date}
-            >
-              <span
-                className="sample-row__thumb"
-                aria-hidden="true"
-              >
-                <Icon name="trends" size={22} />
-
-                <span className="sample-row__count">
-                  {trend.totalErrors}
-                </span>
-              </span>
-
-              <span className="sample-row__body">
-                <span className="sample-row__title">
-                  {formatDate(trend.date)}
-                </span>
-
-                <span className="sample-row__date">
-                  Spelling: {trend.spellingErrors || 0}
-                  {' · '}
-                  Grammar: {trend.grammarErrors || 0}
-                  {' · '}
-                  Punctuation:{' '}
-                  {trend.punctuationErrors || 0}
-                </span>
-
-                <span className="sample-row__date">
-                  Common error:{' '}
-                  {capitalise(trend.commonErrorType)}
-
-                  {trend.commonErrorVariant
-                    ? ` — ${trend.commonErrorVariant}`
-                    : ''}
-                </span>
-              </span>
-            </article>
-          ))}
-        </div>
+      <section className="trend-chart-card">
+        <CategoryTrendChart samples={samplePoints} />
+        <p className="trend-chart-note">
+          Lines are labelled directly at their end — each category keeps its
+          symbol throughout the chart.
+        </p>
       </section>
     </div>
   );
 }
 
-function SummaryCard({ title, value, detail }) {
+function SummaryCard({ title, value, detail, valuePrefix = '' }) {
   return (
-    <article
-      style={{
-        padding: '18px',
-        border: '1px solid var(--card-border)',
-        borderRadius: 'var(--radius)',
-        background: 'var(--surface)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-    >
-      <p
-        style={{
-          color: 'var(--muted)',
-          fontSize: '13px',
-          marginBottom: '5px',
-        }}
-      >
-        {title}
-      </p>
-
-      <h2
-        style={{
-          fontFamily: 'var(--display)',
-          fontSize: '26px',
-          fontWeight: 500,
-          marginBottom: '4px',
-        }}
-      >
+    <article className="trend-summary-card">
+      <p className="trend-summary-card__title">{title}</p>
+      <h2 className="trend-summary-card__value">
+        {valuePrefix && (
+          <span className="trend-summary-card__symbol" aria-hidden="true">
+            {valuePrefix}
+          </span>
+        )}
         {value}
       </h2>
-
-      <p
-        style={{
-          color: 'var(--muted)',
-          fontSize: '13px',
-        }}
-      >
-        {detail}
-      </p>
+      <p className="trend-summary-card__detail">{detail}</p>
     </article>
   );
 }
 
-function SimpleTrendChart({ trends }) {
-  const width = 700;
-  const height = 230;
-  const padding = 38;
+function CategoryTrendChart({ samples }) {
+  const width = 1040;
+  const height = 390;
+  const margin = { top: 30, right: 205, bottom: 58, left: 66 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
 
-  const maximumErrors = Math.max(
+  const maximumCount = Math.max(
     1,
-    ...trends.map((trend) =>
-      Number(trend.totalErrors || 0)
-    )
+    ...samples.flatMap((sample) =>
+      CHART_CATEGORIES.map((category) => sample.counts[category.key] || 0),
+    ),
   );
 
-  function getXPosition(index) {
-    return (
-      padding +
-      (index / (trends.length - 1)) *
-        (width - padding * 2)
-    );
+  const yMaximum = Math.max(4, Math.ceil(maximumCount / 2) * 2);
+  const tickStep = yMaximum <= 5 ? 1 : 2;
+  const yTicks = [];
+
+  for (let value = 0; value <= yMaximum; value += tickStep) {
+    yTicks.push(value);
   }
 
-  function getYPosition(value) {
-    return (
-      height -
-      padding -
-      (Number(value) / maximumErrors) *
-        (height - padding * 2)
-    );
-  }
+  const getX = (index) =>
+    margin.left +
+    (index / Math.max(1, samples.length - 1)) * plotWidth;
 
-  const points = trends
-    .map(
-      (trend, index) =>
-        `${getXPosition(index)},${getYPosition(
-          trend.totalErrors
-        )}`
-    )
-    .join(' ');
+  const getY = (value) =>
+    margin.top + plotHeight - (Number(value) / yMaximum) * plotHeight;
+
+  const labelPositions = calculateLabelPositions(
+    CHART_CATEGORIES.map((category) => ({
+      key: category.key,
+      desiredY: getY(
+        samples[samples.length - 1].counts[category.key] || 0,
+      ),
+    })),
+    margin.top,
+    margin.top + plotHeight,
+  );
 
   return (
-    <div
-      style={{
-        padding: '18px',
-        overflowX: 'auto',
-        border: '1px solid var(--card-border)',
-        borderRadius: 'var(--radius)',
-        background: 'var(--surface)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-    >
+    <div className="trend-chart-scroll">
       <svg
+        className="trend-chart"
         viewBox={`0 0 ${width} ${height}`}
-        style={{
-          width: '100%',
-          minWidth: '550px',
-          display: 'block',
-        }}
         role="img"
-        aria-label="Total errors over time"
+        aria-label="Errors per category over time"
       >
-        <line
-          x1={padding}
-          y1={height - padding}
-          x2={width - padding}
-          y2={height - padding}
-          stroke="var(--border-strong)"
-        />
+        <text
+          className="trend-chart__axis-title"
+          x={18}
+          y={margin.top + plotHeight / 2}
+          transform={`rotate(-90 18 ${margin.top + plotHeight / 2})`}
+          textAnchor="middle"
+        >
+          errors tagged
+        </text>
+
+        {yTicks.map((tick) => {
+          const y = getY(tick);
+          return (
+            <g key={tick}>
+              <line
+                className="trend-chart__grid"
+                x1={margin.left}
+                y1={y}
+                x2={margin.left + plotWidth}
+                y2={y}
+              />
+              <text
+                className="trend-chart__tick"
+                x={margin.left - 13}
+                y={y + 4}
+                textAnchor="end"
+              >
+                {tick}
+              </text>
+            </g>
+          );
+        })}
 
         <line
-          x1={padding}
-          y1={padding}
-          x2={padding}
-          y2={height - padding}
-          stroke="var(--border-strong)"
+          className="trend-chart__axis"
+          x1={margin.left}
+          y1={margin.top}
+          x2={margin.left}
+          y2={margin.top + plotHeight}
+        />
+        <line
+          className="trend-chart__axis"
+          x1={margin.left}
+          y1={margin.top + plotHeight}
+          x2={margin.left + plotWidth}
+          y2={margin.top + plotHeight}
         />
 
-        <polyline
-          points={points}
-          fill="none"
-          stroke="var(--sage-strong)"
-          strokeWidth="3"
-        />
+        {CHART_CATEGORIES.map((category) => {
+          const points = samples.map((sample, index) => ({
+            x: getX(index),
+            y: getY(sample.counts[category.key] || 0),
+            value: sample.counts[category.key] || 0,
+            sample,
+          }));
 
-        {trends.map((trend, index) => (
-          <g key={trend._id || trend.date}>
-            <circle
-              cx={getXPosition(index)}
-              cy={getYPosition(trend.totalErrors)}
-              r="5"
-              fill="var(--surface)"
-              stroke="var(--sage-strong)"
-              strokeWidth="3"
-            />
+          const path = points
+            .map((point, index) =>
+              `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`,
+            )
+            .join(' ');
 
-            <text
-              x={getXPosition(index)}
-              y={
-                getYPosition(trend.totalErrors) - 12
-              }
-              textAnchor="middle"
-              fill="var(--ink)"
-              fontSize="12"
+          const lastPoint = points[points.length - 1];
+          const labelY = labelPositions[category.key];
+
+          return (
+            <g
+              className={`trend-series ${category.className}`}
+              key={category.key}
             >
-              {trend.totalErrors}
-            </text>
+              <path className="trend-series__line" d={path} />
 
-            <text
-              x={getXPosition(index)}
-              y={height - 12}
-              textAnchor="middle"
-              fill="var(--muted)"
-              fontSize="11"
-            >
-              {formatShortDate(trend.date)}
-            </text>
-          </g>
+              {points.map((point) => (
+                <g key={`${category.key}-${point.sample._id || point.sample.date}`}>
+                  <title>
+                    {`${formatDate(point.sample.date)} — ${category.label}: ${point.value}`}
+                  </title>
+                  <ChartMarker
+                    type={category.marker}
+                    x={point.x}
+                    y={point.y}
+                  />
+                </g>
+              ))}
+
+              <line
+                className="trend-series__label-guide"
+                x1={lastPoint.x + 8}
+                y1={lastPoint.y}
+                x2={lastPoint.x + 27}
+                y2={labelY}
+              />
+              <ChartMarker
+                type={category.marker}
+                x={lastPoint.x + 39}
+                y={labelY}
+                small
+              />
+              <text
+                className="trend-series__label"
+                x={lastPoint.x + 52}
+                y={labelY + 4}
+              >
+                {category.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {samples.map((sample, index) => (
+          <text
+            className="trend-chart__date"
+            x={getX(index)}
+            y={height - 18}
+            textAnchor="middle"
+            key={sample._id || sample.date}
+          >
+            {formatShortDate(sample.date)}
+          </text>
         ))}
       </svg>
+    </div>
+  );
+}
+
+function ChartMarker({ type, x, y, small = false }) {
+  const size = small ? 4 : 6;
+
+  if (type === 'diamond') {
+    return (
+      <polygon
+        className="trend-series__marker trend-series__marker--filled"
+        points={`${x},${y - size} ${x + size},${y} ${x},${
+          y + size
+        } ${x - size},${y}`}
+      />
+    );
+  }
+
+  if (type === 'triangle') {
+    return (
+      <polygon
+        className="trend-series__marker trend-series__marker--filled"
+        points={`${x},${y - size} ${x + size},${y + size} ${
+          x - size
+        },${y + size}`}
+      />
+    );
+  }
+
+  if (type === 'square') {
+    return (
+      <rect
+        className="trend-series__marker"
+        x={x - size}
+        y={y - size}
+        width={size * 2}
+        height={size * 2}
+      />
+    );
+  }
+
+  if (type === 'plus') {
+    return (
+      <g className="trend-series__marker trend-series__marker--plus">
+        <line x1={x - size} y1={y} x2={x + size} y2={y} />
+        <line x1={x} y1={y - size} x2={x} y2={y + size} />
+      </g>
+    );
+  }
+
+  return (
+    <circle
+      className="trend-series__marker"
+      cx={x}
+      cy={y}
+      r={size}
+    />
+  );
+}
+
+function createSamplePoint(trend) {
+  const counts = Object.fromEntries(
+    CHART_CATEGORIES.map((category) => [category.key, 0]),
+  );
+
+  for (const error of trend.errors || []) {
+    if (error.dismissed === true) continue;
+    if (Object.hasOwn(counts, error.category)) {
+      counts[error.category] += 1;
+    }
+  }
+
+  return {
+    ...trend,
+    counts,
+  };
+}
+
+function createSummary(samples) {
+  const totalsByCategory = Object.fromEntries(
+    CHART_CATEGORIES.map((category) => [category.key, 0]),
+  );
+
+  for (const sample of samples) {
+    for (const category of CHART_CATEGORIES) {
+      totalsByCategory[category.key] += sample.counts[category.key] || 0;
+    }
+  }
+
+  const [mostCommonCategory, mostCommonCount] = Object.entries(
+    totalsByCategory,
+  ).sort((first, second) => second[1] - first[1])[0];
+
+  const taggedErrorCount = Object.values(totalsByCategory).reduce(
+    (total, count) => total + count,
+    0,
+  );
+
+  const latestTotal = Number(samples[samples.length - 1].totalErrors || 0);
+  const previousTotal = Number(samples[samples.length - 2].totalErrors || 0);
+
+  if (latestTotal < previousTotal) {
+    return {
+      mostCommonCategory,
+      mostCommonCount,
+      taggedErrorCount,
+      latestTotal,
+      previousTotal,
+      progressLabel: 'Improving',
+      progressSymbol: '↘',
+    };
+  }
+
+  if (latestTotal > previousTotal) {
+    return {
+      mostCommonCategory,
+      mostCommonCount,
+      taggedErrorCount,
+      latestTotal,
+      previousTotal,
+      progressLabel: 'Errors increased',
+      progressSymbol: '↗',
+    };
+  }
+
+  return {
+    mostCommonCategory,
+    mostCommonCount,
+    taggedErrorCount,
+    latestTotal,
+    previousTotal,
+    progressLabel: 'No change',
+    progressSymbol: '→',
+  };
+}
+
+function calculateLabelPositions(labels, minimumY, maximumY) {
+  const minimumGap = 24;
+  const sorted = [...labels].sort((first, second) => first.desiredY - second.desiredY);
+
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (sorted[index].desiredY - sorted[index - 1].desiredY < minimumGap) {
+      sorted[index].desiredY = sorted[index - 1].desiredY + minimumGap;
+    }
+  }
+
+  const overflow = sorted[sorted.length - 1].desiredY - maximumY;
+  if (overflow > 0) {
+    sorted.forEach((label) => {
+      label.desiredY -= overflow;
+    });
+  }
+
+  const underflow = minimumY - sorted[0].desiredY;
+  if (underflow > 0) {
+    sorted.forEach((label) => {
+      label.desiredY += underflow;
+    });
+  }
+
+  return Object.fromEntries(
+    sorted.map((label) => [label.key, label.desiredY]),
+  );
+}
+
+function Feedback({ title, text, tone }) {
+  return (
+    <div className={`feedback${tone === 'error' ? ' feedback--error' : ''}`}>
+      <h2 className="feedback__title">{title}</h2>
+      <p className="feedback__text">{text}</p>
+      <Button variant="secondary" icon="chevronLeft" to="/">
+        Back to my students
+      </Button>
     </div>
   );
 }
@@ -508,9 +630,7 @@ function SimpleTrendChart({ trends }) {
 function formatDate(date) {
   const parsedDate = new Date(date);
 
-  if (Number.isNaN(parsedDate.getTime())) {
-    return 'Unknown date';
-  }
+  if (Number.isNaN(parsedDate.getTime())) return 'Unknown date';
 
   return new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
@@ -522,25 +642,15 @@ function formatDate(date) {
 function formatShortDate(date) {
   const parsedDate = new Date(date);
 
-  if (Number.isNaN(parsedDate.getTime())) {
-    return '—';
-  }
+  if (Number.isNaN(parsedDate.getTime())) return '—';
 
   return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
+    day: '2-digit',
     month: 'short',
   }).format(parsedDate);
 }
 
 function capitalise(value) {
-  if (!value) {
-    return 'Unsure';
-  }
-
-  return (
-    value.charAt(0).toUpperCase() +
-    value.slice(1)
-  );
+  if (!value) return 'Unsure';
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
-
-export default ErrorTrendsPage;
