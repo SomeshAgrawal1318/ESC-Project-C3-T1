@@ -128,6 +128,32 @@ export default function StyleguidePage() {
         </p>
       </Section>
 
+      <Section label="Form fields">
+        <div className="guide__row">
+          <label className="field">
+            <span className="field__label">Name</span>
+            <input
+              className="field__input"
+              type="text"
+              placeholder="e.g. Wei Jie Lim"
+            />
+          </label>
+          <label className="field">
+            <span className="field__label">Current grade</span>
+            <input
+              className="field__input"
+              type="text"
+              placeholder="e.g. Primary 4"
+            />
+          </label>
+        </div>
+        <p className="guide__note">
+          Label is the status-note type style in sage; the input matches the
+          search box (surface, card border, 5px radius, 44px min-height,
+          sage border on focus). Used by the add-student form.
+        </p>
+      </Section>
+
       <Section label="Sample rows">
         <div className="guide__row">
           {DEMO_SAMPLES.map((sample) => (

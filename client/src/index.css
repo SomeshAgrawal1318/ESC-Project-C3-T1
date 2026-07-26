@@ -11,10 +11,12 @@
   --sage: #7b8f7a; /* accent — logo bowl, highlights */
   --sage-strong: #566b55; /* sage that meets text contrast on white */
   --mist: #d6d4cc;
-  --paper: #f7f5ef; /* off-white app background */
-  --surface: #ffffff;
-  --border: #e7e3d9;
-  --border-strong: #d3cdbd;
+  /* Paper/surface/border are the former "reading comfort" values — the
+     warm tint was promoted to the one and only theme (owner call, Jul 2026). */
+  --paper: #efe9dc; /* warm parchment app background */
+  --surface: #fbf8f1;
+  --border: #e0d8c8;
+  --border-strong: #cfc6b2;
   --muted: #5c665e;
 
   /* Accent (sage) — nav highlight, washes */
@@ -31,8 +33,9 @@
   --shell-active-text: #cdd8cc;
 
   /* Ruled exercise-book motif — ONLY in: page-header band, empty state,
-     sample thumbnails (see client/DESIGN.md before adding a fourth spot) */
-  --band-bg: #fbf9f3;
+     sample/file thumbnails, upload drop zone (see client/DESIGN.md §7
+     before adding another spot) */
+  --band-bg: #f6f0e3;
   --rule-line: rgba(26, 36, 51, 0.1);
   --margin-line: rgba(123, 143, 122, 0.5);
 
@@ -47,8 +50,8 @@
   /* Typography — Lexend (brand face; tuned for reading proficiency) */
   --body: 'Lexend', 'Inter', system-ui, Arial, sans-serif;
   --display: 'Lexend', 'Inter', system-ui, Arial, sans-serif;
-  --line: 1.55;
-  --tracking: 0.01em;
+  --line: 1.9; /* tall, airy line height — part of the comfort theme */
+  --tracking: 0.02em;
 
   /* Cards must visibly separate from the paper: firm border + real shadow.
      (Hairline-only borders were rejected — see client/DESIGN.md §2.) */
@@ -79,18 +82,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-/* Reading-comfort mode: warmer paper, more air, wider tracking.
-   Toggled by ComfortContext writing data-comfort="on" onto <html>. */
-:root[data-comfort='on'] {
-  --paper: #efe9dc;
-  --surface: #fbf8f1;
-  --band-bg: #f6f0e3;
-  --border: #e0d8c8;
-  --border-strong: #cfc6b2;
-  --line: 1.9;
-  --tracking: 0.02em;
 }
 
 * {
