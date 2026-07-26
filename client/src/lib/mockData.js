@@ -94,7 +94,7 @@ export function mockCreateSample(studentId, files) {
     sampleId,
     studentId,
     uploadedAt,
-    analysisStatus: 'PROCESSING',
+    analysisStatus: 'UPLOADED',
     imageCount: files.length,
     pollCount: 0,
   };
@@ -102,11 +102,11 @@ export function mockCreateSample(studentId, files) {
   // Show up in the profile's sample list right away, same as a real 202
   // response would once the list is refetched.
   mockSamplesByStudent[studentId] = [
-    { sampleId, title, uploadedAt, analysisStatus: 'PROCESSING', imageCount: files.length },
+    { sampleId, title, uploadedAt, analysisStatus: 'UPLOADED', imageCount: files.length },
     ...(mockSamplesByStudent[studentId] ?? []),
   ];
 
-  return { sampleId, studentId, uploadedAt, analysisStatus: 'PROCESSING', imageCount: files.length };
+  return { sampleId, studentId, uploadedAt, analysisStatus: 'UPLOADED', imageCount: files.length };
 }
 
 export function mockGetSample(sampleId) {
@@ -114,12 +114,12 @@ export function mockGetSample(sampleId) {
   if (!sample) return null;
 
   sample.pollCount += 1;
-  if (sample.pollCount >= POLLS_UNTIL_ANALYSED && sample.analysisStatus === 'PROCESSING') {
-    sample.analysisStatus = 'COMPLETE';
+  if (sample.pollCount >= POLLS_UNTIL_ANALYSED && sample.analysisStatus === 'UPLOADED') {
+    sample.analysisStatus = 'ANALYSED';
     const listEntry = mockSamplesByStudent[sample.studentId]?.find(
       (s) => s.sampleId === sampleId
     );
-    if (listEntry) listEntry.analysisStatus = 'COMPLETE';
+    if (listEntry) listEntry.analysisStatus = 'ANALYSED';
   }
 
   return {

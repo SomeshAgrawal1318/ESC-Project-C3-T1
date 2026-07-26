@@ -70,7 +70,7 @@ describe('UploadModal', () => {
     expect(uploadSample).toHaveBeenCalledWith('stu_wei', [expect.any(File)]);
   });
 
-  it('2b -> 2c: moves to the success panel once polling reports COMPLETE', async () => {
+  it('2b -> 2c: moves to the success panel once polling reports complete', async () => {
     uploadSample.mockResolvedValue({ _id: 'smp_123' });
     useSamplePolling.mockReturnValue({ status: 'complete', sample: { sampleId: 'smp_123' } });
 

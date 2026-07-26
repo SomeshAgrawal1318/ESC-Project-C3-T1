@@ -3,11 +3,14 @@
 // Polls GET /api/samples/:sampleId every 2s until analysis finishes, or
 // gives up. Backs the upload modal's "analysing" state (2b).
 //
-// Stops on COMPLETE, on FAILED, or after MAX_ATTEMPTS with no answer - a
-// stuck sample must not spin the UI forever.
+// Stops once analysisStatus reads as "done" (via statusFor - handles
+// ANALYSED and REVIEWED both, not just one hardcoded value), on FAILED, or
+// after MAX_ATTEMPTS with no answer - a stuck sample must not spin the UI
+// forever.
 
 import { useEffect, useState } from 'react';
 import { getSample } from '../lib/api.js';
+import { statusFor } from '../lib/status.js';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_ATTEMPTS = 30; // ~1 minute of polling before giving up
@@ -44,10 +47,10 @@ export function useSamplePolling(sampleId) {
       }
       if (!live) return;
 
-      if (sample.analysisStatus === 'COMPLETE') {
-        setState({ status: 'complete', sample });
-      } else if (sample.analysisStatus === 'FAILED') {
+      if (sample.analysisStatus === 'FAILED') {
         setState({ status: 'failed', sample });
+      } else if (statusFor(sample.analysisStatus).ready) {
+        setState({ status: 'complete', sample });
       } else if (attempts >= MAX_ATTEMPTS) {
         setState({ status: 'timeout', sample });
       } else {

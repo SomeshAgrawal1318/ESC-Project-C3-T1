@@ -101,7 +101,7 @@ export async function uploadSample(studentId, files) {
 // GET /api/samples/:sampleId  ->  the polling target used while a sample
 // is being analysed.
 // Response shape: { sampleId, studentId, uploadedAt, analysisStatus,
-//                    imageCount, sampleContent?, failureReason? }
+//                    imageCount, sampleContent?, analysisError? }
 export function getSample(sampleId) {
   if (USE_MOCKS) return settle(mockGetSample(sampleId), 150);
   return request(`/samples/${sampleId}`);

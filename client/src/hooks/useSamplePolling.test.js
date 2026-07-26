@@ -18,10 +18,10 @@ afterEach(() => {
 });
 
 describe('useSamplePolling', () => {
-  it('stops polling once analysisStatus is COMPLETE', async () => {
+  it('stops polling once analysisStatus is ANALYSED', async () => {
     getSample
-      .mockResolvedValueOnce({ analysisStatus: 'PROCESSING' })
-      .mockResolvedValueOnce({ analysisStatus: 'COMPLETE' });
+      .mockResolvedValueOnce({ analysisStatus: 'UPLOADED' })
+      .mockResolvedValueOnce({ analysisStatus: 'ANALYSED' });
 
     const { result } = renderHook(() => useSamplePolling('smp_1'));
 
@@ -50,7 +50,7 @@ describe('useSamplePolling', () => {
   });
 
   it('gives up after the retry ceiling instead of polling forever', async () => {
-    getSample.mockResolvedValue({ analysisStatus: 'PROCESSING' });
+    getSample.mockResolvedValue({ analysisStatus: 'UPLOADED' });
 
     const { result } = renderHook(() => useSamplePolling('smp_3'));
 
@@ -64,7 +64,7 @@ describe('useSamplePolling', () => {
   });
 
   it('stops calling getSample after unmount - closing the modal must not cancel the server job, but it must stop watching it', async () => {
-    getSample.mockResolvedValue({ analysisStatus: 'PROCESSING' });
+    getSample.mockResolvedValue({ analysisStatus: 'UPLOADED' });
 
     const { unmount } = renderHook(() => useSamplePolling('smp_4'));
     await vi.waitFor(() => expect(getSample).toHaveBeenCalledTimes(1));
