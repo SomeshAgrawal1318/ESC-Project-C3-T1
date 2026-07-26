@@ -1,16 +1,16 @@
 // models/Sample.js
 // -----------------
 // The Sample collection - the heart of the data model. One document per
-// uploaded piece of student work, holding everything about it: the image,
-// what kind of task it was, how far through the flow it is, and the errors
-// the AI found (after the educator's review).
+// uploaded piece of student work, holding everything about it: the scanned
+// image(s), what kind of task it was, how far through the analysis flow it
+// is, and the errors the AI found (after the educator's review).
 //
 // The errors live INSIDE the sample document ("embedded") rather than in
 // their own collection, because this module always works with one sample
 // end to end. If we later need cross-student analytics ("show me every
 // phonological error in Band A"), errors could move to their own collection.
 
-import mongoose, { Mongoose } from "mongoose";
+import mongoose from "mongoose";
 
 // The fixed vocabulary of error categories, used everywhere in the app.
 // "unsure" is the AI's honest fallback when it cannot confidently pick one.
@@ -22,7 +22,7 @@ export const ERROR_CATEGORIES = [
   "punctuation",
   "unsure",
 ];
-const boxSchema = new Mongoose.Schema({
+const boxSchema = new mongoose.Schema({
   x: {type: Number, required: true, min: 0, max: 1},
   y: {type: Number, required: true, min: 0, max: 1},
   z: {type: Number, required: true, min: 0, max: 1},
@@ -76,18 +76,34 @@ const sampleSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Where the uploaded image lives on disk. We store the PATH, not the
-    // image bytes - files belong on the filesystem, not in the database.
-    imagePath: { type: String, required: true },
-    originalFilename: { type: String, default: "" },
+    // A sample can be several scanned pages (e.g. a multi-page PDF), so this
+    // is an array, not one path. mimeType is stored per image so the image
+    // route can set the right Content-Type without re-reading the file.
+    // The path is a filesystem path, never image bytes, and must never be
+    // sent back in a JSON response.
+    images: {
+      type: [
+        {
+          path: { type: String, required: true },
+          originalFilename: { type: String, default: "" },
+          mimeType: { type: String, required: true },
+        },
+      ],
+      required: true,
+      validate: {
+        validator: (arr) => arr.length > 0,
+        message: "A sample needs at least one image",
+      },
+    },
 
     // EDIT_DIAGRAM tasks have one known correct answer; NARRATIVE writing
     // does not. This matters because closed tasks can give the AI an
-    // answer key as reading context.
+    // answer key as reading context. Not collected on upload right now (no
+    // task-type picker in the upload modal), so it defaults to ESSAY.
     taskType: {
       type: String,
       enum: ["ESSAY", "LONG_ANSWER", "SHORT_ANSWER"],
-      required: true,
+      default: "ESSAY",
     },
 
     // For closed tasks only: the exercise's correct text. Passed to Gemini
@@ -95,15 +111,22 @@ const sampleSchema = new mongoose.Schema(
     // child's writing toward it.
     answerKey: { type: String, default: "" },
 
-    // How far through the flow this sample is:
-    //   UPLOADED  - image saved, AI has not looked at it yet
-    //   ANALYSED  - the AI has flagged errors, awaiting human review
-    //   REVIEWED  - an educator has checked the errors against the scan
-    status: {
+    // How far through the flow this sample is. PENDING/PROCESSING are set
+    // by the upload step (this file); COMPLETE/FAILED are set by the
+    // analysis engine once it exists.
+    analysisStatus: {
       type: String,
-      enum: ["UPLOADED", "ANALYSED", "REVIEWED"],
-      default: "UPLOADED",
+      enum: ["PENDING", "PROCESSING", "COMPLETE", "FAILED"],
+      default: "PENDING",
     },
+
+    // Set alongside analysisStatus = FAILED so the UI can show something
+    // better than a spinner that never stops. Empty otherwise.
+    failureReason: { type: String, default: "" },
+
+    // Text the AI extracts from the scan, once analysis has run. Empty
+    // until then - nothing in this slice writes it.
+    sampleContent: { type: String, default: "" },
 
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
@@ -121,6 +144,16 @@ const sampleSchema = new mongoose.Schema(
     // validation errors). Our usage - a plain data array we read and write
     // whole - is safe, so we acknowledge the warning and turn it off.
     suppressReservedKeysWarning: true,
+
+    // images[].path is a filesystem path - it must never leave the server
+    // in a JSON response. Strip it here so every route gets this for free
+    // instead of everyone remembering to do it by hand.
+    toJSON: {
+      transform: (_doc, ret) => {
+        ret.images = ret.images.map(({ path, ...rest }) => rest);
+        return ret;
+      },
+    },
   }
 );
 
