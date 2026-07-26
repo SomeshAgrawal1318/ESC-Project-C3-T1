@@ -10,10 +10,15 @@ import { getStudent, getStudentSamples } from '../lib/api.js';
 import Button from '../components/Button.jsx';
 import SampleRow from '../components/SampleRow.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import UploadModal from '../components/UploadModal.jsx';
 
 export default function StudentProfilePage() {
   const { studentId } = useParams();
   const [state, setState] = useState({ status: 'loading' });
+  const [showUpload, setShowUpload] = useState(false);
+  // Bumping this re-runs the fetch below without resetting to the loading
+  // skeleton, so a freshly uploaded sample appears in place.
+  const [refreshCount, setRefreshCount] = useState(0);
 
   // Reset to the skeleton the moment the student changes (render-phase reset,
   // React's documented pattern) so switching students never flashes stale data.
@@ -35,7 +40,7 @@ export default function StudentProfilePage() {
     return () => {
       live = false;
     };
-  }, [studentId]);
+  }, [studentId, refreshCount]);
 
   if (state.status === 'loading') return <ProfileSkeleton />;
 
@@ -62,9 +67,7 @@ export default function StudentProfilePage() {
   const hasSamples = samples.length > 0;
   const firstName = student.name.split(' ')[0];
 
-  // Placeholder until the upload flow (screen 2, POST /api/samples) is built.
-  const handleUpload = () =>
-    alert('Upload flow (screen 2) is not built yet.');
+  const handleUpload = () => setShowUpload(true);
 
   return (
     <div className="profile">
@@ -122,6 +125,14 @@ export default function StudentProfilePage() {
         </section>
       ) : (
         <EmptyState firstName={firstName} onUpload={handleUpload} />
+      )}
+
+      {showUpload && (
+        <UploadModal
+          studentId={studentId}
+          onClose={() => setShowUpload(false)}
+          onUploaded={() => setRefreshCount((count) => count + 1)}
+        />
       )}
     </div>
   );
