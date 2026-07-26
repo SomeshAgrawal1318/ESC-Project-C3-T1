@@ -32,6 +32,13 @@ const errorHandler = (err, req, res, next) => {
         stackTrace: err.stack,
       });
       break;
+    case constants.UNPROCESSABLE_ENTITY:
+      res.json({
+        title: 'Unprocessable entity',
+        message: err.message,
+        stackTrace: err.stack,
+      });
+      break;
     case constants.INTERNAL_SERVER_ERROR:
       res.json({
         title: 'Internal server error',
