@@ -5,7 +5,7 @@
 import Icon from './Icon.jsx';
 import Button from './Button.jsx';
 
-export default function EmptyState({ firstName, onUpload }) {
+export default function EmptyState({ firstName, uploadTo }) {
   return (
     <div className="empty">
       <div className="empty__mark" aria-hidden="true">
@@ -17,7 +17,7 @@ export default function EmptyState({ firstName, onUpload }) {
         patterns. Trends and recommendations unlock after the first sample is
         analysed.
       </p>
-      <Button variant="primary" icon="upload" onClick={onUpload}>
+      <Button variant="primary" icon="upload" to={uploadTo}>
         Upload the first sample
       </Button>
     </div>

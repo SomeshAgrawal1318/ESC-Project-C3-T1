@@ -1,68 +1,105 @@
 // ------------------------------------------------------------------
 // The single seam between the UI and the backend.
 //
-// Every function here maps 1:1 to a route in server/paths.txt, so when
-// you build the Express endpoints the client already speaks their shape.
+// Every function here maps to a route in server/routes/, so the pages
+// never touch fetch() or URLs themselves.
 //
-//   VITE_API_URL   base origin for the API (default "/api", per paths.txt)
-//   VITE_USE_MOCKS "false" to hit the real backend; anything else = mocks
+//   VITE_API_URL   base origin for the API (default "/api")
 //
-// While the backend does not exist yet, USE_MOCKS defaults to true and the
-// screens run entirely off src/lib/mockData.js. Flip VITE_USE_MOCKS=false
-// (and point VITE_API_URL at your server) to go live — no component changes.
+// Students AND samples routes are live now — the old mockData.js is gone.
 // ------------------------------------------------------------------
 
-import { mockStudents, mockSamplesByStudent } from './mockData.js';
-
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
-const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
 
-// Small artificial delay so loading states are exercised in mock mode.
-const settle = (value, ms = 250) =>
-  new Promise((resolve) => setTimeout(() => resolve(value), ms));
-
-async function request(path) {
+async function request(path, { method = 'GET', body } = {}) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { Accept: 'application/json' },
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body !== undefined && { 'Content-Type': 'application/json' }),
+    },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
   });
   if (!res.ok) {
     let detail;
     try {
-      detail = (await res.json())?.error?.message;
+      // errorHandler responds with { title, message, stackTrace }
+      detail = (await res.json())?.message;
     } catch {
       /* body was not JSON */
     }
-    throw new Error(detail || `Request failed (${res.status})`);
+    const error = new Error(detail || `Request failed (${res.status})`);
+    error.status = res.status;
+    throw error;
   }
   return res.json();
 }
 
+// The server returns raw Mongoose docs keyed by `_id`; the UI keys off `studentId`.
+const toClientStudent = (s) => s && { studentId: s._id, name: s.name, currentGrade: s.currentGrade };
+
 // GET /api/students  ->  Student[]
 export function getStudents() {
-  if (USE_MOCKS) return settle(mockStudents);
-  return request('/students');
+  return request('/students').then((list) => list.map(toClientStudent));
 }
 
 // GET /api/students/:studentId  ->  { studentId, name, currentGrade }
+// Resolves to null on 404 so the profile page can show its "not found"
+// screen instead of a generic error.
 export function getStudent(studentId) {
-  if (USE_MOCKS) {
-    const student = mockStudents.find((s) => s.studentId === studentId);
-    return settle(student ?? null);
-  }
-  return request(`/students/${studentId}`);
+  return request(`/students/${studentId}`)
+    .then(toClientStudent)
+    .catch((err) => {
+      if (err.status === 404) return null;
+      throw err;
+    });
 }
 
-// GET /api/students/:studentId/samples?status=  ->  Sample summaries
-// Summary shape used by the profile list:
-//   { sampleId, title, uploadedAt, analysisStatus, imageCount }
-// NOTE for the backend: paths.txt's summary omits `title`, but the Sample
-// model has it and the list needs it — include `title` in this response.
+// POST /api/students  { name, currentGrade }  ->  created student
+export function createStudent({ name, currentGrade }) {
+  return request('/students', { method: 'POST', body: { name, currentGrade } }).then(
+    toClientStudent,
+  );
+}
+
+// GET /api/students/:studentId/samples?status=  ->  sample summaries,
+// newest first. The server already sends the client shape:
+//   { sampleId, title, uploadedAt, analysisStatus, imageCount, taskType }
 export function getStudentSamples(studentId, { status } = {}) {
-  if (USE_MOCKS) {
-    let list = mockSamplesByStudent[studentId] ?? [];
-    if (status) list = list.filter((s) => s.analysisStatus === status);
-    return settle(list);
-  }
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// GET /api/samples/:sampleId  ->  one sample summary.
+// The upload page polls this to notice UPLOADED -> ANALYSED.
+export function getSample(sampleId) {
+  return request(`/samples/${sampleId}`);
+}
+
+// POST /api/samples/:studentId  ->  the created sample summary.
+// Multipart, not JSON: the files go under the field "samples" (they all
+// become pages of ONE sample) with title/taskType alongside. We build the
+// FormData here so pages stay fetch-free; note we must NOT set a
+// Content-Type header — the browser writes the multipart boundary itself.
+export function uploadSample(studentId, { title, taskType, files }) {
+  const form = new FormData();
+  form.append('title', title);
+  form.append('taskType', taskType);
+  for (const file of files) {
+    form.append('samples', file);
+  }
+  return fetch(`${BASE}/samples/${studentId}`, { method: 'POST', body: form }).then(
+    async (res) => {
+      if (!res.ok) {
+        let detail;
+        try {
+          detail = (await res.json())?.message;
+        } catch {
+          /* body was not JSON */
+        }
+        throw new Error(detail || `Upload failed (${res.status})`);
+      }
+      return res.json();
+    },
+  );
 }
