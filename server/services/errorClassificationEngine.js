@@ -44,7 +44,9 @@ export function isUncertain(detectedError, threshold = getConfidenceThreshold())
   return detectedError.confidenceScore < threshold;
 }
 
-class TimeoutError extends Error {}
+// Exported so callers can tell a timed-out analysis apart from other
+// failures (see describeFailure below).
+export class TimeoutError extends Error {}
 
 function readConfig() {
   const apiKey = process.env.GEMINI_API_KEY || "";
@@ -373,6 +375,11 @@ export async function runAnalysis(sampleId) {
 
   await sample.save();
 }
+
+// Not public API. Exposed only so the unit tests can drive the retry,
+// timeout and prompt-construction logic with a stub client, instead of
+// against a live API call. Do not import these from application code.
+export const __testing = { callModelWithRetry, buildPrompt, mimeTypeFor };
 
 const ErrorClassificationEngine = { analyse: analyseSample };
 export default ErrorClassificationEngine;

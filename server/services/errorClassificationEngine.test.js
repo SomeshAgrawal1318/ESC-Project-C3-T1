@@ -14,9 +14,15 @@ import {
   isUncertain,
   getConfidenceThreshold,
   describeFailure,
+  TimeoutError,
   CONFIDENCE_THRESHOLD_DEFAULT,
+  __testing,
 } from "./errorClassificationEngine.js";
 import { ERROR_CATEGORIES } from "../models/sample.js";
+
+// Internals that are not part of the module's public API - see the
+// __testing export in errorClassificationEngine.js.
+const { callModelWithRetry, buildPrompt, mimeTypeFor } = __testing;
 
 describe("analyseSample (mock mode)", () => {
   test("returns one error per fixed category with valid fields", async () => {
@@ -149,5 +155,168 @@ describe("describeFailure", () => {
   test("explains a missing API key", () => {
     const err = new Error("GEMINI_API_KEY is not configured");
     assert.match(describeFailure(err), /GEMINI_API_KEY/);
+  });
+
+  test("explains a timeout without leaking internal timing detail", () => {
+    const message = describeFailure(new TimeoutError("Gemini request timed out after 30000ms"));
+    assert.match(message, /timed out/i);
+    assert.ok(!message.includes("30000"), "raw timeout value should not reach the educator");
+  });
+});
+
+describe("mimeTypeFor", () => {
+  test("maps the supported extensions, ignoring case", () => {
+    assert.equal(mimeTypeFor("uploads/scan.png"), "image/png");
+    assert.equal(mimeTypeFor("uploads/scan.PNG"), "image/png");
+    assert.equal(mimeTypeFor("uploads/scan.jpg"), "image/jpeg");
+    assert.equal(mimeTypeFor("uploads/scan.jpeg"), "image/jpeg");
+    assert.equal(mimeTypeFor("uploads/scan.pdf"), "application/pdf");
+  });
+
+  test("rejects an unsupported file type", () => {
+    assert.throws(() => mimeTypeFor("uploads/scan.gif"), /Unsupported image type/);
+  });
+});
+
+describe("buildPrompt", () => {
+  test("lists every category the model is allowed to choose", () => {
+    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "" });
+    for (const category of ERROR_CATEGORIES) {
+      assert.ok(prompt.includes(category), `prompt is missing the "${category}" category`);
+    }
+  });
+
+  test("tells the model never to correct the child's spelling", () => {
+    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "" });
+    assert.match(prompt, /Do not silently correct/);
+  });
+
+  test("withholds the answer key on open-ended essays", () => {
+    const prompt = buildPrompt({ taskType: "ESSAY", answerKey: "The cat sat on the mat." });
+    assert.ok(
+      !prompt.includes("The cat sat on the mat."),
+      "an essay has no single correct answer, so the key must not be sent"
+    );
+  });
+
+  test("passes the answer key as reading help on closed tasks", () => {
+    const prompt = buildPrompt({ taskType: "SHORT_ANSWER", answerKey: "The cat sat on the mat." });
+    assert.ok(prompt.includes("The cat sat on the mat."));
+    assert.match(prompt, /help you read unclear handwriting/);
+  });
+
+  test("omits the answer-key section when no key is stored", () => {
+    const prompt = buildPrompt({ taskType: "SHORT_ANSWER", answerKey: "" });
+    assert.ok(!prompt.includes("help you read unclear handwriting"));
+  });
+});
+
+describe("callModelWithRetry", () => {
+  const validPayload = {
+    illegibleNote: "",
+    errors: [
+      {
+        written: "teh",
+        intended: "the",
+        category: "orthographic",
+        confidenceScore: 0.9,
+        note: "Transposed letters.",
+        locationOnScan: { x: 0.1, y: 0.1, z: 0.05, w: 0.05 },
+      },
+    ],
+  };
+
+  const reply = (payload) => ({ text: JSON.stringify(payload) });
+  const config = (maxRetries, timeoutMs = 1000) => ({
+    modelName: "test-model",
+    timeoutMs,
+    maxRetries,
+  });
+
+  // Stand-in for the Gemini client: one queued step per attempt, each either
+  // a response to return or an Error to throw.
+  function fakeModel(steps) {
+    const client = {
+      callCount: 0,
+      models: {
+        generateContent: async () => {
+          const step = steps[client.callCount];
+          client.callCount += 1;
+          if (step === undefined) throw new Error("fakeModel: called more times than queued");
+          if (step instanceof Error) throw step;
+          return step;
+        },
+      },
+    };
+    return client;
+  }
+
+  test("returns the validated result without retrying when the first call succeeds", async () => {
+    const ai = fakeModel([reply(validPayload)]);
+    const result = await callModelWithRetry(ai, [], config(2));
+
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 1);
+  });
+
+  test("retries after a failed call and returns the later success", async () => {
+    const ai = fakeModel([new Error("network reset"), reply(validPayload)]);
+    const result = await callModelWithRetry(ai, [], config(2));
+
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 2);
+  });
+
+  test("retries when the model returns text that is not JSON", async () => {
+    const ai = fakeModel([{ text: "Sure! Here are the errors I found:" }, reply(validPayload)]);
+    const result = await callModelWithRetry(ai, [], config(2));
+
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 2);
+  });
+
+  test("retries when the response is valid JSON but breaks the schema", async () => {
+    const offSchema = structuredClone(validPayload);
+    offSchema.errors[0].category = "not-a-real-category";
+    const ai = fakeModel([reply(offSchema), reply(validPayload)]);
+
+    const result = await callModelWithRetry(ai, [], config(2));
+
+    // Proves validation runs inside the retry loop: a schema breach is
+    // retried rather than persisted.
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 2);
+  });
+
+  test("gives up after maxRetries and rethrows the last error", async () => {
+    const ai = fakeModel([new Error("first failure"), new Error("final failure")]);
+
+    await assert.rejects(() => callModelWithRetry(ai, [], config(1)), /final failure/);
+    assert.equal(ai.callCount, 2, "one initial attempt plus one retry");
+  });
+
+  test("does not retry when maxRetries is zero", async () => {
+    const ai = fakeModel([new Error("only attempt")]);
+
+    await assert.rejects(() => callModelWithRetry(ai, [], config(0)), /only attempt/);
+    assert.equal(ai.callCount, 1);
+  });
+
+  test("times out a call that never comes back", async () => {
+    const stalled = {
+      callCount: 0,
+      models: {
+        generateContent: () => {
+          stalled.callCount += 1;
+          return new Promise(() => {}); // never settles
+        },
+      },
+    };
+
+    await assert.rejects(
+      () => callModelWithRetry(stalled, [], config(0, 50)),
+      (err) => err instanceof TimeoutError
+    );
+    assert.equal(stalled.callCount, 1);
   });
 });
