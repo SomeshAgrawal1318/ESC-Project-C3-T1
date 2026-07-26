@@ -39,6 +39,38 @@ const PATHS = {
       <path d="M21 21l-4.3-4.3" />
     </>
   ),
+  zoomIn: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+      <path d="M11 8v6M8 11h6" />
+    </>
+  ),
+  zoomOut: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+      <path d="M8 11h6" />
+    </>
+  ),
+  fit: (
+    <>
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3" />
+    </>
+  ),
+  check: <path d="M20 6L9 17l-5-5" />,
+  swap: (
+    <>
+      <path d="M7 4v13M7 17l-3-3M7 17l3-3" />
+      <path d="M17 20V7M17 7l3 3M17 7l-3 3" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+    </>
+  ),
+  close: <path d="M6 6l12 12M18 6L6 18" />,
 };
 
 export default function Icon({ name, size = 18, className }) {

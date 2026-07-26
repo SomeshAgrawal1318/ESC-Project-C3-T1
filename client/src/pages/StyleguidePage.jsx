@@ -7,6 +7,8 @@ import Button from '../components/Button.jsx';
 import StatusPill from '../components/StatusPill.jsx';
 import SampleRow from '../components/SampleRow.jsx';
 import Logo from '../components/Logo.jsx';
+import CategoryChip from '../components/CategoryChip.jsx';
+import ErrorCard from '../components/ErrorCard.jsx';
 
 // Display-only fixtures — nothing here touches the API.
 const DEMO_SAMPLES = [

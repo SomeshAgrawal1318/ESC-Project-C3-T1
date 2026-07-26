@@ -12,7 +12,7 @@
 // (and point VITE_API_URL at your server) to go live — no component changes.
 // ------------------------------------------------------------------
 
-import { mockStudents, mockSamplesByStudent } from './mockData.js';
+import { mockStudents, mockSamplesByStudent, mockReportsBySample } from './mockData.js';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
@@ -32,7 +32,9 @@ async function request(path) {
     } catch {
       /* body was not JSON */
     }
-    throw new Error(detail || `Request failed (${res.status})`);
+    const err = new Error(detail || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
@@ -65,4 +67,27 @@ export function getStudentSamples(studentId, { status } = {}) {
   }
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// GET /api.samples/:sampleId/report  ->  SampleReport
+export function getSampleReport(sampleId) {
+  if (USE_MOCKS) {
+    const report = mockReportsBySample[sampleId];
+    if (!report) {
+      const err = new Error(`This sample has not been analysed yet`);
+      err.status = 404;
+      return Promise.reject(err);
+    }
+    return settle(report);
+  }
+  return request(`/samples/${sampleId}/report`);
+}
+
+// GET /api/samples/:sampleId/image
+// Not a JSON endpoint - just builds the URL an <img> tag points at.
+// Returns null in mock mode; ScanPanel falls back to a neutral placeholder
+// rather than a broken image.
+export function getSampleImageUrl(sampleId) {
+  if (USE_MOCKS) return null;
+  return `${BASE}/samples/${sampleId}/image`;
 }

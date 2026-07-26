@@ -12,6 +12,7 @@ import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
+import ErrorReportPage from './pages/ErrorReportPage.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -31,7 +32,7 @@ createRoot(document.getElementById('root')).render(
             />
             <Route
               path="samples/:sampleId"
-              element={<Placeholder label="Error report" />}
+              element={<ErrorReportPage />}
             />
             {/* Living design-system reference for the team (see DESIGN.md) */}
             <Route path="styleguide" element={<StyleguidePage />} />

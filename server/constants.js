@@ -4,6 +4,8 @@ const constants = {
   FORBIDDEN: 403,
   UNAUTHORIZED: 401,
   INTERNAL_SERVER_ERROR: 500,
+  
+  ERROR_CONFIDENCE_THRESHOLD: 0.6,
 };
 
 export default constants;

@@ -22,11 +22,11 @@ export const ERROR_CATEGORIES = [
   "punctuation",
   "unsure",
 ];
-const boxSchema = new Mongoose.Schema({
+const boxSchema = new mongoose.Schema({
   x: {type: Number, required: true, min: 0, max: 1},
   y: {type: Number, required: true, min: 0, max: 1},
-  z: {type: Number, required: true, min: 0, max: 1},
-  w: {type: Number, required: true, min: 0, max: 1},
+  width: {type: Number, required: true, min: 0, max: 1},
+  height: {type: Number, required: true, min: 0, max: 1},
 },
   {_id: false}
 );
@@ -48,6 +48,9 @@ const errorSchema = new mongoose.Schema(
       enum: ERROR_CATEGORIES, // "enum" = only these values are allowed
       default: "unsure",
     },
+
+    confidenceScore: { type: Number, min: 0, max: 1, default: 1},
+
     locationOnScan: {type: boxSchema, default: null},
     // A short plain-language reason for the category, written by the AI.
     note: { type: String, default: "" },
@@ -57,8 +60,16 @@ const errorSchema = new mongoose.Schema(
     // dismissed errors instead of deleting them, so the decision is visible
     // and reversible.
     dismissed: { type: Boolean, default: false },
+
+    // 5. Error Correction & AUdit Trail
+    previousCategory: { type: String, enum: ERROR_CATEGORIES, default: null },
+    correctionNote: { type: String, default: "" },
+    correctedAt: { type: Date, default: null },
   },
-  { _id: false } // sub-documents don't need their own database ids
+  {
+    // Sub-documents get a real _id:
+    // the review screen needs a stable errorId to key cards/outlines by
+  }
 );
 
 const sampleSchema = new mongoose.Schema(
