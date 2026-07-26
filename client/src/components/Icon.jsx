@@ -39,6 +39,18 @@ const PATHS = {
       <path d="M21 21l-4.3-4.3" />
     </>
   ),
+  refresh: (
+    <>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+      <path d="M20 4v5h-5" />
+    </>
+  ),
+  alert: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5.5M12 16.4v.1" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 18, className }) {

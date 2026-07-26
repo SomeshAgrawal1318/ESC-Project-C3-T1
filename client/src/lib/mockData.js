@@ -40,6 +40,13 @@ export const mockSamplesByStudent = {
       imageCount: 1,
     },
     {
+      sampleId: 'smp_492',
+      title: 'Composition — "The Sports Day"',
+      uploadedAt: '2026-07-04T13:30:00.000Z',
+      analysisStatus: 'FAILED',
+      imageCount: 1,
+    },
+    {
       sampleId: 'smp_470',
       title: 'Composition — "My Best Friend"',
       uploadedAt: '2026-06-14T10:20:00.000Z',
@@ -61,3 +68,27 @@ export const mockSamplesByStudent = {
     },
   ],
 };
+
+// GET /api/samples/:sampleId carries a little more than the list summary:
+// the owning student (so a screen can link back to the profile) and, when
+// analysis failed, the reason the engine recorded. Written by the analysis
+// job — see server/services/errorClassificationEngine.js.
+const sampleFailureReasons = {
+  smp_492:
+    'The AI could not produce a usable error report for this sample. The scan may be too faint to read.',
+};
+
+export const mockSampleById = Object.fromEntries(
+  Object.entries(mockSamplesByStudent).flatMap(([studentId, samples]) =>
+    samples.map((sample) => [
+      sample.sampleId,
+      {
+        ...sample,
+        studentId,
+        studentName:
+          mockStudents.find((s) => s.studentId === studentId)?.name ?? '',
+        analysisError: sampleFailureReasons[sample.sampleId] ?? '',
+      },
+    ]),
+  ),
+);

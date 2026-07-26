@@ -348,7 +348,9 @@ export function describeFailure(err) {
   if (err instanceof Error && err.message === "GEMINI_API_KEY is not configured") {
     return "Analysis is not configured (missing GEMINI_API_KEY).";
   }
-  return "Analysis failed: the AI could not produce a usable error report for this sample.";
+  // Just the reason - the caller (UI, log line) supplies the "analysis
+  // failed" framing, so repeating it here reads twice on screen.
+  return "The AI could not produce a usable error report for this sample.";
 }
 
 // The background job. Call this after the 202 response for a sample upload

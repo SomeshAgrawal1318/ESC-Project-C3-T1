@@ -839,3 +839,102 @@
     display: none;
   }
 }
+
+/* ---- 12. Analysis states (wireframe 3c) -------------------------------- */
+/* Opening a sample whose analysis has not finished: a live spinner while the
+   job runs, or the reason it failed. Never an endless spinner. Plain card —
+   the ruled motif stays in its three approved homes (§7). */
+
+.analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.analysis__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 52px 28px 44px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-band);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Failed reads in the failure ink, with a matching wash behind the mark */
+.analysis__panel--failed .analysis__title {
+  color: var(--failed);
+}
+
+.analysis__spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--sage);
+  animation: analysis-spin 0.9s linear infinite;
+}
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.analysis__mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  color: var(--failed);
+  background: var(--failed-wash);
+}
+
+.analysis__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 23px;
+  line-height: 1.25;
+}
+
+.analysis__text {
+  /* Measure capped ~62 characters. Line-height floors at the team-wide 1.6
+     minimum but still rises with --line in reading-comfort mode. */
+  max-width: 58ch;
+  line-height: max(1.65, var(--line));
+  color: var(--muted);
+}
+
+.analysis__meta {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+
+.analysis__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.skel--panel {
+  height: 260px;
+}
+
+@media (max-width: 760px) {
+  .analysis__panel {
+    padding: 38px 18px 32px;
+  }
+  .analysis__actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .analysis__actions .btn {
+    justify-content: center;
+  }
+}

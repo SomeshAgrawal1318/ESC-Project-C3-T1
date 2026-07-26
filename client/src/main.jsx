@@ -10,6 +10,7 @@ import App from './App.jsx';
 import { ComfortProvider } from './context/ComfortContext.jsx';
 import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
+import SampleAnalysisPage from './pages/SampleAnalysisPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
 
@@ -29,10 +30,10 @@ createRoot(document.getElementById('root')).render(
               path="students/:studentId/recommendations"
               element={<Placeholder label="Recommendations" />}
             />
-            <Route
-              path="samples/:sampleId"
-              element={<Placeholder label="Error report" />}
-            />
+            {/* Opening a sample lands here first: it shows the analysis
+                pending / failed states (3c) and hands off to the error
+                report once analysis is done. */}
+            <Route path="samples/:sampleId" element={<SampleAnalysisPage />} />
             {/* Living design-system reference for the team (see DESIGN.md) */}
             <Route path="styleguide" element={<StyleguidePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

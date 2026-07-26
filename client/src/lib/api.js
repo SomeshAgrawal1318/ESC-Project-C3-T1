@@ -12,7 +12,11 @@
 // (and point VITE_API_URL at your server) to go live — no component changes.
 // ------------------------------------------------------------------
 
-import { mockStudents, mockSamplesByStudent } from './mockData.js';
+import {
+  mockStudents,
+  mockSamplesByStudent,
+  mockSampleById,
+} from './mockData.js';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false';
@@ -65,4 +69,16 @@ export function getStudentSamples(studentId, { status } = {}) {
   }
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// GET /api/samples/:sampleId  ->  one sample's detail. This is the polling
+// target after an upload, and what the analysis-status screen (3c) reads.
+// Shape: { sampleId, studentId, studentName, title, uploadedAt,
+//          analysisStatus, imageCount, analysisError }
+// NOTE for the backend: analysisError must be populated whenever
+// analysisStatus is FAILED — the screen shows it instead of a spinner that
+// never stops. It is a plain-language sentence, never a stack trace.
+export function getSample(sampleId) {
+  if (USE_MOCKS) return settle(mockSampleById[sampleId] ?? null);
+  return request(`/samples/${sampleId}`);
 }
