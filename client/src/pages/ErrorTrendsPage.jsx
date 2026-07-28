@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
 import {
-  getErrorTrendsByStudentName,
+  getStudentTrend,
   getStudent,
 } from '../lib/api.js';
 
@@ -60,8 +60,8 @@ export default function ErrorTrendsPage() {
           return;
         }
 
-        const trends = await getErrorTrendsByStudentName(student.name);
-        const sortedTrends = [...trends].sort(
+        const trendData = await getStudentTrend(studentId);
+        const sortedTrends = [...trendData.trends].sort(
           (first, second) => new Date(first.date) - new Date(second.date),
         );
 

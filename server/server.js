@@ -9,7 +9,7 @@ import connectDB from './config/dbConnection.js';
 import samples from './routes/samples.js';
 import students from './routes/students.js';
 import recommendation from './routes/recommendation.js';
-import errorTrend from './routes/error_trend.js';
+import trendRoutes from './routes/trendRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const port = process.env.PORT || 5000;
@@ -22,6 +22,8 @@ app.use(express.json());
 app.use('/api/samples', samples);
 app.use('/api/students', students);
 app.use('/api/recommendation', recommendation);
+app.use('/api', trendRoutes);
+
 app.use(errorHandler);
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
