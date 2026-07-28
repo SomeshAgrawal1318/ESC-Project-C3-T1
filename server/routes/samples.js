@@ -2,7 +2,14 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { getSample, getSamples, createSample } from '../controllers/sampleController.js';
+import {
+  getSample,
+  getSamples,
+  createSample,
+  getImages,
+  markReviewed,
+  reclassifyError,
+} from '../controllers/sampleController.js';
 
 // ------------------------------------------------------------------
 // File storage (multer)
@@ -41,6 +48,8 @@ router.route('/:studentId').post(upload.array('samples', 12), createSample);
 
 // GET /api/samples/:sampleId — one sample's summary. The upload page polls
 // this while the "Analysing…" screen is up.
-router.route('/:sampleId').get(getSample);
+router.route('/:sampleId').get(getSample).patch(markReviewed);
+router.route('/:sampleId/images/:index').get(getImages);
+router.route('/:sampleId/errors/:errorIndex').patch(reclassifyError);
 
 export default router;
