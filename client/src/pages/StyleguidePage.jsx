@@ -7,6 +7,9 @@ import Button from '../components/Button.jsx';
 import StatusPill from '../components/StatusPill.jsx';
 import SampleRow from '../components/SampleRow.jsx';
 import Logo from '../components/Logo.jsx';
+import CategoryChip from '../components/CategoryChip.jsx';
+import ErrorCard from '../components/ErrorCard.jsx';
+import { CATEGORY_ORDER } from '../lib/categories.js';
 
 // Display-only fixtures — nothing here touches the API.
 const DEMO_SAMPLES = [
@@ -25,6 +28,46 @@ const DEMO_SAMPLES = [
     imageCount: 1,
   },
 ];
+
+// Screen 3 fixtures. `written` is deliberately misspelled — that is the
+// point of the card: the child's word is shown exactly as written.
+const DEMO_ERRORS = [
+  {
+    errorIndex: 0,
+    n: 1,
+    written: 'becos',
+    intended: 'because',
+    category: 'phonological',
+    confidenceScore: 0.92,
+    note: 'Sound-based substitution of the middle syllable.',
+    locationOnScan: { page: 0, x: 0.1, y: 0.1, z: 0.2, w: 0.05 },
+    dismissed: false,
+  },
+  {
+    errorIndex: 1,
+    n: 2,
+    written: 'runed',
+    intended: 'ran',
+    category: 'morphological',
+    confidenceScore: 0.48,
+    note: 'Past-tense ending applied to an irregular verb.',
+    locationOnScan: { page: 1, x: 0.3, y: 0.4, z: 0.15, w: 0.05 },
+    dismissed: false,
+  },
+  {
+    errorIndex: 2,
+    n: 3,
+    written: 'fone',
+    intended: 'phone',
+    category: 'orthographic',
+    confidenceScore: 0.81,
+    note: '',
+    locationOnScan: null,
+    dismissed: true,
+  },
+];
+
+const noop = () => {};
 
 const SWATCHES = [
   { name: 'Ink', varName: '--ink', use: 'sidebar · primary · text' },
@@ -163,6 +206,78 @@ export default function StyleguidePage() {
         <p className="guide__note">
           Ready rows link to the report; analysing rows are dashed and inert.
           The thumbnail is a miniature ruled page with the bowl corner.
+        </p>
+      </Section>
+
+      <Section label="Category chips">
+        <div className="guide__row">
+          {CATEGORY_ORDER.map((category) => (
+            <CategoryChip key={category} category={category} />
+          ))}
+        </div>
+        <p className="guide__note">
+          One chip spec everywhere a category is named — cards, filters, group
+          headers, scan tags. Squared at 4px, never a capsule. The six
+          categories are told apart by <strong>shape and word</strong>, never
+          colour: six category colours would break the palette, and a mark on
+          its own fails anyone who can’t distinguish them.
+        </p>
+      </Section>
+
+      <Section label="Error cards (3a)">
+        <div className="guide__row guide__row--stack">
+          <ErrorCard
+            error={DEMO_ERRORS[0]}
+            selected
+            multiPage
+            onSelect={noop}
+            onReclassify={noop}
+            onDismiss={noop}
+            onConfirm={noop}
+          />
+          <ErrorCard
+            error={DEMO_ERRORS[1]}
+            multiPage
+            onSelect={noop}
+            onReclassify={noop}
+            onDismiss={noop}
+            onConfirm={noop}
+          />
+          <ErrorCard error={DEMO_ERRORS[2]} onRestore={noop} />
+        </div>
+        <p className="guide__note">
+          Selected (navy edge + sage inset, mirroring the active nav item),
+          uncertain (dashed in the pending ink — the AI scored below the 0.6
+          threshold, so it asks for a decision), and removed. A removed tag is
+          kept and restorable, never deleted: the educator’s decision has to
+          stay visible and reversible.
+        </p>
+      </Section>
+
+      <Section label="Scan outlines (3a)">
+        <div className="guide__row">
+          <div className="guide__scan">
+            <span className="scan-box" style={{ left: '6%', top: '18%', width: '30%', height: '26%' }}>
+              <span className="scan-box__tag">1 · Phon</span>
+            </span>
+            <span
+              className="scan-box scan-box--selected"
+              style={{ left: '44%', top: '52%', width: '34%', height: '26%' }}
+            >
+              <span className="scan-box__tag">2 · Orth</span>
+            </span>
+            <span
+              className="scan-box scan-box--uncertain"
+              style={{ left: '12%', top: '66%', width: '24%', height: '22%' }}
+            >
+              <span className="scan-box__tag">3 · Morph?</span>
+            </span>
+          </div>
+        </div>
+        <p className="guide__note">
+          Boxes are positioned as percentages of the scan, so they scale with
+          zoom and can never drift off the words. Dashed = flagged, solid navy
+          = selected, pending ink = uncertain.
         </p>
       </Section>
     </div>

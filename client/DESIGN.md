@@ -223,9 +223,71 @@ No CSS frameworks, no icon libraries, no new dependencies — inline SVG icons v
 ## 12. Adding a new screen (checklist)
 
 1. Page component in `src/pages/`, route in `src/main.jsx`, data via functions in `src/lib/api.js`
-   (mirror `server/paths.txt`; mocks in `src/lib/mockData.js` until the backend exists).
+   (mirror `server/paths.txt`).
 2. Start with the header pattern (§9); put it on the band only if the screen is about one
    student's work.
 3. Cards per §5, statuses per §6, motif only per §7.
 4. Check at 1920 / 1366 / 800 / 390px — centered column, top-bar collapse, no horizontal scroll.
 5. Add the new pieces to `/styleguide` if they introduce a reusable pattern.
+
+## 13. Error review screen (3a / 3b / 3c)
+
+`src/pages/SampleReportPage.jsx` at `/samples/:sampleId`. The one screen where the child's
+actual handwriting is on display, so it gets the most neutral ground in the app and the quietest
+chrome around it.
+
+**Layout.** Band header (§9, `.report__head` reuses `.profile__head`: back button → eyebrow →
+sample title → subline + status note → `Mark review done`), then a two-column split
+`minmax(0,55fr) / minmax(0,45fr)`. The scan column is `position: sticky` so it stays put while
+the error list scrolls. At ≤1024px the split goes 60/40; at ≤900px it stacks, the scan loses its
+stickiness and the list loses its max-height.
+
+**Multi-page.** A sample spans up to 12 files and every box carries a 0-based `page`, so the
+viewer shows one page at a time with a thumbnail rail (`.scan__rail`, bowl corner `3px 12px 3px
+3px`, active thumb takes the sidebar's `inset 2.5px 0 0 var(--sage)`). `page` is owned by the
+*page component*, not the viewer — selecting an error on the right has to be able to move the
+scan to the page it sits on. Cards carry a `p.2` chip whenever the sample has more than one page.
+
+**Zoom.** `.scan__page { width: calc(var(--zoom) * 100%) }` against the viewport, so `--zoom: 1`
+*is* fit-to-width and the fit control just resets to 1. Boxes are positioned in percentages of
+that element, so they scale with the scan for free — never recompute box geometry on zoom.
+
+**Scan outlines** (`.scan-box`): normal `1.5px dashed rgba(26,36,51,0.55)` · selected `2px solid
+var(--ink)` + `rgba(26,36,51,0.06)` fill + inverted tag · uncertain dashed in `--pending`. The tag
+is a fixed px size so it survives 50%–300% zoom. An inverted tag is navy carrying white, which is
+fine — §2 rule 4 only forbids white on *sage*.
+
+**Categories are shape + word, never colour.** Six category colours would wreck §3, and wireframe
+turn 6 removed the last icon-only cues, so `CategoryChip` always pairs the mark with the label.
+One chip spec everywhere a category is named (cards, filter row, group headers, scan tags):
+squared `--radius-chip`, `--accent-wash` ground, mark in `--sage-strong`.
+
+**Card states** (`.ecard`): normal · selected · uncertain · removed.
+- Selected — `border-color: var(--ink)` + `inset 2.5px 0 0 var(--sage)`, the active-nav device.
+- Uncertain — dashed `--pending` with a `--pending-wash` banner strip. Derived from
+  `confidenceScore < 0.6` (mirrors the server's threshold); nothing is stored for it, which is why
+  "Confirm tag" writes `confidenceScore: 1` rather than setting a flag.
+- Removed — dashed, transparent, the word struck through, with `Restore tag`. Dismissed errors are
+  **kept, not deleted**, so the decision stays visible and reversible; they sit behind a
+  `Show N removed tags` toggle at the foot of the list.
+
+3b's reclassify and remove-confirm are **inline panels under the card** (`.epanel`), not modals —
+§9's forms rule. The reclassify list omits `unsure`: an educator picking a category by hand is by
+definition not unsure.
+
+**Three deliberate departures from the wireframe**, all resolved in favour of this document:
+
+| Wireframe | Built as | Why |
+|---|---|---|
+| Category chips at 18px radius | Squared 4px chip | §2 rule 1 — no capsule badges |
+| Selected card `3.5px` black outline + offset shadow | Navy edge + sage inset | Would have been the app's only such treatment; the inset edge already means "active" |
+| Uncertain card diagonal hatch fill | Dashed `--pending` + wash strip | Dashed already reads as "not settled"; a hatch is a new texture |
+
+Also dropped, because the data no longer exists: the `✎ Teacher-corrected — was …` state and 3b's
+optional note fields. Corrections overwrite `category` in place and no history is kept (owner call,
+July 2026), so there is nothing to render them from. The outdated-recommendations banner counts
+corrections **for the current visit only** and its action stays locked until the recommendations
+screen exists.
+
+**Not the ruled motif.** §7 allows exactly four places and this screen is not one of them. The
+only motif use here is the page-rail thumbnails (allowed spot #3), and they show the real scan.

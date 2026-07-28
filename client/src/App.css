@@ -18,7 +18,8 @@
      8. Students list + search
      9. Feedback + skeletons
     10. Styleguide page
-    11. Responsive
+    11. Error report (3a–3c): scan pane, error list, cards, panels
+    12. Responsive
    ================================================================== */
 
 /* ---- 1. Shell -------------------------------------------------------- */
@@ -1068,8 +1069,834 @@
   color: var(--muted);
   font-size: 11.5px;
 }
+.guide__row--stack {
+  display: flex;
+  flex-direction: column;
+  max-width: 520px;
+}
+/* A stand-in scan, just to show the outline states in isolation */
+.guide__scan {
+  position: relative;
+  width: 280px;
+  height: 190px;
+  border: 1px solid var(--border-strong);
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 22px,
+      var(--rule-line) 22px 23px
+    ),
+    #fff;
+}
 
-/* ---- 11. Responsive ------------------------------------------------------ */
+/* ---- 11. Error report — screens 3a / 3b / 3c ---------------------------- */
+/* Split view: the scan on the left, the AI's flagged errors on the right.
+   See DESIGN.md §13 for the three places this deliberately departs from the
+   wireframe (squared chips, the selected-card device, no hatch fill). */
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Reuses the ruled band (.profile__head) — this screen is about one
+   student's work, so DESIGN.md §9 puts its header on the band. */
+.report__head {
+  align-items: flex-start;
+}
+.report__head .profile__id {
+  gap: 6px;
+}
+/* The back button sits above the eyebrow and shouldn't be indented by the
+   button's own padding. */
+.report__head .btn--tertiary {
+  margin-left: -18px;
+  margin-bottom: 2px;
+}
+.report__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(24px, 2.9vw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  max-width: 30ch;
+}
+.report__sub {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.report__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--done);
+}
+.done-mark--sm {
+  width: 34px;
+  height: 34px;
+  border-width: 1.5px;
+}
+.report__failure {
+  font-size: 13.5px;
+  color: var(--failed);
+}
+.report__failmark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--failed);
+  border-radius: 50%;
+  color: var(--failed);
+}
+.analysing--failed {
+  border-color: var(--failed);
+}
+
+/* The "recommendations may be outdated" strip (3a). Dashed foot, quiet
+   ground — it reports a consequence, it isn't an alarm. */
+.report__banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--band-bg);
+  box-shadow: var(--shadow-sm);
+}
+.report__banner-mark {
+  flex: none;
+  color: var(--pending);
+}
+.report__banner-text {
+  flex: 1;
+  min-width: 220px;
+  font-size: 14.5px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.report__banner-x {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--muted);
+}
+.report__banner-x:hover {
+  border-color: var(--card-border);
+  color: var(--ink);
+}
+
+.report__split {
+  display: grid;
+  grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+  gap: 16px;
+  align-items: start;
+}
+/* The scan stays put while the error list scrolls past it. */
+.report__scan {
+  position: sticky;
+  top: 20px;
+}
+
+/* ---- 11a. The scan pane ------------------------------------------------- */
+
+.scan {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.scan__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.scan__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.scan__zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.scan__ctrl {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-chip);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.scan__ctrl:hover:not(:disabled) {
+  border-color: var(--sage);
+  color: var(--accent-ink);
+}
+.scan__ctrl:disabled {
+  color: var(--border-strong);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.scan__readout {
+  min-width: 54px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* Page rail — only present on multi-page samples. Thumbnails wear the bowl
+   corner (identity block, DESIGN.md §5) and the active one takes the sage
+   inset edge the sidebar's active nav item uses. */
+.scan__rail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--band-bg);
+}
+.scan__thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px;
+}
+.scan__thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 40px;
+  flex: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px 12px 3px 3px; /* bowl corner */
+  background: #fdfcf8;
+}
+.scan__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scan__thumb--on {
+  border-color: var(--sage);
+  box-shadow: inset 2.5px 0 0 var(--sage);
+}
+.scan__thumb-doc {
+  color: var(--sage-strong);
+}
+.scan__thumb-no {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+.scan__pages {
+  flex: none;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* The scan sits on a neutral ground so the child's paper reads as paper. */
+.scan__viewport {
+  overflow: auto;
+  max-height: min(64svh, 660px);
+  padding: 14px;
+  background: color-mix(in srgb, var(--paper) 70%, #fff);
+}
+/* --zoom of 1 IS fit-to-width, because the page is sized against the
+   viewport. Every box inside is positioned in % of this element, so the
+   outlines scale with the scan and can never drift off the words. */
+.scan__page {
+  position: relative;
+  width: calc(var(--zoom, 1) * 100%);
+  margin-inline: auto;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.scan__img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.scan__broken {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 52px 26px;
+  color: var(--muted);
+}
+.scan__broken-title {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.scan__broken-text {
+  max-width: 40ch;
+  font-size: 13.5px;
+  font-weight: 300;
+}
+
+/* One AI-flagged word on the scan. Dashed = flagged, solid navy = selected,
+   dashed pending-ink = the AI wasn't confident. */
+.scan-box {
+  position: absolute;
+  padding: 0;
+  border: 1.5px dashed rgba(26, 36, 51, 0.55);
+  border-radius: 2px;
+  background: transparent;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.scan-box:hover {
+  border-color: var(--sage);
+  background: rgba(123, 143, 122, 0.1);
+}
+.scan-box--uncertain {
+  border-color: var(--pending);
+}
+.scan-box--selected {
+  border: 2px solid var(--ink);
+  background: rgba(26, 36, 51, 0.06);
+}
+/* The tag is fixed-size on purpose: it must stay readable at 50% zoom and
+   not balloon at 300%. */
+.scan-box__tag {
+  position: absolute;
+  left: -1px;
+  bottom: 100%;
+  margin-bottom: 2px;
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.scan-box--uncertain .scan-box__tag {
+  border-color: var(--pending);
+  color: var(--pending);
+}
+/* Navy carrying white is fine — the rule only forbids white on sage. */
+.scan-box--selected .scan-box__tag {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.scan__hint {
+  padding: 9px 14px;
+  border-top: 1px dashed var(--border-strong);
+  font-size: 12.5px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.scan__illegible {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.scan__illegible svg {
+  flex: none;
+  margin-top: 4px;
+  color: var(--pending);
+}
+
+/* ---- 11b. The error list ------------------------------------------------ */
+
+.report__list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.report__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: min(72svh, 780px);
+  padding: 16px 18px 20px;
+}
+.report__none {
+  padding: 22px 2px;
+  font-size: 14.5px;
+  font-weight: 300;
+  color: var(--muted);
+}
+/* Category chips — squared, never capsules (DESIGN.md §2 rule 1). The mark
+   is always paired with its word; colour is never the cue. */
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: var(--accent-wash);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.cat-chip__mark {
+  flex: none;
+  color: var(--sage-strong);
+}
+.cat-chip__count {
+  font-weight: 600;
+}
+
+.cat-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--band-bg);
+}
+.cat-filter__btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+.cat-filter__btn:hover .cat-chip {
+  border-color: var(--sage);
+}
+.cat-filter__btn--on .cat-chip {
+  border-color: var(--ink);
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--sage);
+}
+
+/* ---- 11c. One error card ------------------------------------------------ */
+
+.ecard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ecard:hover {
+  border-color: var(--sage);
+}
+/* Selected: the sage inset edge the active nav item uses, plus a navy edge.
+   (The wireframe's 3.5px black outline + offset shadow would have been the
+   only such treatment in the app.) */
+.ecard--selected {
+  border-color: var(--ink);
+  box-shadow: inset 2.5px 0 0 var(--sage), var(--shadow-card-hover);
+}
+/* Uncertain: dashed in the pending ink — the app's existing "not settled"
+   device. Status ink never fills a shape (DESIGN.md §3). */
+.ecard--uncertain {
+  border-style: dashed;
+  border-color: var(--pending);
+}
+.ecard__flag {
+  padding: 7px 14px 6px;
+  border-bottom: 1px dashed var(--pending);
+  background: var(--pending-wash);
+  color: var(--pending);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* The card body is one big select target. */
+.ecard__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px 15px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.ecard__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ecard__no {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ecard--selected .ecard__no {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+/* The child's word, exactly as written — never corrected (DESIGN.md §10).
+   The wireframe set this in a monospace face; §2 rule 6 allows one typeface
+   only, so it is separated by ground and weight instead. */
+.ecard__word {
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  background: var(--band-bg);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.ecard__said {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.ecard__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ecard__conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ecard__conf-label {
+  font-weight: 300;
+}
+.ecard__bar {
+  display: block;
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mist);
+  overflow: hidden;
+}
+.ecard__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+.ecard--uncertain .ecard__bar-fill {
+  background: var(--pending);
+}
+.ecard__conf-val {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ecard__reading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.ecard__intended {
+  color: var(--ink);
+  font-weight: 400;
+}
+.ecard__tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ecard__page {
+  padding: 1px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ecard__page--none {
+  border-style: dashed;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ecard__state {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--sage-strong);
+}
+
+.ecard__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 15px 12px;
+}
+.ecard__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ecard__act:hover:not(:disabled) {
+  border-color: var(--sage);
+  color: var(--accent-ink);
+}
+.ecard__act--strong {
+  border-color: var(--ink);
+}
+.ecard__act--quiet {
+  border-color: var(--border);
+  color: var(--muted);
+}
+.ecard__act--quiet:hover:not(:disabled) {
+  border-color: var(--failed);
+  color: var(--failed);
+}
+.ecard__act:disabled {
+  border-style: dashed;
+  color: var(--border-strong);
+  cursor: not-allowed;
+}
+.ecard__failure {
+  padding: 0 15px 12px;
+  font-size: 13px;
+  color: var(--failed);
+}
+
+/* Removed tags — kept, never deleted, so the decision stays reversible. */
+.ecard--removed {
+  gap: 10px;
+  padding: 12px 15px;
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+.ecard--removed .ecard__word {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.ecard--removed .ecard__actions {
+  padding: 0;
+}
+.ecard__removed-note {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.report__removed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-strong);
+}
+.report__removed-toggle {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.report__removed-toggle:hover {
+  color: var(--accent-ink);
+}
+
+/* ---- 11d. Reclassify + remove panels (3b) ------------------------------- */
+/* Inline under the card, never a modal (DESIGN.md §9). */
+
+.epanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 15px 15px;
+  border-top: 1px solid var(--border);
+  background: var(--band-bg);
+}
+.epanel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.epanel__head .ecard__word {
+  background: var(--surface);
+}
+.epanel__now {
+  font-size: 12.5px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.epanel__ask {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 500;
+}
+.epanel__text {
+  max-width: 52ch;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.epanel__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.epanel__choice {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--body);
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.epanel__choice:hover {
+  border-color: var(--sage);
+}
+.epanel__choice--on {
+  border-color: var(--ink);
+  box-shadow: inset 2.5px 0 0 var(--sage);
+}
+.epanel__radio {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+}
+.epanel__choice--on .epanel__radio {
+  border-color: var(--ink);
+}
+.epanel__choice--on .epanel__radio::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.epanel__current {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--muted);
+}
+.epanel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.skel--scan {
+  height: 460px;
+}
+.skel--ecard {
+  height: 132px;
+}
+
+/* ---- 12. Responsive ------------------------------------------------------ */
 
 /* Narrower desktops: slimmer sidebar, tighter paddings */
 @media (max-width: 1024px) {
@@ -1084,6 +1911,27 @@
   }
   .profile__head::before {
     left: 48px;
+  }
+  /* The scan needs the width more than the list does */
+  .report__split {
+    grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
+  }
+}
+
+/* Tablets: the split view runs out of room long before the shell does —
+   stack the scan above the list and let each take the full column. */
+@media (max-width: 900px) {
+  .report__split {
+    grid-template-columns: 1fr;
+  }
+  .report__scan {
+    position: static;
+  }
+  .scan__viewport {
+    max-height: min(56svh, 520px);
+  }
+  .report__cards {
+    max-height: none;
   }
 }
 
@@ -1117,6 +1965,23 @@
     padding: 20px 20px 18px;
   }
   .profile__head::before {
+    display: none;
+  }
+  .report__head .btn--tertiary {
+    margin-left: -14px;
+  }
+  /* Zoom controls and the page rail both scroll rather than wrap, so the
+     scan card never forces the page sideways. */
+  .scan__bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .cat-filter,
+  .report__cards {
+    padding-inline: 13px;
+  }
+  .ecard__said {
     display: none;
   }
 }

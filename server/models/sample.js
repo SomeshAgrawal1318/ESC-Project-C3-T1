@@ -24,6 +24,7 @@ export const ERROR_CATEGORIES = [
 ];
 const boxSchema = new mongoose.Schema(
   {
+    page: { type: Number, required: true, min: 0 },
     x: { type: Number, required: true, min: 0, max: 1 },
     y: { type: Number, required: true, min: 0, max: 1 },
     z: { type: Number, required: true, min: 0, max: 1 },
@@ -49,6 +50,8 @@ const errorSchema = new mongoose.Schema(
       enum: ERROR_CATEGORIES, // "enum" = only these values are allowed
       default: 'unsure',
     },
+
+    confidenceScore: { type: Number, min: 0, max: 1, default: 1 },
     locationOnScan: { type: boxSchema, default: null },
     // A short plain-language reason for the category, written by the AI.
     note: { type: String, default: '' },
@@ -118,10 +121,13 @@ const sampleSchema = new mongoose.Schema(
     //   REVIEWED  - an educator has checked the errors against the scan
     status: {
       type: String,
-      enum: ['UPLOADED', 'ANALYSED', 'REVIEWED'],
+      enum: ['UPLOADED', 'ANALYSED', 'REVIEWED', 'FAILED'],
       default: 'UPLOADED',
     },
-
+    // Human-readable reason analysis failed (e.g. unreadable file, AI
+    // timeout). Only meaningful when status is FAILED; empty otherwise.
+    // Never a raw stack trace - the educator reads this directly.
+    analysisError: { type: String, default: '' },
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
 

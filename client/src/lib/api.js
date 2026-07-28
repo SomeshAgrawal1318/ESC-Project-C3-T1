@@ -35,31 +35,25 @@ async function request(path, { method = 'GET', body } = {}) {
   return res.json();
 }
 
-// The server returns raw Mongoose docs keyed by `_id`; the UI keys off `studentId`.
-const toClientStudent = (s) => s && { studentId: s._id, name: s.name, currentGrade: s.currentGrade };
-
 // GET /api/students  ->  Student[]
 export function getStudents() {
-  return request('/students').then((list) => list.map(toClientStudent));
+  return request('/students');
 }
 
 // GET /api/students/:studentId  ->  { studentId, name, currentGrade }
 // Resolves to null on 404 so the profile page can show its "not found"
-// screen instead of a generic error.
+// screen instead of a generic error. (StudentProfilePage and
+// UploadSamplePage both branch on the null — don't drop this catch.)
 export function getStudent(studentId) {
-  return request(`/students/${studentId}`)
-    .then(toClientStudent)
-    .catch((err) => {
-      if (err.status === 404) return null;
-      throw err;
-    });
+  return request(`/students/${studentId}`).catch((err) => {
+    if (err.status === 404) return null;
+    throw err;
+  });
 }
 
 // POST /api/students  { name, currentGrade }  ->  created student
 export function createStudent({ name, currentGrade }) {
-  return request('/students', { method: 'POST', body: { name, currentGrade } }).then(
-    toClientStudent,
-  );
+  return request('/students', { method: 'POST', body: { name, currentGrade } });
 }
 
 // GET /api/students/:studentId/samples?status=  ->  sample summaries,
@@ -70,10 +64,51 @@ export function getStudentSamples(studentId, { status } = {}) {
   return request(`/students/${studentId}/samples${qs}`);
 }
 
-// GET /api/samples/:sampleId  ->  one sample summary.
-// The upload page polls this to notice UPLOADED -> ANALYSED.
+// GET /api/samples/:sampleId  ->  one sample, with its errors.
+//
+// The upload page polls this to notice UPLOADED -> ANALYSED; the review
+// screen (3a) reads the whole thing. On top of the summary shape it carries
+// studentId, illegibleNote, analysisError and:
+//
+//   errors: [{ errorIndex, written, intended, category, confidenceScore,
+//              locationOnScan: { page, x, y, z, w } | null, note, dismissed }]
+//
+// errorIndex is the error's position in the sample's errors array — the only
+// handle there is, since the sub-schema has no _id. It stays stable because
+// removing a tag sets dismissed rather than deleting the entry.
 export function getSample(sampleId) {
   return request(`/samples/${sampleId}`);
+}
+
+// The scan itself. NOT routed through request() — that parses JSON, and this
+// is an image the browser loads via <img src>. index is 0-based into the
+// sample's pages, so it runs 0 .. imageCount - 1.
+export function sampleImageUrl(sampleId, index) {
+  return `${BASE}/samples/${sampleId}/images/${index}`;
+}
+
+// PATCH /api/samples/:sampleId/errors/:errorIndex  ->  the updated sample
+// (same shape as getSample), so the screen repaints its counts and groups
+// from one response instead of reconciling locally.
+//
+// A partial update — send only what changes:
+//   { category }         reclassify (must be one of ERROR_CATEGORIES)
+//   { dismissed: true }  remove the tag   { dismissed: false }  restore it
+//   { confidenceScore }  1 when the educator confirms an uncertain tag
+export function updateSampleError(sampleId, errorIndex, patch) {
+  return request(`/samples/${sampleId}/errors/${errorIndex}`, {
+    method: 'PATCH',
+    body: patch,
+  });
+}
+
+// PATCH /api/samples/:sampleId  { status }  ->  the updated sample.
+// Behind "Mark review done" on 3a: ANALYSED -> REVIEWED.
+export function markSampleReviewed(sampleId) {
+  return request(`/samples/${sampleId}`, {
+    method: 'PATCH',
+    body: { status: 'REVIEWED' },
+  });
 }
 
 // POST /api/samples/:studentId  ->  the created sample summary.
@@ -88,18 +123,16 @@ export function uploadSample(studentId, { title, taskType, files }) {
   for (const file of files) {
     form.append('samples', file);
   }
-  return fetch(`${BASE}/samples/${studentId}`, { method: 'POST', body: form }).then(
-    async (res) => {
-      if (!res.ok) {
-        let detail;
-        try {
-          detail = (await res.json())?.message;
-        } catch {
-          /* body was not JSON */
-        }
-        throw new Error(detail || `Upload failed (${res.status})`);
+  return fetch(`${BASE}/samples/${studentId}`, { method: 'POST', body: form }).then(async (res) => {
+    if (!res.ok) {
+      let detail;
+      try {
+        detail = (await res.json())?.message;
+      } catch {
+        /* body was not JSON */
       }
-      return res.json();
-    },
-  );
+      throw new Error(detail || `Upload failed (${res.status})`);
+    }
+    return res.json();
+  });
 }

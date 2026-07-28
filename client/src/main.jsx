@@ -10,6 +10,7 @@ import App from './App.jsx';
 import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import UploadSamplePage from './pages/UploadSamplePage.jsx';
+import SampleReportPage from './pages/SampleReportPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
 
@@ -27,7 +28,8 @@ createRoot(document.getElementById('root')).render(
             path="students/:studentId/recommendations"
             element={<Placeholder label="Recommendations" />}
           />
-          <Route path="samples/:sampleId" element={<Placeholder label="Error report" />} />
+          {/* Screens 3a/3c — scan beside the AI's flagged errors */}
+          <Route path="samples/:sampleId" element={<SampleReportPage />} />
           {/* Living design-system reference for the team (see DESIGN.md) */}
           <Route path="styleguide" element={<StyleguidePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
