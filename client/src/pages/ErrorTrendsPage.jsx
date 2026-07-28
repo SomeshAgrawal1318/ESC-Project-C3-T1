@@ -260,6 +260,26 @@ function PopulatedTrends({ studentId, student, trends }) {
           symbol throughout the chart.
         </p>
       </section>
+
+      <section className="trend-summary" aria-label="Overall error totals">
+        <SummaryCard
+          title="Total errors across all samples"
+          value={summary.taggedErrorCount}
+          detail={`Across ${samplePoints.length} analysed samples`}
+        />
+
+        {CHART_CATEGORIES.map((category) => (
+          <SummaryCard
+            key={category.key}
+            title={`${category.label} errors`}
+            value={summary.totalsByCategory[category.key]}
+            detail={`${percentageOf(
+              summary.totalsByCategory[category.key],
+              summary.taggedErrorCount,
+            )}% of all tagged errors`}
+          />
+        ))}
+      </section>
     </div>
   );
 }
@@ -512,18 +532,15 @@ function ChartMarker({ type, x, y, small = false }) {
 
 function createSamplePoint(trend) {
   const counts = Object.fromEntries(
-    CHART_CATEGORIES.map((category) => [category.key, 0]),
+    CHART_CATEGORIES.map((category) => [
+      category.key,
+      Number(trend.categoryCounts?.[category.key] ?? 0),
+    ]),
   );
-
-  for (const error of trend.errors || []) {
-    if (error.dismissed === true) continue;
-    if (Object.hasOwn(counts, error.category)) {
-      counts[error.category] += 1;
-    }
-  }
 
   return {
     ...trend,
+    _id: trend.sampleId,
     counts,
   };
 }
@@ -556,6 +573,7 @@ function createSummary(samples) {
       mostCommonCategory,
       mostCommonCount,
       taggedErrorCount,
+      totalsByCategory,
       latestTotal,
       previousTotal,
       progressLabel: 'Improving',
@@ -568,6 +586,7 @@ function createSummary(samples) {
       mostCommonCategory,
       mostCommonCount,
       taggedErrorCount,
+      totalsByCategory,
       latestTotal,
       previousTotal,
       progressLabel: 'Errors increased',
@@ -579,11 +598,18 @@ function createSummary(samples) {
     mostCommonCategory,
     mostCommonCount,
     taggedErrorCount,
+    totalsByCategory,
     latestTotal,
     previousTotal,
     progressLabel: 'No change',
     progressSymbol: '→',
   };
+}
+
+
+function percentageOf(value, total) {
+  if (total === 0) return 0;
+  return Math.round((value / total) * 100);
 }
 
 function calculateLabelPositions(labels, minimumY, maximumY) {
