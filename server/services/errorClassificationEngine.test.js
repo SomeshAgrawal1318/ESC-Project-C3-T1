@@ -14,6 +14,7 @@ import {
   isUncertain,
   getConfidenceThreshold,
   describeFailure,
+  group,
   TimeoutError,
   CONFIDENCE_THRESHOLD_DEFAULT,
   __testing,
@@ -211,6 +212,20 @@ describe("confidence threshold", () => {
   });
 });
 
+describe("group", () => {
+  test("a valid error keeps its assigned category (Valid Error Tag)", () => {
+    const error = { written: "teh", category: "orthographic", confidenceScore: 0.9 };
+    assert.equal(group(error), "orthographic");
+  });
+
+  test("an error with an unrecognised shape is tagged 'unsure' (Uncategorized Error)", () => {
+    assert.equal(group({ written: "teh", category: "not-a-real-category" }), "unsure");
+    assert.equal(group({ written: "teh" }), "unsure");
+    assert.equal(group("not an error object"), "unsure");
+    assert.equal(group(null), "unsure");
+  });
+});
+
 describe("describeFailure", () => {
   test("produces a human-readable message, never a raw stack trace", () => {
     const message = describeFailure(new Error("some internal detail"));
@@ -400,6 +415,19 @@ describe("callModelWithRetry", () => {
 
     await assert.rejects(() => callModelWithRetry(ai, [], config(0)), /only attempt/);
     assert.equal(ai.callCount, 1);
+  });
+
+  test("waits longer before retrying a Gemini rate-limit (429) error than a generic failure", async () => {
+    const rateLimitError = Object.assign(new Error("Resource exhausted"), { status: 429 });
+    const ai = fakeModel([rateLimitError, reply(validPayload)]);
+
+    const start = Date.now();
+    const result = await callModelWithRetry(ai, [], config(1));
+    const elapsed = Date.now() - start;
+
+    assert.deepEqual(result, validPayload);
+    assert.equal(ai.callCount, 2);
+    assert.ok(elapsed >= 2000, `expected a rate-limit backoff of at least 2000ms, got ${elapsed}ms`);
   });
 
   test("times out a call that never comes back", async () => {

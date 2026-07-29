@@ -31,6 +31,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { ERROR_CATEGORIES, Sample } from "../models/sample.js";
+import { buildPrompt } from "./errorClassificationPrompt.js";
 
 // Confidence threshold that drives the "uncertain - AI needs your judgement"
 // state. 0.6 is picked so a roughly coin-flip guess (0.5) always gets a human
@@ -48,6 +49,19 @@ export function getConfidenceThreshold() {
 
 export function isUncertain(detectedError, threshold = getConfidenceThreshold()) {
   return detectedError.confidenceScore < threshold;
+}
+
+// group(error) - assigns/confirms a single detected error's category tag.
+// A well-formed error keeps the category already on it; anything that
+// isn't a recognised category (missing, misspelled, or not one of
+// ERROR_CATEGORIES) is tagged "unsure" rather than rejected, since this is
+// meant to be a lenient last step, not a validation gate - validateAnalysisResult
+// is what enforces the strict schema earlier in the pipeline.
+export function group(error) {
+  if (error && typeof error === "object" && ERROR_CATEGORIES.includes(error.category)) {
+    return error.category;
+  }
+  return "unsure";
 }
 
 // Exported so callers can tell a timed-out analysis apart from other
@@ -166,41 +180,6 @@ function mimeTypeFor(imagePath) {
   throw new Error(`Unsupported image type "${ext}" for analysis`);
 }
 
-function buildPrompt(sample) {
-  const categoryList = ERROR_CATEGORIES.map((category) => `- ${category}`).join("\n");
-  const pageCount = (sample.pages || []).length || 1;
-
-  let answerKeyNote = "";
-  if (sample.taskType !== "ESSAY" && sample.answerKey) {
-    answerKeyNote = `\nThe expected answer for this task is: "${sample.answerKey}". Use it ONLY to help you read unclear handwriting. Never use it to judge whether the student's answer is "correct", and never let it change the "written" field - "written" must always be exactly what the student wrote, spelling and all.\n`;
-  }
-
-  const pageNote =
-    pageCount > 1
-      ? `This sample has ${pageCount} pages, provided as ${pageCount} images in order (the first image is page 0, the second is page 1, and so on). Treat them as one continuous piece of writing - an error can start on one page and finish on the next.`
-      : `This sample has a single page, provided as one image (page 0).`;
-
-  return `You are analysing a scanned, possibly multi-page piece of a child's handwritten schoolwork for a literacy-support tool.
-${pageNote}
-Read the handwriting exactly as the child wrote it and flag every spelling, grammar and punctuation error you find. Do not silently correct anything - "written" must always be the child's original text.
-
-For each error, classify it into exactly one of these categories:
-${categoryList}
-Use "unsure" only when you genuinely cannot decide between the other categories.
-${answerKeyNote}
-For each error return:
-- written: the word or phrase exactly as the child wrote it.
-- intended: your best guess at the word or phrase the child meant.
-- category: one of the categories above.
-- confidenceScore: a number from 0 to 1 for how confident you are in this category assignment.
-- note: one short, plain-language sentence explaining the error, written for a teacher.
-- locationOnScan: a bounding box around the error, as { page, x, y, z, w } - page is the 0-based index of the image the error appears on, and x, y, z, w are normalised to that image's size (0 to 1), where x,y is the top-left corner and z,w are the width and height.
-
-Also return illegibleNote: a short note describing any part of the page(s) you could not read, or an empty string if everything was legible.
-
-Return only the JSON described by the response schema - no extra commentary.`;
-}
-
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -244,6 +223,16 @@ function withTimeout(promise, ms) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Is this error Gemini telling us "slow down"? The free tier allows only a
+// small number of requests per minute, so this is an expected condition
+// during real testing, not a bug - and it needs a longer wait than a
+// generic transient failure, since a short backoff often will not clear a
+// per-minute quota window.
+function isRateLimitError(err) {
+  const text = `${err?.status ?? ""} ${err?.message ?? ""}`;
+  return text.includes("429") || text.includes("RESOURCE_EXHAUSTED");
 }
 
 // pageCount is optional: when the caller knows how many pages the sample
@@ -325,7 +314,8 @@ async function callModelWithRetry(ai, parts, config, pageCount) {
     } catch (err) {
       lastError = err;
       if (attempt < config.maxRetries) {
-        await sleep(500 * 2 ** attempt);
+        const baseDelayMs = isRateLimitError(err) ? 2000 : 500;
+        await sleep(baseDelayMs * 2 ** attempt);
       }
     }
   }
@@ -440,5 +430,5 @@ export async function runAnalysis(sampleId) {
 // against a live API call. Do not import these from application code.
 export const __testing = { callModelWithRetry, buildPrompt, mimeTypeFor };
 
-const ErrorClassificationEngine = { analyse: analyseSample };
+const ErrorClassificationEngine = { analyse: analyseSample, group };
 export default ErrorClassificationEngine;
