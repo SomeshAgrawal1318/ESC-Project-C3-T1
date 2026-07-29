@@ -1,6 +1,11 @@
 import express from 'express';
 import { getStudent, getStudents, createStudent } from '../controllers/studentController.js';
 import { getStudentSamples } from '../controllers/sampleController.js';
+import {
+  generateStudentRecommendations,
+  getLatestStudentRecommendations,
+} from '../controllers/recommendationController.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
@@ -9,6 +14,11 @@ router.route('/').get(getStudents).post(createStudent);
 
 // get a student by student ID
 router.route('/:studentId').get(getStudent);
+
+router.route('/:studentId/recommendations').post(asyncHandler(generateStudentRecommendations));
+router
+  .route('/:studentId/recommendations/latest')
+  .get(asyncHandler(getLatestStudentRecommendations));
 
 // GET /api/students/:studentId/samples — the writing-samples list on the
 // student profile, newest first. Supports ?status=UPLOADED etc. so the UI

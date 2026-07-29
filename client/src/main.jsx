@@ -1,6 +1,5 @@
-// Router + providers. Routes for screens beyond 1a/1b (report, upload,
-// trends, recommendations) are stubbed as placeholders so the links in the
-// UI resolve to an honest "not built yet" instead of a dead end.
+// Router for the live student, upload, report, and recommendation screens.
+// Error trends remains an explicit placeholder until that feature is merged.
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -11,6 +10,7 @@ import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import UploadSamplePage from './pages/UploadSamplePage.jsx';
 import SampleReportPage from './pages/SampleReportPage.jsx';
+import RecommendationsPage from './pages/RecommendationsPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
 
@@ -24,10 +24,7 @@ createRoot(document.getElementById('root')).render(
           {/* Screens 2a/2b — upload + analyse flow */}
           <Route path="students/:studentId/upload" element={<UploadSamplePage />} />
           <Route path="students/:studentId/trends" element={<Placeholder label="Error trends" />} />
-          <Route
-            path="students/:studentId/recommendations"
-            element={<Placeholder label="Recommendations" />}
-          />
+          <Route path="students/:studentId/recommendations" element={<RecommendationsPage />} />
           {/* Screens 3a/3c — scan beside the AI's flagged errors */}
           <Route path="samples/:sampleId" element={<SampleReportPage />} />
           {/* Living design-system reference for the team (see DESIGN.md) */}

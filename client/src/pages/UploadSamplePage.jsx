@@ -14,6 +14,8 @@
 //                   page and lets it finish in the background (the profile
 //                   list shows the sample as "Pending analysis" meanwhile)
 //   done       (2c) analysis finished — offer the error report or the profile
+//   failed          analysis ended without a report — explain why and return
+//                   to the profile instead of polling forever
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -36,9 +38,7 @@ const TASK_TYPES = [
 // the input's `accept`, but drag & drop can hand us anything (screen 2d).
 function isSupported(file) {
   return (
-    file.type.startsWith('image/') ||
-    file.type === 'application/pdf' ||
-    /\.pdf$/i.test(file.name)
+    file.type.startsWith('image/') || file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
   );
 }
 
@@ -71,10 +71,7 @@ export default function UploadSamplePage() {
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
-  useEffect(
-    () => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl)),
-    [],
-  );
+  useEffect(() => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl)), []);
 
   // ---- 2b: poll until analysis finishes -----------------------------
   // The server answers the upload before the AI has looked at the scan
@@ -85,7 +82,11 @@ export default function UploadSamplePage() {
     const timer = setInterval(async () => {
       try {
         const fresh = await getSample(createdSample.sampleId);
-        if (statusFor(fresh.analysisStatus).ready) {
+        const status = statusFor(fresh.analysisStatus);
+        if (status.failed) {
+          setCreatedSample(fresh);
+          setPhase('failed');
+        } else if (status.ready) {
           setCreatedSample(fresh);
           setPhase('done');
         }
@@ -118,7 +119,7 @@ export default function UploadSamplePage() {
       for (const file of accepted) {
         // The same scan dropped twice shouldn't become two pages.
         const alreadyChosen = merged.some(
-          (f) => f.file.name === file.name && f.file.size === file.size,
+          (f) => f.file.name === file.name && f.file.size === file.size
         );
         if (alreadyChosen || merged.length >= MAX_FILES) continue;
         merged.push({
@@ -198,6 +199,8 @@ export default function UploadSamplePage() {
 
       {phase === 'done' ? (
         <DoneCard sample={createdSample} firstName={firstName} studentId={studentId} />
+      ) : phase === 'failed' ? (
+        <FailedCard sample={createdSample} studentId={studentId} />
       ) : phase === 'analysing' ? (
         <AnalysingCard
           sample={createdSample}
@@ -407,12 +410,26 @@ function AnalysingCard({ sample, firstName, onClose }) {
       <span className="analysing__spinner" aria-hidden="true" />
       <h2 className="analysing__title">Analysing “{sample.title}”…</h2>
       <p className="analysing__text">
-        LexiPath is reading {firstName}’s handwriting and tagging the errors it finds. This can
-        take a little while — the sample sits in {firstName}’s list as “Pending analysis” until
-        it’s done, so it’s safe to close this and carry on.
+        LexiPath is reading {firstName}’s handwriting and tagging the errors it finds. This can take
+        a little while — the sample sits in {firstName}’s list as “Pending analysis” until it’s
+        done, so it’s safe to close this and carry on.
       </p>
       <Button variant="secondary" onClick={onClose}>
         Close — keep analysing in background
+      </Button>
+    </section>
+  );
+}
+
+function FailedCard({ sample, studentId }) {
+  return (
+    <section className="analysing" aria-label="Sample analysis failed" role="alert">
+      <h2 className="analysing__title">Analysis couldn’t finish</h2>
+      <p className="analysing__text">
+        {sample.analysisError || 'LexiPath could not produce an error report for this sample.'}
+      </p>
+      <Button variant="secondary" to={`/students/${studentId}`}>
+        Back to profile
       </Button>
     </section>
   );
@@ -428,8 +445,8 @@ function DoneCard({ sample, firstName, studentId }) {
       </span>
       <h2 className="analysing__title">Sample uploaded &amp; analysed</h2>
       <p className="analysing__text">
-        LexiPath found and tagged the literacy errors in “{sample.title}”. Review the AI’s
-        tagging against {firstName}’s scan in the error report.
+        LexiPath found and tagged the literacy errors in “{sample.title}”. Review the AI’s tagging
+        against {firstName}’s scan in the error report.
       </p>
       <div className="analysing__actions">
         <Button variant="secondary" to={`/students/${studentId}`}>

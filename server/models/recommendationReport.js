@@ -1,17 +1,39 @@
-// One set of intervention strategies generated for a student, based on their
-// analysed samples. Strategies are embedded (same call as Sample.errors) -
-// a report is always read as one whole. "based on SampleReport" in the class
-// diagram maps to Sample here, since we don't have a separate SampleReport
-// collection (see docs/decisions-log.md).
+// The one latest intervention-strategy report for a student. Generating again
+// replaces the old report; there is no lifecycle or report history.
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-export const RECOMMENDATION_STATUSES = ["CURRENT", "OUTDATED", "SUPERSEDED"];
+import { ERROR_CATEGORIES } from './sample.js';
+
+const worksheetSchema = new mongoose.Schema(
+  {
+    worksheetId: { type: String, required: true },
+    title: { type: String, required: true },
+    pdfPages: { type: String, default: '' },
+    available: { type: Boolean, default: false },
+    targetCategories: [{ type: String, enum: ERROR_CATEGORIES }],
+    rationale: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const evidenceSchema = new mongoose.Schema(
+  {
+    category: { type: String, enum: ERROR_CATEGORIES, required: true },
+    count: { type: Number, min: 1, required: true },
+    writtenExamples: { type: [String], default: [] },
+    sampleIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sample' }],
+  },
+  { _id: false }
+);
 
 const strategySchema = new mongoose.Schema(
   {
-    strategy: { type: String, required: true },
-    rationale: { type: String, required: true },
+    strategy: { type: String, required: true, trim: true },
+    rationale: { type: String, required: true, trim: true },
+    targetCategories: [{ type: String, enum: ERROR_CATEGORIES }],
+    evidence: { type: [evidenceSchema], default: [] },
+    worksheets: { type: [worksheetSchema], default: [] },
   },
   { _id: false }
 );
@@ -20,39 +42,31 @@ const recommendationReportSchema = new mongoose.Schema(
   {
     student: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+      ref: 'Student',
       required: true,
+      index: true,
+      unique: true,
     },
-
-    basedOnSamples: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "Sample" },
-    ],
-
+    basedOnSamples: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Sample' }],
     strategies: { type: [strategySchema], default: [] },
-
-    status: {
-      type: String,
-      enum: RECOMMENDATION_STATUSES,
-      default: "CURRENT",
-    },
-
-    // // A teacher can dismiss the "may be outdated" banner without
-    // // regenerating - the report stays active, this just silences the flag.
-    // outdatedFlagDismissed: { type: Boolean, default: false },
-    // commented out by Somesh: I feel it doesn't make sense can just change the status back to CURRENT
-    // Set on the new report when it replaces an older one (regenerate flow).
-    supersedes: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "RecommendationReport",
-      default: null,
-    },
+    generatedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true } // createdAt covers "generatedAt" from the diagram
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_document, result) => {
+        result.reportId = result._id.toString();
+        delete result._id;
+        delete result.__v;
+        return result;
+      },
+    },
+  }
 );
+
+recommendationReportSchema.index({ student: 1, generatedAt: -1 });
 
 export const RecommendationReport = mongoose.model(
-  "RecommendationReport",
+  'RecommendationReport',
   recommendationReportSchema
 );
-
-

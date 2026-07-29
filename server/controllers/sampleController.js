@@ -95,11 +95,12 @@ const getImages = async (req, res) => {
     res.status(400);
     throw new Error('Sample Not found');
   }
-  const imagePath = sample.pages[Number(req.params.index)].imagePath;
-  if (!imagePath) {
+  const index = Number(req.params.index);
+  if (!Number.isInteger(index) || index < 0 || index >= sample.pages.length) {
     res.status(400);
     throw new Error('Image not found');
   }
+  const imagePath = sample.pages[index].imagePath;
 
   res.status(200).sendFile(imagePath);
 };
@@ -112,7 +113,7 @@ const markReviewed = async (req, res) => {
     throw new Error('Sample Not found');
   }
   const status = req.body.status;
-  if (!status && !validSampleStatus.includes(status)) {
+  if (!status || !validSampleStatus.includes(status)) {
     res.status(400);
     throw new Error('body usage incorrect submit correct status');
   }
@@ -127,18 +128,41 @@ const reclassifyError = async (req, res) => {
     res.status(400);
     throw new Error('Sample Not found');
   }
-  if (req.body.dismissed) {
-    sample.errors[req.params.errorIndex].dismissed = true;
-    await sample.save();
+  const index = Number(req.params.errorIndex);
+  if (!Number.isInteger(index) || index < 0 || index >= sample.errors.length) {
+    res.status(400);
+    throw new Error('Error not found');
   }
-  const newCategory = req.body.category;
-  if (!newCategory || !ERROR_CATEGORIES.includes(newCategory)) {
+  const body = req.body ?? {};
+  const hasCategory = Object.hasOwn(body, 'category');
+  const hasDismissed = Object.hasOwn(body, 'dismissed');
+  const hasConfidence = Object.hasOwn(body, 'confidenceScore');
+  if (!hasCategory && !hasDismissed && !hasConfidence) {
+    res.status(400);
+    throw new Error('Provide category, dismissed, or confidenceScore');
+  }
+  if (hasCategory && !ERROR_CATEGORIES.includes(body.category)) {
     res.status(400);
     throw new Error('Category wrong');
   }
-  sample.errors[req.params.errorIndex].category = newCategory;
+  if (hasDismissed && typeof body.dismissed !== 'boolean') {
+    res.status(400);
+    throw new Error('Dismissed must be boolean');
+  }
+  if (
+    hasConfidence &&
+    (typeof body.confidenceScore !== 'number' ||
+      body.confidenceScore < 0 ||
+      body.confidenceScore > 1)
+  ) {
+    res.status(400);
+    throw new Error('Confidence score must be between 0 and 1');
+  }
+  if (hasCategory) sample.errors[index].category = body.category;
+  if (hasDismissed) sample.errors[index].dismissed = body.dismissed;
+  if (hasConfidence) sample.errors[index].confidenceScore = body.confidenceScore;
   await sample.save();
-  res.json(toClientSample(sample));
+  res.status(200).json(toClientSample(sample));
 };
 
 export {

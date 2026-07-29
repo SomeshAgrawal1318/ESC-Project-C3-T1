@@ -1,46 +1,27 @@
-import constants from '../constants.js';
+const errorHandler = (error, req, res, next) => {
+  if (res.headersSent) return next(error);
 
-const errorHandler = (err, req, res, next) => {
-  const statusCode = res.statusCode ? res.statusCode : 500;
+  let statusCode = error.statusCode ?? (res.statusCode >= 400 ? res.statusCode : 500);
+  let code = error.code ?? 'INTERNAL_SERVER_ERROR';
+  let message = error.message || 'An unexpected server error occurred.';
 
-  switch (statusCode) {
-    case constants.VALIDATION_ERROR:
-      res.json({
-        title: 'Validation error',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-    case constants.NOT_FOUND:
-      res.json({
-        title: 'Not found',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-    case constants.FORBIDDEN:
-      res.json({
-        title: 'Forbidden',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-    case constants.UNAUTHORIZED:
-      res.json({
-        title: 'Unauthorized',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-    case constants.INTERNAL_SERVER_ERROR:
-      res.json({
-        title: 'Internal server error',
-        message: err.message,
-        stackTrace: err.stack,
-      });
-      break;
-    default:
-      console.log('No error, all good!');
+  if (error.name === 'ValidationError') {
+    statusCode = 400;
+    code = 'VALIDATION_ERROR';
+  } else if (error.name === 'CastError') {
+    statusCode = 400;
+    code = 'INVALID_ID';
+    message = 'The supplied resource ID is invalid.';
   }
+
+  if (statusCode >= 500) {
+    console.error(`[${code}]`, error);
+    if (process.env.NODE_ENV === 'production') {
+      message = 'An unexpected server error occurred.';
+    }
+  }
+
+  return res.status(statusCode).json({ error: { code, message } });
 };
+
 export default errorHandler;

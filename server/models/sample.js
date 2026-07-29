@@ -75,6 +75,20 @@ const pageSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Public worksheet metadata. The private Azure blob path is deliberately not
+// persisted; downloads resolve this stable ID against the approved manifest.
+const worksheetSchema = new mongoose.Schema(
+  {
+    worksheetId: { type: String, required: true },
+    title: { type: String, required: true },
+    pdfPages: { type: String, default: '' },
+    available: { type: Boolean, default: false },
+    targetCategories: [{ type: String, enum: ERROR_CATEGORIES }],
+    rationale: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const sampleSchema = new mongoose.Schema(
   {
     // A reference ("foreign key") to the Student who wrote this work.
@@ -130,6 +144,16 @@ const sampleSchema = new mongoose.Schema(
     analysisError: { type: String, default: '' },
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
+
+    recommendedWorksheets: {
+      type: [worksheetSchema],
+      default: [],
+      validate: {
+        validator: (value) => value.length <= 3,
+        message: 'A sample can have at most three recommended worksheets',
+      },
+    },
+    recommendationsGeneratedAt: { type: Date, default: null },
 
     // Anything the AI could not read on the page, in its own words.
     // "none" or empty means everything was legible.

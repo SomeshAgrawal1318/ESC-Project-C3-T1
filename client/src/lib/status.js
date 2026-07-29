@@ -26,5 +26,8 @@ const STATUS = {
 const FALLBACK = { label: 'Unknown', tone: 'pending', ready: false };
 
 export function statusFor(analysisStatus) {
-  return STATUS[analysisStatus] ?? FALLBACK;
+  return {
+    ...(STATUS[analysisStatus] ?? FALLBACK),
+    failed: analysisStatus === 'FAILED',
+  };
 }

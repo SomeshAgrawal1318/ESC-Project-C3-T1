@@ -1,16 +1,36 @@
-# React + Vite
+# LexiPath client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 and Vite educator interface for reviewing student writing samples,
+inspecting error patterns, and opening grounded intervention worksheets.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Create an ignored `client/.env` containing the public API origin:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```dotenv
+VITE_API_URL=http://localhost:4000/api
+```
 
-## Expanding the ESLint configuration
+All Gemini, MongoDB, Azure, and SAS credentials belong in the server's ignored
+environment file. Never expose them through `VITE_*` variables.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Recommendations
+
+The student recommendations route displays reviewed evidence, intervention
+strategies, and approved worksheets. Worksheet links send only a stable ID to
+`/api/worksheets/:worksheetId/file`; the browser never receives an Azure SAS
+token or signed Blob URL.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```
+
+`DESIGN.md` is the authoritative visual specification for UI changes.

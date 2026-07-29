@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+For the current recommendation-engine integration branch, runtime findings, verification state, and unresolved pre-commit review items, read `HANDOFF.md` before making changes or publishing the branch.
+
 ## What this is
 
 **LexiPath** — a tool for classifying spelling/literacy errors in children's handwritten work. An educator uploads a scan (or several pages) of a student's writing; Gemini flags errors and categorises them; the educator reviews each flag against the scan (the "scan-beside-errors" review screen) and corrects the AI. Aggregated error trends and intervention recommendations are planned on top of that reviewed data.
