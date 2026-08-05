@@ -203,7 +203,7 @@ drop zone and the flow loops back to 2a with the form intact.
 - Empty states invite the next action and mention the child by first name where natural.
 - Locked features explain their unlock: "Available once a sample has been analysed."
 - Never auto-correct or paraphrase a child's written words in any UI string — display `written`
-  verbatim (product invariant, see `../CLAUDE.md`).
+  verbatim (product invariant, see `../AGENTS.md`).
 
 ## 11. File map
 
@@ -291,3 +291,23 @@ screen exists.
 
 **Not the ruled motif.** §7 allows exactly four places and this screen is not one of them. The
 only motif use here is the page-rail thumbnails (allowed spot #3), and they show the real scan.
+
+## 14. Error trends screen (4a / 4b)
+
+`src/pages/ErrorTrendsPage.jsx` at `/students/:studentId/trends`. This screen is a quick reading
+tool, not a dense analytics dashboard: its hierarchy is the student band, one compact three-part
+summary, a slim filter row, then the chart.
+
+**One category at a time.** The chart must not overlay all five category lines. A squared category
+switcher shows shape + word + selected-sample total, and the chart focuses on the chosen category.
+The default is the most frequent category for the current selection. This preserves every value
+without the crossings and label connectors that made the wireframe difficult to scan.
+
+**Progressive controls.** Date range stays visible because it changes the whole view. Individual
+sample checkboxes live inside a `Choose samples` disclosure and all start selected. Excluded samples
+keep their chronological positions as dashed markers, while the line connects the included points.
+
+The summary is one bordered surface with internal dividers rather than three competing cards. On
+small screens its sections stack, the category switcher scrolls horizontally, and the fixed-width
+chart scrolls rather than shrinking its labels and sample names below a legible size. The complete
+five-category dataset remains available in the accessible table below the chart.

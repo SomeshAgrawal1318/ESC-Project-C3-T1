@@ -49,7 +49,7 @@ const lexend = Lexend({
 });
 ```
 
-## Claude Code implementation instruction
+## Coding-agent implementation instruction
 
 Use `asset-manifest.json` to locate the approved assets and
 `brand-tokens.json` as the colour and typography source of truth.
