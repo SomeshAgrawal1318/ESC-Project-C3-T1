@@ -1,5 +1,10 @@
 import express from 'express';
-import { getStudent, getStudents, createStudent } from '../controllers/studentController.js';
+import {
+  getStudent,
+  getStudents,
+  createStudent,
+  getTrends,
+} from '../controllers/studentController.js';
 import { getStudentSamples } from '../controllers/sampleController.js';
 
 const router = express.Router();
@@ -16,5 +21,6 @@ router.route('/:studentId').get(getStudent);
 // samples.js — raw image paths never leave the server.
 
 router.route('/:studentId/samples').get(getStudentSamples);
+router.route('/:studentId/trends').get(getTrends);
 
 export default router;

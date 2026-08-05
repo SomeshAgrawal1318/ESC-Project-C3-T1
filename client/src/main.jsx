@@ -1,6 +1,5 @@
-// Router + providers. Routes for screens beyond 1a/1b (report, upload,
-// trends, recommendations) are stubbed as placeholders so the links in the
-// UI resolve to an honest "not built yet" instead of a dead end.
+// Router + providers. Recommendations remains a placeholder; the upload,
+// review and trends routes are live screens backed by the API seam.
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -11,6 +10,7 @@ import StudentsListPage from './pages/StudentsListPage.jsx';
 import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import UploadSamplePage from './pages/UploadSamplePage.jsx';
 import SampleReportPage from './pages/SampleReportPage.jsx';
+import ErrorTrendsPage from './pages/ErrorTrendsPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
 
@@ -23,7 +23,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="students/:studentId" element={<StudentProfilePage />} />
           {/* Screens 2a/2b — upload + analyse flow */}
           <Route path="students/:studentId/upload" element={<UploadSamplePage />} />
-          <Route path="students/:studentId/trends" element={<Placeholder label="Error trends" />} />
+          <Route path="students/:studentId/trends" element={<ErrorTrendsPage />} />
           <Route
             path="students/:studentId/recommendations"
             element={<Placeholder label="Recommendations" />}

@@ -56,9 +56,10 @@ export function createStudent({ name, currentGrade }) {
   return request('/students', { method: 'POST', body: { name, currentGrade } });
 }
 
-// GET /api/students/:studentId/samples?status=  ->  sample summaries,
-// newest first. The server already sends the client shape:
-//   { sampleId, title, uploadedAt, analysisStatus, imageCount, taskType }
+// GET /api/students/:studentId/samples?status=  ->  samples, newest first.
+// The response uses the same full path-safe shape as getSample(), including
+// errors[]. The profile ignores the detail; ErrorTrendsPage derives its chart
+// locally from it without needing a separate trends request.
 export function getStudentSamples(studentId, { status } = {}) {
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
