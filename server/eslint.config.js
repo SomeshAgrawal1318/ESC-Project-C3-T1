@@ -13,7 +13,8 @@ export default defineConfig([
     },
     rules: {
       // req/next often unused in Express handlers; err param must stay for error middleware
-      'no-unused-vars': ['error', { argsIgnorePattern: '^(req|res|next)$' }],
+      // ignoreRestSiblings: destructuring a key out just to omit it from ...rest is intentional, not unused
+      'no-unused-vars': ['error', { argsIgnorePattern: '^(req|res|next)$', ignoreRestSiblings: true }],
     },
   },
 ]);
