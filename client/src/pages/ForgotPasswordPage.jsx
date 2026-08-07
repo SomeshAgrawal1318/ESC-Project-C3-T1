@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
             type="text"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="e.g. Sandy@DAS"
+            placeholder="e.g. Name@DAS"
             autoFocus
             required
           />
