@@ -39,10 +39,11 @@ const errorHandler = (err, req, res, next) => {
   const title = TITLES[statusCode] ?? TITLES[constants.INTERNAL_SERVER_ERROR] ?? 'Error';
   const code = err.code ?? title.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
   let message = err.message;
+  const exposeInternals = process.env.NODE_ENV !== 'production';
 
   if (statusCode >= 500) {
     console.error(`[${title}]`, err);
-    if (process.env.NODE_ENV === 'production') {
+    if (!exposeInternals) {
       message = 'An unexpected server error occurred.';
     }
   }
@@ -51,8 +52,14 @@ const errorHandler = (err, req, res, next) => {
   // { title, message, stackTrace } read by client/src/lib/api.js and most
   // existing tests, and the newer { error: { code, message } } read by the
   // AppError-based recommendation routes/tests. Send both in one body so
-  // neither consumer needs to change.
-  res.status(statusCode).json({ title, message, stackTrace: err.stack, error: { code, message } });
+  // neither consumer needs to change. stackTrace is dev-only - it must
+  // never leak internals (file paths, function names) to a production client.
+  res.status(statusCode).json({
+    title,
+    message,
+    stackTrace: exposeInternals ? err.stack : undefined,
+    error: { code, message },
+  });
 };
 
 export default errorHandler;
