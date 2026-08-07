@@ -5,6 +5,8 @@ const constants = {
   UNAUTHORIZED: 401,
   UNPROCESSABLE_ENTITY: 422,
   INTERNAL_SERVER_ERROR: 500,
+  
+  ERROR_CONFIDENCE_THRESHOLD: 0.6,
 };
 
 export default constants;
