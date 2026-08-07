@@ -55,9 +55,9 @@ beforeEach(() => {
 
   Student.findById = async (id) => records.find((student) => student._id === id) ?? null;
 
-  Sample.find = async (filter) => {
+  Sample.find = (filter) => {
     sampleFilter = filter;
-    return [];
+    return { sort: async () => [] };
   };
 });
 
@@ -157,7 +157,22 @@ describe('students API integration', () => {
     );
 
     assert.equal(response.status, 200);
-    assert.deepEqual(body, []);
+    assert.deepEqual(body, {
+      studentId: '000000000000000000000007',
+      totalSamples: 0,
+      totalErrors: 0,
+      mostFrequentCategory: null,
+      categoryTotals: {
+        phonological: 0,
+        orthographic: 0,
+        morphological: 0,
+        capitalisation: 0,
+        punctuation: 0,
+        unsure: 0,
+      },
+      trends: [],
+    });
+    assert.equal(sampleFilter.status.$in.join(','), 'ANALYSED,REVIEWED');
     assert.equal(sampleFilter.createdAt.$lt.toISOString(), '2026-07-28T00:00:00.000Z');
   });
 

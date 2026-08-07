@@ -1,5 +1,5 @@
 import { Student } from '../models/student.js';
-import { Sample } from '../models/sample.js';
+import { Sample, ERROR_CATEGORIES } from '../models/sample.js';
 // The client shape for a student. Every route in this file answers with
 // this instead of the raw Mongoose document, so `_id`/`__v` never reach the
 // UI — client/src/lib/api.js and the pages key off `studentId`.
@@ -56,8 +56,15 @@ const createStudent = async (req, res) => {
   res.status(201).json(toClientStudent(student));
 };
 
+// Computed on demand from stored Samples - there is no persisted trend
+// entity, by design (see the Error Trends & Analytics slice notes).
+// Combines aadi/main's date-range filtering with error_trends_kavi's
+// richer aggregate shape (totalSamples/mostFrequentCategory/categoryTotals
+// plus a per-sample trends[] series), and adds the two filter rules the
+// spec calls for: only ANALYSED/REVIEWED samples contribute, and dismissed
+// errors are excluded from every count.
 const getTrends = async (req, res) => {
-  const filter = { student: req.params.studentId };
+  const filter = { student: req.params.studentId, status: { $in: ['ANALYSED', 'REVIEWED'] } };
   if (req.query.from) {
     const from = parseDateQuery(req.query.from);
     if (!from) {
@@ -77,23 +84,45 @@ const getTrends = async (req, res) => {
     to.setUTCDate(to.getUTCDate() + 1);
     filter.createdAt = { ...filter.createdAt, $lt: to };
   }
-  const samples = await Sample.find(filter);
-  let validErrors = samples
-    .filter((s) => s.errors.length > 0)
-    .flatMap((s) => s.errors)
-    .filter((error) => !error.dismissed);
 
-  const phonological = validErrors.filter((error) => error.category === 'phonological');
-  const orthographic = validErrors.filter((error) => error.category === 'orthographic');
-  const morphological = validErrors.filter((error) => error.category === 'morphological');
-  const capitalisation = validErrors.filter((error) => error.category === 'capitalisation');
-  const punctuation = validErrors.filter((error) => error.category === 'punctuation');
+  const samples = await Sample.find(filter).sort({ createdAt: 1 });
+
+  const categoryTotals = Object.fromEntries(ERROR_CATEGORIES.map((category) => [category, 0]));
+  let totalErrors = 0;
+
+  const trends = samples.map((sample) => {
+    const categoryCounts = Object.fromEntries(ERROR_CATEGORIES.map((category) => [category, 0]));
+    const validErrors = sample.errors.filter((error) => !error.dismissed);
+
+    for (const error of validErrors) {
+      categoryCounts[error.category] += 1;
+      categoryTotals[error.category] += 1;
+    }
+    totalErrors += validErrors.length;
+
+    return {
+      sampleId: sample._id,
+      title: sample.title,
+      date: sample.createdAt,
+      totalErrors: validErrors.length,
+      categoryCounts,
+    };
+  });
+
+  let mostFrequentCategory = null;
+  if (totalErrors > 0) {
+    mostFrequentCategory = Object.entries(categoryTotals).reduce((highest, current) =>
+      current[1] > highest[1] ? current : highest
+    )[0];
+  }
+
   res.status(200).json({
-    phonological,
-    orthographic,
-    morphological,
-    capitalisation,
-    punctuation,
+    studentId: req.params.studentId,
+    totalSamples: samples.length,
+    totalErrors,
+    mostFrequentCategory,
+    categoryTotals,
+    trends,
   });
 };
 
