@@ -69,25 +69,37 @@ const createStudent = async (req, res) => {
 // spec calls for: only ANALYSED/REVIEWED samples contribute, and dismissed
 // errors are excluded from every count.
 const getTrends = async (req, res) => {
+  const student = await Student.findById(req.params.studentId).catch(() => null);
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
+
   const filter = { student: req.params.studentId, status: { $in: ['ANALYSED', 'REVIEWED'] } };
+  let fromDate = null;
+  let toDate = null;
   if (req.query.from) {
-    const from = parseDateQuery(req.query.from);
-    if (!from) {
+    fromDate = parseDateQuery(req.query.from);
+    if (!fromDate) {
       res.status(400);
       throw new Error('The "from" date must use the YYYY-MM-DD format');
     }
-    filter.createdAt = { $gte: from };
+    filter.createdAt = { $gte: fromDate };
   }
   if (req.query.to) {
-    const to = parseDateQuery(req.query.to);
-    if (!to) {
+    toDate = parseDateQuery(req.query.to);
+    if (!toDate) {
       res.status(400);
       throw new Error('The "to" date must use the YYYY-MM-DD format');
     }
+    if (fromDate && fromDate > toDate) {
+      res.status(400);
+      throw new Error('The "from" date must not be later than the "to" date');
+    }
     // Use midnight of the following UTC day as the exclusive upper limit.
     // For to=2026-07-27, this produces createdAt < 2026-07-28 00:00 UTC.
-    to.setUTCDate(to.getUTCDate() + 1);
-    filter.createdAt = { ...filter.createdAt, $lt: to };
+    toDate.setUTCDate(toDate.getUTCDate() + 1);
+    filter.createdAt = { ...filter.createdAt, $lt: toDate };
   }
 
   const samples = await Sample.find(filter).sort({ createdAt: 1 });

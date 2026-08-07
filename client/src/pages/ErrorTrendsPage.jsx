@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
 import TrendChart from '../components/TrendChart.jsx';
-import { getStudent, getStudentSamples } from '../lib/api.js';
+import { getStudent, getStudentTrends } from '../lib/api.js';
 import { categoryFor } from '../lib/categories.js';
 import {
   DATE_RANGES,
@@ -27,20 +27,23 @@ export default function ErrorTrendsPage() {
   const [state, setState] = useState({ status: 'loading' });
   const [range, setRange] = useState('3m');
   const [excludedIds, setExcludedIds] = useState(() => new Set());
-  const [activeCategory, setActiveCategory] = useState(null);
   const [now] = useState(() => new Date());
 
   useEffect(() => {
     let live = true;
-    Promise.all([getStudent(studentId), getStudentSamples(studentId)])
-      .then(([student, samples]) => {
+    // Fetches all-time trend data once (real server aggregation, so it
+    // already reconciles with the review screen), then filters by the
+    // chosen preset client-side — the range dropdown below stays instant
+    // without a round-trip per change.
+    Promise.all([getStudent(studentId), getStudentTrends(studentId)])
+      .then(([student, trendData]) => {
         if (!live) return;
         if (!student) setState({ status: 'notfound' });
         else {
           setState({
             status: 'ready',
             student,
-            samples: prepareTrendSamples(samples),
+            samples: prepareTrendSamples(trendData.trends),
           });
         }
       })
@@ -61,7 +64,6 @@ export default function ErrorTrendsPage() {
     [rangedSamples, excludedIds]
   );
   const summary = useMemo(() => summariseTrends(includedSamples), [includedSamples]);
-  const focusedCategory = activeCategory ?? summary.mostFrequent ?? 'phonological';
 
   if (state.status === 'loading') return <TrendsSkeleton />;
   if (state.status === 'notfound') {
@@ -110,12 +112,7 @@ export default function ErrorTrendsPage() {
           </div>
         </div>
         <div className="profile__actions">
-          <Button
-            variant="secondary"
-            icon="recommendations"
-            disabled
-            disabledHint="Recommendations are not available yet"
-          >
+          <Button variant="secondary" icon="recommendations" to={`/students/${studentId}/recommendations`}>
             View recommendations
           </Button>
         </div>
@@ -184,8 +181,6 @@ export default function ErrorTrendsPage() {
         <TrendChart
           samples={rangedSamples}
           excludedIds={excludedIds}
-          activeCategory={focusedCategory}
-          onCategoryChange={setActiveCategory}
           onOpenSample={(sampleId) => navigate(`/samples/${sampleId}`)}
         />
       ) : (

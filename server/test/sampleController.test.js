@@ -99,7 +99,7 @@ test('error updates reject an out-of-range embedded error index', async () => {
       ),
       /Error not found/
     );
-    assert.equal(res.statusCode, 400);
+    assert.equal(res.statusCode, 404);
   } finally {
     Sample.findById = originalFindById;
   }

@@ -56,13 +56,28 @@ export function createStudent({ name, currentGrade }) {
   return request('/students', { method: 'POST', body: { name, currentGrade } });
 }
 
-// GET /api/students/:studentId/samples?status=  ->  samples, newest first.
-// The response uses the same full path-safe shape as getSample(), including
-// errors[]. The profile ignores the detail; ErrorTrendsPage derives its chart
-// locally from it without needing a separate trends request.
+// GET /api/students/:studentId/samples?status=  ->  lightweight summaries,
+// newest first: { sampleId, title, uploadedAt, analysisStatus, imageCount }.
+// Never carries errors/content — see paths.txt. Powers the profile's sample
+// list. For trend data use getStudentTrends() below, not this.
 export function getStudentSamples(studentId, { status } = {}) {
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// GET /api/students/:studentId/trends?from=&to=  ->
+//   { studentId, totalSamples, totalErrors, mostFrequentCategory,
+//     categoryTotals, trends: [{ sampleId, title, date, totalErrors,
+//     categoryCounts }] }
+// Computed server-side from stored SampleReports; totalErrors/categoryCounts
+// already exclude dismissed tags and only count ANALYSED/REVIEWED samples,
+// so it reconciles exactly with the review screen's own counts.
+export function getStudentTrends(studentId, { from, to } = {}) {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  return request(`/students/${studentId}/trends${qs ? `?${qs}` : ''}`);
 }
 
 // GET the latest report. `isOutdated` is computed from source sample updates;

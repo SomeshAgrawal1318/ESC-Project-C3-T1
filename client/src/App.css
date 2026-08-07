@@ -2151,7 +2151,7 @@
 .trend-category-option {
   --category-color: var(--ink);
   min-width: max-content;
-  min-height: 42px;
+  min-height: 44px;
   display: grid;
   grid-template-columns: 20px auto auto;
   align-items: center;
@@ -2163,7 +2163,6 @@
   color: var(--category-color);
   font: inherit;
   font-size: 12px;
-  cursor: pointer;
 }
 .trend-category-option--orthographic {
   --category-color: var(--ink-soft);
@@ -2331,6 +2330,15 @@
 .trend-point:hover .trend-point__focus,
 .trend-point:focus-visible .trend-point__focus {
   stroke: var(--sage-strong);
+}
+.trend-endlabel__marker {
+  overflow: visible;
+}
+.trend-endlabel__text {
+  fill: currentColor;
+  font-size: 11.5px;
+  font-weight: 600;
+  dominant-baseline: middle;
 }
 
 .trend-table-wrap {

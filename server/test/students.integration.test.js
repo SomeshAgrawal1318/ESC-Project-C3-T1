@@ -152,6 +152,13 @@ describe('students API integration', () => {
   });
 
   test('GET trends includes the entire requested to date', async () => {
+    records.push({
+      _id: '000000000000000000000007',
+      name: 'Wei Jie Lim',
+      currentGrade: 'Primary 4',
+      createdAt: new Date(),
+    });
+
     const { response, body } = await request(
       '/api/students/000000000000000000000007/trends?to=2026-07-27'
     );
@@ -177,6 +184,13 @@ describe('students API integration', () => {
   });
 
   test('GET trends rejects incorrectly formatted and impossible dates', async () => {
+    records.push({
+      _id: '000000000000000000000007',
+      name: 'Wei Jie Lim',
+      currentGrade: 'Primary 4',
+      createdAt: new Date(),
+    });
+
     for (const date of ['2026/07/27', '2026-02-30']) {
       const { response, body } = await request(
         `/api/students/000000000000000000000007/trends?from=${date}`
@@ -185,5 +199,30 @@ describe('students API integration', () => {
       assert.equal(response.status, 400);
       assert.equal(body.message, 'The "from" date must use the YYYY-MM-DD format');
     }
+  });
+
+  test('GET trends reports an unknown student as 404', async () => {
+    const { response, body } = await request(
+      '/api/students/000000000000000000000099/trends'
+    );
+
+    assert.equal(response.status, 404);
+    assert.equal(body.message, 'Student not found');
+  });
+
+  test('GET trends rejects a from date later than the to date', async () => {
+    records.push({
+      _id: '000000000000000000000007',
+      name: 'Wei Jie Lim',
+      currentGrade: 'Primary 4',
+      createdAt: new Date(),
+    });
+
+    const { response, body } = await request(
+      '/api/students/000000000000000000000007/trends?from=2026-08-01&to=2026-01-01'
+    );
+
+    assert.equal(response.status, 400);
+    assert.equal(body.message, 'The "from" date must not be later than the "to" date');
   });
 });

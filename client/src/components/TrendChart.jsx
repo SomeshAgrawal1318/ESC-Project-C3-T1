@@ -17,19 +17,15 @@ const shortDate = new Intl.DateTimeFormat('en-SG', {
   month: 'short',
 });
 
-export default function TrendChart({
-  samples,
-  excludedIds,
-  activeCategory,
-  onCategoryChange,
-  onOpenSample,
-}) {
+// All five categories are drawn as their own line at once — per the
+// wireframe, symbol + label at the line end, never a detached legend and
+// never colour as the only way to tell two series apart.
+export default function TrendChart({ samples, excludedIds, onOpenSample }) {
   const titleId = useId();
   const descriptionId = useId();
   const included = samples.filter((sample) => !excludedIds.has(String(sample.sampleId)));
   const includedIds = new Set(included.map((sample) => String(sample.sampleId)));
-  const category = categoryFor(activeCategory);
-  const config = SERIES[activeCategory];
+
   const categoryTotals = Object.fromEntries(
     TREND_CATEGORIES.map((item) => [
       item,
@@ -37,17 +33,17 @@ export default function TrendChart({
     ])
   );
 
-  const chartWidth = Math.max(920, 350 + Math.max(samples.length - 1, 1) * 190);
+  const chartWidth = Math.max(960, 350 + Math.max(samples.length - 1, 1) * 190);
   const chartHeight = 390;
-  const plot = {
-    left: 62,
-    top: 36,
-    right: chartWidth - 38,
-    bottom: 285,
-  };
+  // Right margin widened versus the single-series layout, to leave room for
+  // up to five end-of-line labels beyond the last plotted sample.
+  const plot = { left: 62, top: 36, right: chartWidth - 118, bottom: 285 };
   const plotWidth = plot.right - plot.left;
   const plotHeight = plot.bottom - plot.top;
-  const maxValue = Math.max(0, ...included.map((sample) => sample.counts[activeCategory]));
+  const maxValue = Math.max(
+    0,
+    ...included.flatMap((sample) => TREND_CATEGORIES.map((item) => sample.counts[item]))
+  );
   const axisMax = Math.max(4, Math.ceil(maxValue / 2) * 2);
   const tickCount = 4;
 
@@ -56,19 +52,34 @@ export default function TrendChart({
       ? plot.left + plotWidth / 2
       : plot.left + (index / (samples.length - 1)) * plotWidth;
   const yForValue = (value) => plot.bottom - (value / axisMax) * plotHeight;
-  const points = samples
-    .map((sample, sampleIndex) => ({ sample, sampleIndex }))
-    .filter(({ sample }) => includedIds.has(String(sample.sampleId)))
-    .map(({ sample, sampleIndex }) => ({
-      sample,
-      x: xForIndex(sampleIndex),
-      y: yForValue(sample.counts[activeCategory]),
-    }));
-  const areaPoints = [
-    `${points[0].x},${plot.bottom}`,
-    ...points.map((point) => `${point.x},${point.y}`),
-    `${points.at(-1).x},${plot.bottom}`,
-  ].join(' ');
+
+  const series = TREND_CATEGORIES.map((item) => {
+    const points = samples
+      .map((sample, sampleIndex) => ({ sample, sampleIndex }))
+      .filter(({ sample }) => includedIds.has(String(sample.sampleId)))
+      .map(({ sample, sampleIndex }) => ({
+        sample,
+        x: xForIndex(sampleIndex),
+        y: yForValue(sample.counts[item]),
+        count: sample.counts[item],
+      }));
+    return { item, config: SERIES[item], category: categoryFor(item), points };
+  });
+
+  // End-of-line labels sit at each series' final value, nudged apart
+  // vertically so two categories converging on the same count never overlap.
+  const MIN_LABEL_GAP = 18;
+  const endLabels = series
+    .filter((s) => s.points.length > 0)
+    .map((s) => ({ item: s.item, category: s.category, y: s.points.at(-1).y }))
+    .sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++) {
+    if (endLabels[i].y - endLabels[i - 1].y < MIN_LABEL_GAP) {
+      endLabels[i].y = endLabels[i - 1].y + MIN_LABEL_GAP;
+    }
+  }
+  const endLabelY = Object.fromEntries(endLabels.map((label) => [label.item, label.y]));
+  const lastX = samples.length ? xForIndex(samples.length - 1) : plot.right;
 
   return (
     <section className="trend-chart-card" aria-labelledby={titleId}>
@@ -76,33 +87,23 @@ export default function TrendChart({
         <div>
           <span className="eyebrow">Category movement</span>
           <h2 id={titleId} className="trend-chart-card__title">
-            {category.label} errors over time
+            Errors by category over time
           </h2>
         </div>
-        <p className="trend-chart-card__focus">
-          <strong>{categoryTotals[activeCategory]}</strong> tagged across {included.length} samples
-        </p>
       </div>
 
-      <div className="trend-category-nav" aria-label="Choose an error category">
+      <div className="trend-category-nav" aria-label="Category totals in the selected range">
         {TREND_CATEGORIES.map((item) => {
           const itemCategory = categoryFor(item);
           const itemConfig = SERIES[item];
-          const selected = item === activeCategory;
           return (
-            <button
-              key={item}
-              type="button"
-              className={`trend-category-option trend-category-option--${item}${selected ? ' trend-category-option--active' : ''}`}
-              aria-pressed={selected}
-              onClick={() => onCategoryChange(item)}
-            >
+            <span key={item} className={`trend-category-option trend-category-option--${item}`}>
               <svg className="trend-category-option__marker" viewBox="0 0 20 20" aria-hidden="true">
                 <SeriesMarker marker={itemConfig.marker} x={10} y={10} small />
               </svg>
               <span>{itemCategory.label}</span>
               <strong>{categoryTotals[item]}</strong>
-            </button>
+            </span>
           );
         })}
       </div>
@@ -117,8 +118,8 @@ export default function TrendChart({
           aria-labelledby={`${titleId} ${descriptionId}`}
         >
           <desc id={descriptionId}>
-            Line chart showing {category.label.toLowerCase()} errors across the selected writing
-            samples.
+            Line chart showing phonological, orthographic, morphological, capitalisation and
+            punctuation errors across the selected writing samples, one line per category.
           </desc>
 
           <text
@@ -203,22 +204,19 @@ export default function TrendChart({
             );
           })}
 
-          <g className={`trend-series trend-series--${activeCategory}`}>
-            <polygon className="trend-series__area" points={areaPoints} />
-            <polyline
-              className="trend-series__line"
-              points={points.map((point) => `${point.x},${point.y}`).join(' ')}
-              strokeDasharray={config.dash}
-            />
+          {series.map(({ item, config, category, points }) => {
+            if (points.length === 0) return null;
+            return (
+              <g key={item} className={`trend-series trend-series--${item}`}>
+                <polyline
+                  className="trend-series__line"
+                  points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+                  strokeDasharray={config.dash}
+                />
 
-            {points.map(({ sample, x, y }) => {
-              const count = sample.counts[activeCategory];
-              return (
-                <g key={sample.sampleId}>
-                  <text className="trend-point__value" x={x} y={Math.max(plot.top + 12, y - 16)}>
-                    {count}
-                  </text>
+                {points.map(({ sample, x, y, count }) => (
                   <g
+                    key={sample.sampleId}
                     className="trend-point"
                     role="link"
                     tabIndex="0"
@@ -232,14 +230,36 @@ export default function TrendChart({
                     }}
                   >
                     <title>{`${sample.title} — ${category.label}: ${count}`}</title>
-                    <circle className="trend-point__hit" cx={x} cy={y} r="16" />
+                    <circle className="trend-point__hit" cx={x} cy={y} r="22" />
                     <circle className="trend-point__focus" cx={x} cy={y} r="11" />
                     <SeriesMarker marker={config.marker} x={x} y={y} />
                   </g>
+                ))}
+
+                {/* Line-end label: symbol + full category name, per the wireframe —
+                    never colour/position alone. */}
+                <g
+                  className="trend-endlabel"
+                  transform={`translate(${lastX + 16}, ${endLabelY[item]})`}
+                >
+                  <svg
+                    className="trend-endlabel__marker"
+                    viewBox="0 0 20 20"
+                    width="14"
+                    height="14"
+                    x="0"
+                    y="-7"
+                    aria-hidden="true"
+                  >
+                    <SeriesMarker marker={config.marker} x={10} y={10} small />
+                  </svg>
+                  <text className="trend-endlabel__text" x="18" y="4">
+                    {category.label}
+                  </text>
                 </g>
-              );
-            })}
-          </g>
+              </g>
+            );
+          })}
         </svg>
       </div>
 

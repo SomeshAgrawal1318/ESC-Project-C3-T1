@@ -99,13 +99,33 @@ function toClientSample(sample) {
   };
 }
 
+// The list-of-samples summary, deliberately smaller than toClientSample():
+// this route backs a list screen that only ever shows a status pill and a
+// date, so it must never carry the (potentially large) errors array or any
+// image reference - see paths.txt's "must NOT return sampleImages or
+// sampleContent" rule for this route.
+function toSampleSummary(sample) {
+  return {
+    sampleId: sample._id,
+    title: sample.title,
+    uploadedAt: sample.createdAt,
+    analysisStatus: sample.status,
+    imageCount: sample.pages.length,
+  };
+}
+
 const getStudentSamples = async (req, res) => {
+  const student = await Student.findById(req.params.studentId).catch(() => null);
+  if (!student) {
+    res.status(404);
+    throw new Error('Student not found');
+  }
   const filter = { student: req.params.studentId };
   if (req.query.status) {
     filter.status = req.query.status;
   }
   const samples = await Sample.find(filter).sort({ createdAt: -1 });
-  res.status(200).json(samples.map(toClientSample));
+  res.status(200).json(samples.map(toSampleSummary));
 };
 
 const getSamples = async (req, res) => {
@@ -160,19 +180,21 @@ const createSample = async (req, res) => {
     pages: pageEntries,
     taskType: req.body.taskType,
   });
-  res.status(201).json(toClientSample(sample));
+  // 202, not 201: the Sample row exists, but analysis (below) has not run
+  // yet and continues after this response is sent - see errorClassificationEngine.js.
+  res.status(202).json(toClientSample(sample));
   runAnalysis(sample._id);
 };
 
 const getImages = async (req, res) => {
   const sample = await Sample.findById(req.params.sampleId);
   if (!sample) {
-    res.status(400);
+    res.status(404);
     throw new Error('Sample Not found');
   }
   const index = Number(req.params.index);
   if (!Number.isInteger(index) || index < 0 || index >= sample.pages.length) {
-    res.status(400);
+    res.status(404);
     throw new Error('Image not found');
   }
   const imagePath = sample.pages[index].imagePath;
@@ -184,7 +206,7 @@ const markReviewed = async (req, res) => {
   const validSampleStatus = ['UPLOADED', 'ANALYSED', 'REVIEWED', 'FAILED'];
   const sample = await Sample.findById(req.params.sampleId);
   if (!sample) {
-    res.status(400);
+    res.status(404);
     throw new Error('Sample Not found');
   }
   const status = req.body.status;
@@ -200,12 +222,12 @@ const markReviewed = async (req, res) => {
 const reclassifyError = async (req, res) => {
   const sample = await Sample.findById(req.params.sampleId);
   if (!sample) {
-    res.status(400);
+    res.status(404);
     throw new Error('Sample Not found');
   }
   const index = Number(req.params.errorIndex);
   if (!Number.isInteger(index) || index < 0 || index >= sample.errors.length) {
-    res.status(400);
+    res.status(404);
     throw new Error('Error not found');
   }
   const body = req.body ?? {};

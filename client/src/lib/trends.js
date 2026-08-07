@@ -9,34 +9,29 @@ export const DATE_RANGES = [
   { value: 'all', label: 'All time', months: null },
 ];
 
-const READY_STATUSES = new Set(['ANALYSED', 'REVIEWED', 'COMPLETE']);
-
 function emptyCounts() {
   return Object.fromEntries(TREND_CATEGORIES.map((category) => [category, 0]));
 }
 
-export function prepareTrendSamples(samples) {
-  return samples
-    .filter(
-      (sample) =>
-        READY_STATUSES.has(sample.analysisStatus) &&
-        !Number.isNaN(new Date(sample.uploadedAt).getTime())
-    )
-    .map((sample) => {
-      const counts = emptyCounts();
-
-      for (const error of sample.errors ?? []) {
-        if (!error.dismissed && error.category in counts) {
-          counts[error.category] += 1;
-        }
-      }
-
-      return {
-        ...sample,
-        counts,
-        totalErrors: TREND_CATEGORIES.reduce((total, category) => total + counts[category], 0),
-      };
-    })
+// Adapts the server's per-sample trend entries ({ sampleId, title, date,
+// totalErrors, categoryCounts }, already filtered to ANALYSED/REVIEWED
+// samples with dismissed errors excluded — see studentController.getTrends)
+// into the shape this module and TrendChart work with. totalErrors is kept
+// as the server sent it (every non-dismissed error, all six categories,
+// including "unsure") so it reconciles exactly with the review screen's own
+// count; counts is narrowed to the five chartable categories.
+export function prepareTrendSamples(serverTrends) {
+  return serverTrends
+    .filter((entry) => !Number.isNaN(new Date(entry.date).getTime()))
+    .map((entry) => ({
+      sampleId: entry.sampleId,
+      title: entry.title,
+      uploadedAt: entry.date,
+      totalErrors: entry.totalErrors,
+      counts: Object.fromEntries(
+        TREND_CATEGORIES.map((category) => [category, entry.categoryCounts?.[category] ?? 0])
+      ),
+    }))
     .sort((a, b) => new Date(a.uploadedAt) - new Date(b.uploadedAt));
 }
 
@@ -71,17 +66,19 @@ export function applySampleSelection(samples, excludedIds) {
 
 export function summariseTrends(samples) {
   const categoryTotals = emptyCounts();
+  let totalErrors = 0;
 
   for (const sample of samples) {
     for (const category of TREND_CATEGORIES) {
       categoryTotals[category] += sample.counts[category];
     }
+    // Use the server's own per-sample total (all six categories, including
+    // "unsure") rather than summing the five chartable categories here —
+    // otherwise an unsure-categorised error would silently vanish from this
+    // total while still counting on the review screen. See trends theme in
+    // the Work Allocation audit: "trends must reconcile exactly".
+    totalErrors += sample.totalErrors;
   }
-
-  const totalErrors = TREND_CATEGORIES.reduce(
-    (total, category) => total + categoryTotals[category],
-    0
-  );
 
   let mostFrequent = null;
   for (const category of TREND_CATEGORIES) {

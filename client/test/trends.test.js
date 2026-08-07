@@ -9,22 +9,26 @@ import {
   summariseTrends,
 } from '../src/lib/trends.js';
 
-function sample({ id, date, status = 'ANALYSED', errors = [] }) {
+// Shaped like one entry of the server's GET /api/students/:id/trends
+// response (studentController.getTrends) — status filtering and dismissed-
+// error exclusion already happened server-side, so prepareTrendSamples no
+// longer needs sample.errors/analysisStatus at all.
+function trendEntry({ id, date, categoryCounts = {}, totalErrors }) {
+  const total = totalErrors ?? Object.values(categoryCounts).reduce((sum, n) => sum + n, 0);
   return {
     sampleId: id,
     title: `Sample ${id}`,
-    uploadedAt: date,
-    analysisStatus: status,
-    errors,
+    date,
+    totalErrors: total,
+    categoryCounts,
   };
 }
 
 describe('trend data preparation', () => {
-  test('keeps completed samples in chronological order and retains zero-error samples', () => {
+  test('keeps samples in chronological order and retains zero-error samples', () => {
     const result = prepareTrendSamples([
-      sample({ id: 'new', date: '2026-07-20T08:00:00.000Z', status: 'REVIEWED' }),
-      sample({ id: 'waiting', date: '2026-07-10T08:00:00.000Z', status: 'UPLOADED' }),
-      sample({ id: 'old', date: '2026-06-20T08:00:00.000Z' }),
+      trendEntry({ id: 'new', date: '2026-07-20T08:00:00.000Z', totalErrors: 0 }),
+      trendEntry({ id: 'old', date: '2026-06-20T08:00:00.000Z', totalErrors: 0 }),
     ]);
 
     assert.deepEqual(
@@ -34,24 +38,23 @@ describe('trend data preparation', () => {
     assert.equal(result[1].totalErrors, 0);
   });
 
-  test('counts five categories while excluding dismissed and unsure errors', () => {
+  test('narrows to five chartable categories while keeping the server total for reconciliation', () => {
     const [result] = prepareTrendSamples([
-      sample({
+      trendEntry({
         id: 'one',
         date: '2026-07-20T08:00:00.000Z',
-        errors: [
-          { category: 'phonological', dismissed: false },
-          { category: 'phonological', dismissed: true },
-          { category: 'punctuation', dismissed: false },
-          { category: 'unsure', dismissed: false },
-        ],
+        categoryCounts: { phonological: 1, punctuation: 1, unsure: 1 },
+        totalErrors: 3, // the server's full count, including the "unsure" error
       }),
     ]);
 
     assert.equal(result.counts.phonological, 1);
     assert.equal(result.counts.punctuation, 1);
-    assert.equal(result.totalErrors, 2);
     assert.equal('unsure' in result.counts, false);
+    // Reconciles with the review screen's own count even though "unsure"
+    // isn't one of the five charted series — regression test for the
+    // trends/review-screen mismatch found in the Work Allocation audit.
+    assert.equal(result.totalErrors, 3);
   });
 });
 
@@ -66,9 +69,9 @@ describe('trend filtering and selection', () => {
 
   test('filters by range and removes explicitly excluded samples', () => {
     const prepared = prepareTrendSamples([
-      sample({ id: 'old', date: '2026-01-01T08:00:00.000Z' }),
-      sample({ id: 'middle', date: '2026-06-01T08:00:00.000Z' }),
-      sample({ id: 'latest', date: '2026-07-20T08:00:00.000Z' }),
+      trendEntry({ id: 'old', date: '2026-01-01T08:00:00.000Z' }),
+      trendEntry({ id: 'middle', date: '2026-06-01T08:00:00.000Z' }),
+      trendEntry({ id: 'latest', date: '2026-07-20T08:00:00.000Z' }),
     ]);
     const ranged = filterSamplesByRange(prepared, '3m', new Date(2026, 6, 31, 12));
     const selected = applySampleSelection(ranged, new Set(['middle']));
@@ -87,13 +90,10 @@ describe('trend filtering and selection', () => {
 describe('trend summaries', () => {
   test('uses category order to break a most-frequent tie', () => {
     const prepared = prepareTrendSamples([
-      sample({
+      trendEntry({
         id: 'one',
         date: '2026-06-01T08:00:00.000Z',
-        errors: [
-          { category: 'phonological', dismissed: false },
-          { category: 'orthographic', dismissed: false },
-        ],
+        categoryCounts: { phonological: 1, orthographic: 1 },
       }),
     ]);
 
@@ -101,12 +101,18 @@ describe('trend summaries', () => {
   });
 
   test('reports improving, steady, and more-errors comparisons', () => {
-    const counts = (amount) =>
-      Array.from({ length: amount }, () => ({ category: 'phonological', dismissed: false }));
     const makePair = (previous, latest) =>
       prepareTrendSamples([
-        sample({ id: 'previous', date: '2026-06-01T08:00:00.000Z', errors: counts(previous) }),
-        sample({ id: 'latest', date: '2026-07-01T08:00:00.000Z', errors: counts(latest) }),
+        trendEntry({
+          id: 'previous',
+          date: '2026-06-01T08:00:00.000Z',
+          categoryCounts: { phonological: previous },
+        }),
+        trendEntry({
+          id: 'latest',
+          date: '2026-07-01T08:00:00.000Z',
+          categoryCounts: { phonological: latest },
+        }),
       ]);
 
     assert.equal(summariseTrends(makePair(5, 3)).comparison.state, 'improving');
