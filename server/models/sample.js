@@ -24,6 +24,9 @@ export const ERROR_CATEGORIES = [
 ];
 const boxSchema = new mongoose.Schema(
   {
+    // Which page this box belongs to - a 0-based index into the sample's
+    // `pages` array, matching upload order. Without this, x/y/z/w alone are
+    // ambiguous the moment a sample has more than one page.
     page: { type: Number, required: true, min: 0 },
     x: { type: Number, required: true, min: 0, max: 1 },
     y: { type: Number, required: true, min: 0, max: 1 },
@@ -51,7 +54,12 @@ const errorSchema = new mongoose.Schema(
       default: 'unsure',
     },
 
+    // How confident the AI is in this category assignment (0-1). Errors
+    // below ErrorClassificationEngine's confidence threshold are surfaced to
+    // the educator as "uncertain" instead of a silent guess. Defaults to 1
+    // (fully confident) so manually-created errors aren't flagged uncertain.
     confidenceScore: { type: Number, min: 0, max: 1, default: 1 },
+
     locationOnScan: { type: boxSchema, default: null },
     // A short plain-language reason for the category, written by the AI.
     note: { type: String, default: '' },
@@ -119,15 +127,18 @@ const sampleSchema = new mongoose.Schema(
     //   UPLOADED  - image saved, AI has not looked at it yet
     //   ANALYSED  - the AI has flagged errors, awaiting human review
     //   REVIEWED  - an educator has checked the errors against the scan
+    //   FAILED    - the AI could not produce a report; see analysisError
     status: {
       type: String,
       enum: ['UPLOADED', 'ANALYSED', 'REVIEWED', 'FAILED'],
       default: 'UPLOADED',
     },
+
     // Human-readable reason analysis failed (e.g. unreadable file, AI
     // timeout). Only meaningful when status is FAILED; empty otherwise.
     // Never a raw stack trace - the educator reads this directly.
     analysisError: { type: String, default: '' },
+
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
 
@@ -144,6 +155,16 @@ const sampleSchema = new mongoose.Schema(
     // validation errors). Our usage - a plain data array we read and write
     // whole - is safe, so we acknowledge the warning and turn it off.
     suppressReservedKeysWarning: true,
+
+    // pages[].imagePath is a filesystem path - it must never leave the
+    // server in a JSON response. Strip it here so every route gets this for
+    // free instead of everyone remembering to do it by hand.
+    toJSON: {
+      transform: (_doc, ret) => {
+        ret.pages = ret.pages.map(({ imagePath, ...rest }) => rest);
+        return ret;
+      },
+    },
   }
 );
 

@@ -81,6 +81,11 @@ export function getSample(sampleId) {
   return request(`/samples/${sampleId}`);
 }
 
+// NOTE for SampleAnalysisPage.jsx (wireframe 3c, from harsha/error-classification-engine):
+// that screen expects analysisStatus/imageCount fields shaped like the older
+// mock-era contract. getSample() above returns the real server shape
+// instead (status/pages) - reconcile the two before wiring 3c to real data.
+
 // The scan itself. NOT routed through request() — that parses JSON, and this
 // is an image the browser loads via <img src>. index is 0-based into the
 // sample's pages, so it runs 0 .. imageCount - 1.

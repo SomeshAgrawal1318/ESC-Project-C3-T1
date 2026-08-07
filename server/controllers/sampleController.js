@@ -86,7 +86,7 @@ const createSample = async (req, res) => {
     taskType: req.body.taskType,
   });
   res.status(201).json(toClientSample(sample));
-  runAnalysis(sample);
+  runAnalysis(sample._id);
 };
 
 const getImages = async (req, res) => {

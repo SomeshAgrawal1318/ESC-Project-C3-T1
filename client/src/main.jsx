@@ -39,7 +39,10 @@ createRoot(document.getElementById('root')).render(
             path="students/:studentId/recommendations"
             element={<Placeholder label="Recommendations" />}
           />
-          {/* Screens 3a/3c — scan beside the AI's flagged errors */}
+          {/* Screens 3a/3c — scan beside the AI's flagged errors. SampleReportPage
+              already branches on analysisStatus (pending/failed/ready), so the
+              older standalone SampleAnalysisPage (harsha/error-classification-engine)
+              is superseded, not wired in here. */}
           <Route path="samples/:sampleId" element={<SampleReportPage />} />
           {/* Living design-system reference for the team (see DESIGN.md) */}
           <Route path="styleguide" element={<StyleguidePage />} />
