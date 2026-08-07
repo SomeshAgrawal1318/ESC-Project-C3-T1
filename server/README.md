@@ -39,9 +39,15 @@ npm test
 npm run lint
 npm run format:check
 npm run format
+npm run seed:students
 ```
 
 Tests use Node's built-in test runner and are stored in `test/`.
+
+`npm run seed:students` creates the two canonical demo students (Wei Jie Lim /
+Primary 4, Aisha Rahman / Primary 3) so everyone develops against the same
+data. Safe to run more than once — it skips a student whose name already
+exists. `node seedAccount.js` does the same for the demo login account.
 
 ## Structure
 

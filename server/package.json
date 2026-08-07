@@ -6,6 +6,7 @@
     "test": "node --experimental-test-module-mocks --test",
     "test:live": "RUN_LIVE_RECOMMENDATION_TESTS=true RECOMMENDATION_USE_MOCKS=false node --experimental-test-module-mocks --env-file=.env --test test/live-recommendation.test.js",
     "start": "nodemon server.js",
+    "seed:students": "node seedStudents.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

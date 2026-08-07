@@ -6,15 +6,17 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getStudent, getStudentSamples } from '../lib/api.js';
-import { statusFor } from '../lib/status.js';
+import { getStudent } from '../lib/api.js';
 import Button from '../components/Button.jsx';
-import SampleRow from '../components/SampleRow.jsx';
-import EmptyState from '../components/EmptyState.jsx';
+import StudentSamplesPanel from '../components/StudentSamplesPanel.jsx';
 
 export default function StudentProfilePage() {
   const { studentId } = useParams();
   const [state, setState] = useState({ status: 'loading' });
+  // Reported back by StudentSamplesPanel once it has fetched — this page
+  // renders that component rather than fetching samples itself (that's
+  // Sample Upload & Ingestion's data, not the profile screen's).
+  const [samplesInfo, setSamplesInfo] = useState(null);
 
   // Reset to the skeleton the moment the student changes (render-phase reset,
   // React's documented pattern) so switching students never flashes stale data.
@@ -22,15 +24,15 @@ export default function StudentProfilePage() {
   if (loadedFor !== studentId) {
     setLoadedFor(studentId);
     setState({ status: 'loading' });
+    setSamplesInfo(null);
   }
 
   useEffect(() => {
     let live = true;
-    Promise.all([getStudent(studentId), getStudentSamples(studentId)])
-      .then(([student, samples]) => {
+    getStudent(studentId)
+      .then((student) => {
         if (!live) return;
-        if (!student) setState({ status: 'notfound' });
-        else setState({ status: 'ready', student, samples });
+        setState(student ? { status: 'ready', student } : { status: 'notfound' });
       })
       .catch((err) => live && setState({ status: 'error', message: err.message }));
     return () => {
@@ -53,9 +55,8 @@ export default function StudentProfilePage() {
     return <Feedback title="Couldn’t load this profile" text={state.message} tone="error" />;
   }
 
-  const { student, samples } = state;
-  const hasSamples = samples.length > 0;
-  const hasAnalysedSamples = samples.some((sample) => statusFor(sample.analysisStatus).ready);
+  const { student } = state;
+  const hasAnalysedSamples = samplesInfo?.hasAnalysedSamples ?? false;
   const firstName = student.name.split(' ')[0];
 
   // The upload flow (screens 2a/2b) lives on its own route.
@@ -97,24 +98,12 @@ export default function StudentProfilePage() {
         </div>
       </header>
 
-      {hasSamples ? (
-        <section className="samples" aria-label="Writing samples">
-          <div className="samples__head">
-            <h2 className="samples__title">Writing samples</h2>
-            <span className="samples__meta">
-              Newest first · {samples.length} {samples.length === 1 ? 'sample' : 'samples'}
-            </span>
-          </div>
-          <div className="samples__list">
-            {samples.map((sample) => (
-              <SampleRow key={sample.sampleId} sample={sample} />
-            ))}
-          </div>
-          <p className="samples__hint">Open an analysed sample to review its error report.</p>
-        </section>
-      ) : (
-        <EmptyState firstName={firstName} uploadTo={uploadTo} />
-      )}
+      <StudentSamplesPanel
+        studentId={studentId}
+        firstName={firstName}
+        uploadTo={uploadTo}
+        onLoaded={setSamplesInfo}
+      />
     </div>
   );
 }
