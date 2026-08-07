@@ -1,5 +1,57 @@
+import fs from 'fs/promises';
+import { fileTypeFromFile } from 'file-type';
+import { pdf as renderPdf } from 'pdf-to-img';
 import { Sample, ERROR_CATEGORIES } from '../models/sample.js';
+import { Student } from '../models/student.js';
 import { runAnalysis } from '../services/errorClassificationEngine.js';
+
+// Real accepted formats, matching the upload modal's copy ("JPG, PNG or PDF
+// only"). Combined in from aadi/sample-upload: multer's own mimetype/
+// extension checks are trivial to spoof, so every upload is re-verified
+// against its actual file content once it lands on disk.
+const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+// One raster page ready to become a Sample.pages[] entry. JPG/PNG files are
+// already exactly one page; a PDF may be several, so it is rendered to one
+// PNG per page - a therapist scanning a single worksheet and a multi-page
+// essay both end up with the "right" imageCount either way.
+async function toPageFiles(file) {
+  const detected = await fileTypeFromFile(file.path).catch(() => null);
+  if (!detected || !ACCEPTED_MIME_TYPES.includes(detected.mime)) {
+    const error = new Error(
+      `"${file.originalname}" is not a supported file. Only JPG, PNG and PDF are accepted.`
+    );
+    error.statusCode = 422;
+    throw error;
+  }
+
+  if (detected.mime !== 'application/pdf') {
+    return [{ path: file.path, originalFilename: file.originalname }];
+  }
+
+  let rendered;
+  try {
+    const document = await renderPdf(file.path, { scale: 2 });
+    rendered = [];
+    for await (const page of document) rendered.push(page);
+  } catch {
+    const error = new Error(`"${file.originalname}" could not be read as a PDF.`);
+    error.statusCode = 422;
+    throw error;
+  }
+
+  const pages = await Promise.all(
+    rendered.map(async (buffer, index) => {
+      const pagePath = `${file.path}-p${index}.png`;
+      await fs.writeFile(pagePath, buffer);
+      return { path: pagePath, originalFilename: file.originalname };
+    })
+  );
+  // The original PDF is kept on disk too (imagePath entries below only
+  // reference the rendered pages) - harmless, and useful if a future
+  // screen wants the source document rather than the split raster pages.
+  return pages;
+}
 
 // ------------------------------------------------------------------
 // Serialising samples for the client
@@ -76,13 +128,36 @@ const createSample = async (req, res) => {
     res.status(400);
     throw new Error('No files uploaded under the "samples" field');
   }
+
+  const student = await Student.findById(req.params.studentId).catch(() => null);
+  if (!student) {
+    // Clean up what multer already wrote to disk before we knew the
+    // studentId was bad.
+    await Promise.all(req.files.map((file) => fs.unlink(file.path).catch(() => {})));
+    res.status(400);
+    throw new Error(`Unknown studentId "${req.params.studentId}"`);
+  }
+
+  // Validate every file's real content and split any PDFs into pages
+  // before writing anything to the Sample - a bad second file shouldn't
+  // leave the first file's pages half-registered.
+  let pageEntries;
+  try {
+    const perFile = await Promise.all(req.files.map(toPageFiles));
+    pageEntries = perFile.flat().map((page) => ({
+      imagePath: page.path,
+      originalFilename: page.originalFilename,
+    }));
+  } catch (err) {
+    await Promise.all(req.files.map((file) => fs.unlink(file.path).catch(() => {})));
+    res.status(err.statusCode || 422);
+    throw err;
+  }
+
   const sample = await Sample.create({
     student: req.params.studentId,
     title: req.body.title || req.files[0].originalname,
-    pages: req.files.map((file) => ({
-      imagePath: file.path,
-      originalFilename: file.originalname,
-    })),
+    pages: pageEntries,
     taskType: req.body.taskType,
   });
   res.status(201).json(toClientSample(sample));

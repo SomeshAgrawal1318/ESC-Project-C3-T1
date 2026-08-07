@@ -19,10 +19,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "file-type": "^19.6.0",
     "mongodb": "^7.5.0",
     "mongoose": "^9.8.0",
     "multer": "^2.2.0",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "pdf-to-img": "^6.2.0"
   },
   "type": "module",
   "devDependencies": {
