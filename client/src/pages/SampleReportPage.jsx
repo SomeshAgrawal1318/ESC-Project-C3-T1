@@ -16,12 +16,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  getSample,
-  getStudent,
-  markSampleReviewed,
-  updateSampleError,
-} from '../lib/api.js';
+import { getSample, getStudent, markSampleReviewed, updateSampleError } from '../lib/api.js';
 import { statusFor } from '../lib/status.js';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
@@ -97,9 +92,7 @@ export default function SampleReportPage() {
       .catch((err) => {
         if (!live) return;
         setState(
-          err.status === 404
-            ? { status: 'notfound' }
-            : { status: 'error', message: err.message }
+          err.status === 404 ? { status: 'notfound' } : { status: 'error', message: err.message }
         );
       });
 
@@ -145,14 +138,11 @@ export default function SampleReportPage() {
             <div className="analysing__spinner" />
           )}
           <h2 className="analysing__title">
-            {failed
-              ? 'This sample couldn’t be analysed'
-              : 'This sample hasn’t been analysed yet'}
+            {failed ? 'This sample couldn’t be analysed' : 'This sample hasn’t been analysed yet'}
           </h2>
           <p className="analysing__text">
             {failed
-              ? sample.analysisError ||
-                'The AI could not produce an error report for this sample.'
+              ? sample.analysisError || 'The AI could not produce an error report for this sample.'
               : 'Analysis is still running — it usually takes a few seconds. The error report will appear here when it’s done.'}
           </p>
           <div className="analysing__actions">
@@ -199,9 +189,7 @@ export default function SampleReportPage() {
 
   // Numbering runs over live errors only, so the badges match what the
   // educator can actually see on the scan.
-  const liveErrors = sample.errors
-    .filter((e) => !e.dismissed)
-    .map((e, i) => ({ ...e, n: i + 1 }));
+  const liveErrors = sample.errors.filter((e) => !e.dismissed).map((e, i) => ({ ...e, n: i + 1 }));
   const removed = sample.errors.filter((e) => e.dismissed);
   const byIndex = new Map(liveErrors.map((e) => [e.errorIndex, e]));
 
@@ -290,13 +278,11 @@ export default function SampleReportPage() {
         }
       />
 
-      {failure?.errorIndex === 'review' && (
-        <p className="report__failure">{failure.message}</p>
-      )}
+      {failure?.errorIndex === 'review' && <p className="report__failure">{failure.message}</p>}
 
       {/* Corrections are counted for this visit only — nothing is stored
-          about who changed what, by design. Enough to prompt a regenerate;
-          the action stays locked until the recommendations screen exists. */}
+          about who changed what, by design. The recommendation endpoint
+          computes freshness from sample timestamps. */}
       {corrections > 0 && !bannerOff && (
         <div className="report__banner">
           <Icon name="alert" size={19} className="report__banner-mark" />
@@ -305,10 +291,11 @@ export default function SampleReportPage() {
           </p>
           <Button
             variant="secondary"
-            disabled
-            disabledHint="Available once recommendations exist"
+            to={student ? `/students/${student.studentId}/recommendations` : undefined}
+            disabled={!student}
+            disabledHint="Student details are still loading"
           >
-            Regenerate recommendations
+            Review recommendations
           </Button>
           <button
             type="button"
@@ -358,9 +345,7 @@ export default function SampleReportPage() {
                 multiPage={sample.imageCount > 1}
                 selected={selected === error.errorIndex}
                 busy={busy === error.errorIndex}
-                failure={
-                  failure?.errorIndex === error.errorIndex ? failure.message : null
-                }
+                failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
                 innerRef={(node) => {
                   if (node) cardRefs.current.set(error.errorIndex, node);
                   else cardRefs.current.delete(error.errorIndex);
@@ -392,9 +377,7 @@ export default function SampleReportPage() {
                       key={error.errorIndex}
                       error={error}
                       busy={busy === error.errorIndex}
-                      failure={
-                        failure?.errorIndex === error.errorIndex ? failure.message : null
-                      }
+                      failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
                       onRestore={() => patchError(error.errorIndex, { dismissed: false })}
                     />
                   ))}

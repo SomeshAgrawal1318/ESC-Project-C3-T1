@@ -3115,3 +3115,129 @@
     justify-content: center;
   }
 }
+
+/* ---- 12. Recommendations ------------------------------------------------- */
+
+.recommendations,
+.recommendations__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recommendation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.recommendation-card h3 {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.recommendation-card > p,
+.worksheet-card p {
+  color: var(--muted);
+}
+
+.recommendation-card__number {
+  color: var(--sage-strong);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.recommendation-card__evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--sage);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.worksheet-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.worksheet-card > div {
+  display: flex;
+  flex: 1 1 420px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.worksheet-card h4 {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.worksheet-card small {
+  color: var(--muted);
+}
+
+.worksheet-card__unavailable {
+  max-width: 210px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.recommendations-empty {
+  padding: 28px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-band);
+  background: var(--surface);
+}
+
+.recommendations-empty h2 {
+  margin-bottom: 6px;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.recommendations-empty p {
+  color: var(--muted);
+}
+
+.recommendations-error {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--failed);
+  background: var(--surface);
+  color: var(--failed);
+}
+
+.recommendations-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--pending-ink);
+  background: var(--pending-bg);
+}
+
+.recommendations-warning p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+

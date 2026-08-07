@@ -1,5 +1,5 @@
-// Router + providers. Recommendations remains a placeholder; the upload,
-// review and trends routes are live screens backed by the API seam.
+// Router + providers. Upload, review, trends and recommendations are all
+// live screens backed by the API seam.
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -11,8 +11,8 @@ import StudentProfilePage from './pages/StudentProfilePage.jsx';
 import UploadSamplePage from './pages/UploadSamplePage.jsx';
 import SampleReportPage from './pages/SampleReportPage.jsx';
 import ErrorTrendsPage from './pages/ErrorTrendsPage.jsx';
+import RecommendationsPage from './pages/RecommendationsPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
-import Placeholder from './components/Placeholder.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
@@ -35,10 +35,7 @@ createRoot(document.getElementById('root')).render(
           {/* Screens 2a/2b — upload + analyse flow */}
           <Route path="students/:studentId/upload" element={<UploadSamplePage />} />
           <Route path="students/:studentId/trends" element={<ErrorTrendsPage />} />
-          <Route
-            path="students/:studentId/recommendations"
-            element={<Placeholder label="Recommendations" />}
-          />
+          <Route path="students/:studentId/recommendations" element={<RecommendationsPage />} />
           {/* Screens 3a/3c — scan beside the AI's flagged errors. SampleReportPage
               already branches on analysisStatus (pending/failed/ready), so the
               older standalone SampleAnalysisPage (harsha/error-classification-engine)

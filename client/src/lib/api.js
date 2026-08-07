@@ -23,8 +23,8 @@ async function request(path, { method = 'GET', body } = {}) {
   if (!res.ok) {
     let detail;
     try {
-      // errorHandler responds with { title, message, stackTrace }
-      detail = (await res.json())?.message;
+      const payload = await res.json();
+      detail = payload?.error?.message ?? payload?.message;
     } catch {
       /* body was not JSON */
     }
@@ -63,6 +63,33 @@ export function createStudent({ name, currentGrade }) {
 export function getStudentSamples(studentId, { status } = {}) {
   const qs = status ? `?status=${encodeURIComponent(status)}` : '';
   return request(`/students/${studentId}/samples${qs}`);
+}
+
+// GET the latest report. `isOutdated` is computed from source sample updates;
+// the expected no-report 404 is not a page-level failure.
+export async function getLatestRecommendations(studentId) {
+  try {
+    return (await request(`/students/${studentId}/recommendations/latest`)).report;
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+}
+
+// Generate and replace the student's latest intervention report.
+export async function generateRecommendations(studentId) {
+  return (
+    await request(`/students/${studentId}/recommendations`, {
+      method: 'POST',
+      body: {},
+    })
+  ).report;
+}
+
+// The browser receives only a stable approved ID, never an Azure blob path or SAS URL.
+// Mock worksheet records carry available=false, so the UI does not offer a dead link.
+export function worksheetFileUrl(worksheetId) {
+  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file`;
 }
 
 // GET /api/samples/:sampleId  ->  one sample, with its errors.
@@ -166,7 +193,8 @@ export function uploadSample(studentId, { title, taskType, files }) {
     if (!res.ok) {
       let detail;
       try {
-        detail = (await res.json())?.message;
+        const payload = await res.json();
+        detail = payload?.error?.message ?? payload?.message;
       } catch {
         /* body was not JSON */
       }

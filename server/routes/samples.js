@@ -10,6 +10,11 @@ import {
   markReviewed,
   reclassifyError,
 } from '../controllers/sampleController.js';
+import {
+  generateSampleWorksheets,
+  getSampleWorksheets,
+} from '../controllers/recommendationController.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 // ------------------------------------------------------------------
 // File storage (multer)
@@ -48,6 +53,10 @@ router.route('/:studentId').post(upload.array('samples', 12), createSample);
 
 // GET /api/samples/:sampleId — one sample's summary. The upload page polls
 // this while the "Analysing…" screen is up.
+router
+  .route('/:sampleId/recommendations')
+  .post(asyncHandler(generateSampleWorksheets))
+  .get(asyncHandler(getSampleWorksheets));
 router.route('/:sampleId').get(getSample).patch(markReviewed);
 router.route('/:sampleId/images/:index').get(getImages);
 router.route('/:sampleId/errors/:errorIndex').patch(reclassifyError);

@@ -1,6 +1,6 @@
 ================================================================================
 LEXIPATH API - ROUTE REFERENCE
-Scope: Error Classification Engine slice (PS4). Recommendation routes deferred.
+Scope: Error Classification Engine and Recommendation Engine prototype routes.
 Base path: /api
 ================================================================================
 
@@ -195,9 +195,9 @@ Notes:
     and correctedAt before saving.
   - Returns the whole report rather than the single error because
     recalculateStatistics() has run and the summary panel needs the new numbers.
-  - HOT SEAM: this is where RecommendationReport.markOutdated() will be called
-    once the recommendation leg exists. Leave the hook, even if it is a no-op
-    for now - retrofitting it later means touching this handler again.
+  - Recommendation freshness is computed when the latest report is read: any
+    usable sample updated after generation, or absent from basedOnSamples,
+    marks the response isOutdated without adding audit-history fields.
 
 
 ================================================================================
@@ -226,12 +226,32 @@ Notes:
   - Only samples with analysisStatus = COMPLETE contribute.
 
 ================================================================================
-Recommendation
+RECOMMENDATIONS
 ================================================================================
-GET /recommendation/:studentId
 
+POST /api/samples/:sampleId/recommendations
+------------------------------------------------
+Generates and stores up to three approved worksheet recommendations for one
+ANALYSED or REVIEWED sample.
 
-PATCH /recommendation/:studentID
+GET /api/samples/:sampleId/recommendations
+-----------------------------------------------
+Returns the worksheet recommendations already stored for one sample.
+
+POST /api/students/:studentId/recommendations
+-------------------------------------------------
+Generates a latest-only intervention report from all ANALYSED and REVIEWED
+samples. A successful generation replaces older reports for that student.
+
+GET /api/students/:studentId/recommendations/latest
+-----------------------------------------------------
+Returns the student's latest intervention report. Returns 404 when no report
+has been generated.
+
+GET /api/worksheets/:worksheetId/file
+----------------------------------------
+Streams an approved PDF through the server. worksheetId must exist in the
+server-side Azure asset manifest; clients never submit Blob paths or SAS URLs.
 
 ================================================================================
 NOTES AND DEFERRED
@@ -240,17 +260,6 @@ NOTES AND DEFERRED
 VERTICAL SLICE COVERED BY THE ABOVE
   create student -> upload sample -> poll status -> view report -> correct an
   error -> view trends. That is a complete demoable path with no gaps.
-
-DEFERRED TO THE RECOMMENDATION LEG (PS6) - not built in this slice
-  POST  /api/students/:studentId/recommendations
-        Generates a RecommendationReport. POST, not GET, because it creates a
-        resource. Maps to RecommendationController.generateRecommendations.
-  GET   /api/students/:studentId/recommendations/latest
-        Returns the current report, including whether it is OUTDATED.
-  POST  /api/students/:studentId/recommendations/regenerate
-        Maps to regenerateRecommendations. The old report is marked superseded.
-  PATCH /api/recommendations/:reportId/flag
-        Maps to dismissOutdatedFlag(reportId).
 
 DEFERRED - AUTH
   No login route exists. Teacher is in the domain model but nothing enforces

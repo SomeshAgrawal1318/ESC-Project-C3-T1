@@ -29,7 +29,13 @@ const parseDateQuery = (value) => {
 // Newest first, matching StudentsListPage, which drops a newly created
 // student at the top of the grid.
 const getStudents = async (req, res) => {
-  const students = await Student.find({}).sort({ createdAt: -1 });
+  // Older development databases can contain documents from before these
+  // required fields existed. Do not let one unusable legacy row crash the
+  // entire caseload screen.
+  const students = await Student.find({
+    name: { $type: 'string' },
+    currentGrade: { $type: 'string' },
+  }).sort({ createdAt: -1 });
   res.json(students.map(toClientStudent));
 };
 
@@ -43,7 +49,6 @@ const getStudent = async (req, res) => {
 };
 
 const createStudent = async (req, res) => {
-  console.log(req.body);
   const { name, currentGrade } = req.body;
   if (!name || !currentGrade) {
     res.status(400);

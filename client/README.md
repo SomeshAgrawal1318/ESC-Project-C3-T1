@@ -1,7 +1,8 @@
 # LexiPath client
 
-React and Vite frontend for managing students, uploading writing samples, and reviewing
-AI-classified literacy errors beside the original scan.
+React and Vite frontend for managing students, uploading writing samples, reviewing
+AI-classified literacy errors beside the original scan, and opening grounded intervention
+worksheets.
 
 ## Setup
 
@@ -45,3 +46,12 @@ npm run preview
 
 Read `DESIGN.md` before changing UI and `AGENTS.md` before changing client code. Pages should use
 `src/lib/api.js` rather than calling `fetch()` directly.
+
+All Gemini, MongoDB, Azure, and SAS credentials belong in the server's ignored environment file.
+Never expose them through `VITE_*` variables.
+
+## Recommendations
+
+The student recommendations route displays reviewed evidence, intervention strategies, and
+approved worksheets. Worksheet links send only a stable ID to `/api/worksheets/:worksheetId/file`;
+the browser never receives an Azure SAS token or signed Blob URL.

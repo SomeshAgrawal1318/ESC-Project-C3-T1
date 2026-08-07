@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getStudent, getStudentSamples } from '../lib/api.js';
+import { statusFor } from '../lib/status.js';
 import Button from '../components/Button.jsx';
 import SampleRow from '../components/SampleRow.jsx';
 import EmptyState from '../components/EmptyState.jsx';
@@ -88,8 +89,8 @@ export default function StudentProfilePage() {
           <Button
             variant="secondary"
             icon="recommendations"
-            to={hasSamples ? `/students/${studentId}/recommendations` : undefined}
-            disabled={!hasSamples}
+            to={hasAnalysedSamples ? `/students/${studentId}/recommendations` : undefined}
+            disabled={!hasAnalysedSamples}
             disabledHint="Available once a sample has been analysed"
           >
             View recommendations
