@@ -213,7 +213,9 @@ export function uploadSample(studentId, { title, taskType, files }) {
       } catch {
         /* body was not JSON */
       }
-      throw new Error(detail || `Upload failed (${res.status})`);
+      const error = new Error(detail || `Upload failed (${res.status})`);
+      error.status = res.status;
+      throw error;
     }
     return res.json();
   });

@@ -15,6 +15,7 @@ import {
   getSampleWorksheets,
 } from '../controllers/recommendationController.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { MAX_FILE_SIZE } from '../middleware/upload.js';
 
 // ------------------------------------------------------------------
 // File storage (multer)
@@ -36,7 +37,23 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: MAX_FILE_SIZE } });
+
+// multer rejects an oversized file with a MulterError before createSample
+// ever runs. Convert that into the 422 validateSample() would have produced
+// for any other unacceptable file, instead of a generic 500.
+function uploadSamples(req, res, next) {
+  upload.array('samples', 12)(req, res, (err) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      const sizeError = new Error(
+        `One of the uploaded files is larger than ${MAX_FILE_SIZE / (1024 * 1024)}MB, the maximum accepted size.`
+      );
+      sizeError.statusCode = 422;
+      return next(sizeError);
+    }
+    next(err);
+  });
+}
 
 const router = express.Router();
 
@@ -49,7 +66,7 @@ router.route('/').get(getSamples);
 // The client polls GET /api/samples/:sampleId afterwards to see the status
 // move from UPLOADED to ANALYSED once the AI analysis (Gemini, not wired
 // up yet) has run.
-router.route('/:studentId').post(upload.array('samples', 12), createSample);
+router.route('/:studentId').post(uploadSamples, createSample);
 
 // GET /api/samples/:sampleId — one sample's summary. The upload page polls
 // this while the "Analysing…" screen is up.

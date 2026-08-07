@@ -84,7 +84,6 @@ export default function ErrorTrendsPage() {
   function changeRange(event) {
     setRange(event.target.value);
     setExcludedIds(new Set());
-    setActiveCategory(null);
   }
 
   function toggleSample(sampleId) {

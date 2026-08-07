@@ -19,13 +19,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getStudent, getSample, uploadSample } from '../lib/api.js';
-import { statusFor } from '../lib/status.js';
+import { getStudent, uploadSample } from '../lib/api.js';
+import { useSamplePolling } from '../hooks/useSamplePolling.js';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
 
 const MAX_FILES = 12;
-const POLL_EVERY_MS = 3000;
 
 // The Sample model's taskType enum, with human labels for the select.
 const TASK_TYPES = [
@@ -34,20 +33,12 @@ const TASK_TYPES = [
   { value: 'SHORT_ANSWER', label: 'Short answer' },
 ];
 
-// What the AI can read: image scans or PDFs. Browsing is already limited by
-// the input's `accept`, but drag & drop can hand us anything (screen 2d).
-function isSupported(file) {
-  return (
-    file.type.startsWith('image/') || file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-  );
-}
-
 export default function UploadSamplePage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
 
   const [student, setStudent] = useState(null); // null = still loading
-  const [phase, setPhase] = useState('form'); // form | uploading | analysing | done
+  const [phase, setPhase] = useState('form'); // form | uploading | analysing | done | failed | timeout
   const [files, setFiles] = useState([]); // [{ id, file, previewUrl }]
   const [title, setTitle] = useState('');
   const [taskType, setTaskType] = useState('ESSAY');
@@ -73,50 +64,36 @@ export default function UploadSamplePage() {
   }, [files]);
   useEffect(() => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl)), []);
 
-  // ---- 2b: poll until analysis finishes -----------------------------
+  // ---- 2b: poll until analysis finishes, or give up ------------------
   // The server answers the upload before the AI has looked at the scan
-  // (status UPLOADED). We ask again every few seconds; once the status
-  // reads as ready ("Analysed"), the success screen (2c) takes over.
-  useEffect(() => {
-    if (phase !== 'analysing' || !createdSample) return undefined;
-    const timer = setInterval(async () => {
-      try {
-        const fresh = await getSample(createdSample.sampleId);
-        const status = statusFor(fresh.analysisStatus);
-        if (status.failed) {
-          setCreatedSample(fresh);
-          setPhase('failed');
-        } else if (status.ready) {
-          setCreatedSample(fresh);
-          setPhase('done');
-        }
-      } catch {
-        // A dropped poll is not a failed upload — just try again next tick.
-      }
-    }, POLL_EVERY_MS);
-    return () => clearInterval(timer);
-  }, [phase, createdSample]);
+  // (status UPLOADED). useSamplePolling asks again every couple of
+  // seconds, stopping on a ready/failed status or its own attempt ceiling
+  // so a stuck sample can't spin this screen forever. Its status is derived
+  // straight into what this screen renders, rather than mirrored into more
+  // state via an effect - "analysing" isn't really a phase of its own so
+  // much as "phase is analysing AND polling hasn't settled yet".
+  const [pollResetKey, setPollResetKey] = useState(0);
+  const pollSampleId = phase === 'analysing' ? createdSample?.sampleId : null;
+  const polling = useSamplePolling(pollSampleId, pollResetKey);
+  const POLL_STATUS_TO_PHASE = { complete: 'done', failed: 'failed', timeout: 'timeout' };
+  const renderPhase =
+    phase === 'analysing' && polling.status in POLL_STATUS_TO_PHASE
+      ? POLL_STATUS_TO_PHASE[polling.status]
+      : phase;
+  const renderSample =
+    phase === 'analysing' && polling.sample ? polling.sample : createdSample;
 
   // ---- file picking (drop zone + browse button share this) ----------
+  // No client-side format gate here on purpose: the AI engine's own
+  // content-sniffing (not just extension/MIME) is the real authority on
+  // what it can read, so an unsupported file goes through the same upload
+  // attempt as any other and 2d renders from that real 422 response
+  // instead of a client-guessed one.
   function addFiles(picked) {
-    const rejected = [...picked].filter((file) => !isSupported(file));
-    const accepted = [...picked].filter(isSupported);
-
-    // 2d — say exactly which file the AI can't read, and what it wants.
-    if (rejected.length > 0) {
-      const names = rejected.map((f) => `“${f.name}”`).join(', ');
-      setAlert({
-        title:
-          rejected.length === 1 ? 'That file can’t be analysed' : 'Those files can’t be analysed',
-        detail: `${names} ${rejected.length === 1 ? 'isn’t' : 'aren’t'} a supported format. Upload a JPG, PNG or PDF scan of the handwritten sample, then try again.`,
-      });
-    } else if (accepted.length > 0) {
-      setAlert(null); // a clean pick clears the old complaint
-    }
-
+    setAlert(null); // a fresh pick clears the previous complaint
     setFiles((current) => {
       const merged = [...current];
-      for (const file of accepted) {
+      for (const file of [...picked]) {
         // The same scan dropped twice shouldn't become two pages.
         const alreadyChosen = merged.some(
           (f) => f.file.name === file.name && f.file.size === file.size
@@ -153,11 +130,18 @@ export default function UploadSamplePage() {
       setCreatedSample(sample);
       setPhase('analysing');
     } catch (err) {
-      // Also 2d — the flow loops back to the form with everything intact.
-      setAlert({
-        title: 'The upload didn’t go through',
-        detail: `${err.message}. Check the server is running, then try again.`,
-      });
+      // 2d — the flow loops back to the form with everything intact.
+      if (err.status === 422) {
+        // A real rejection from the server's own content check (wrong
+        // format, unreadable file) — show its message verbatim, it already
+        // names the offending file and the accepted formats.
+        setAlert({ title: 'That file can’t be analysed', detail: err.message });
+      } else {
+        setAlert({
+          title: 'The upload didn’t go through',
+          detail: `${err.message}. Check the server is running, then try again.`,
+        });
+      }
       setPhase('form');
     }
   }
@@ -197,13 +181,19 @@ export default function UploadSamplePage() {
         </div>
       </header>
 
-      {phase === 'done' ? (
-        <DoneCard sample={createdSample} firstName={firstName} studentId={studentId} />
-      ) : phase === 'failed' ? (
-        <FailedCard sample={createdSample} studentId={studentId} />
-      ) : phase === 'analysing' ? (
+      {renderPhase === 'done' ? (
+        <DoneCard sample={renderSample} firstName={firstName} studentId={studentId} />
+      ) : renderPhase === 'failed' ? (
+        <FailedCard sample={renderSample} studentId={studentId} />
+      ) : renderPhase === 'timeout' ? (
+        <TimeoutCard
+          firstName={firstName}
+          studentId={studentId}
+          onCheckAgain={() => setPollResetKey((key) => key + 1)}
+        />
+      ) : renderPhase === 'analysing' ? (
         <AnalysingCard
-          sample={createdSample}
+          sample={renderSample}
           firstName={firstName}
           onClose={() => navigate(`/students/${studentId}`)}
         />
@@ -431,6 +421,28 @@ function FailedCard({ sample, studentId }) {
       <Button variant="secondary" to={`/students/${studentId}`}>
         Back to profile
       </Button>
+    </section>
+  );
+}
+
+// A poll ceiling was reached with no answer yet — the job may still finish
+// server-side, but this screen must not spin forever waiting for it.
+function TimeoutCard({ firstName, studentId, onCheckAgain }) {
+  return (
+    <section className="analysing" aria-label="Analysis is taking longer than expected" role="alert">
+      <h2 className="analysing__title">This is taking longer than usual</h2>
+      <p className="analysing__text">
+        LexiPath hasn’t finished tagging {firstName}’s sample yet. It may still complete in the
+        background — check {firstName}’s profile shortly, or check again here.
+      </p>
+      <div className="analysing__actions">
+        <Button variant="secondary" to={`/students/${studentId}`}>
+          Back to profile
+        </Button>
+        <Button variant="primary" icon="arrow" onClick={onCheckAgain}>
+          Check again
+        </Button>
+      </div>
     </section>
   );
 }
