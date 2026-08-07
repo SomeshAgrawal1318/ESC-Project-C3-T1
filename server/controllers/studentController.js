@@ -77,7 +77,6 @@ const getTrends = async (req, res) => {
 
   const filter = { student: req.params.studentId, status: { $in: ['ANALYSED', 'REVIEWED'] } };
   let fromDate = null;
-  let toDate = null;
   if (req.query.from) {
     fromDate = parseDateQuery(req.query.from);
     if (!fromDate) {
@@ -87,7 +86,7 @@ const getTrends = async (req, res) => {
     filter.createdAt = { $gte: fromDate };
   }
   if (req.query.to) {
-    toDate = parseDateQuery(req.query.to);
+    const toDate = parseDateQuery(req.query.to);
     if (!toDate) {
       res.status(400);
       throw new Error('The "to" date must use the YYYY-MM-DD format');

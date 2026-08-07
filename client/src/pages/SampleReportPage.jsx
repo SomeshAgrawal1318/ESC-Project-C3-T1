@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSample, getStudent, markSampleReviewed, updateSampleError } from '../lib/api.js';
 import { statusFor } from '../lib/status.js';
+import { CATEGORY_ORDER, categoryFor } from '../lib/categories.js';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
 import StatusPill from '../components/StatusPill.jsx';
@@ -197,6 +198,12 @@ export default function SampleReportPage() {
   for (const e of liveErrors) counts[e.category] = (counts[e.category] ?? 0) + 1;
 
   const shown = filter ? liveErrors.filter((e) => e.category === filter) : liveErrors;
+  // Grouped by category with a heading + count per group (wireframe 3a) —
+  // when a filter chip is active this naturally collapses to one group.
+  const groups = CATEGORY_ORDER.map((category) => ({
+    category,
+    errors: shown.filter((e) => e.category === category),
+  })).filter((group) => group.errors.length > 0);
 
   function selectError(errorIndex) {
     setSelected(errorIndex);
@@ -338,27 +345,38 @@ export default function SampleReportPage() {
               </p>
             )}
 
-            {shown.map((error) => (
-              <ErrorCard
-                key={error.errorIndex}
-                error={error}
-                multiPage={sample.imageCount > 1}
-                selected={selected === error.errorIndex}
-                busy={busy === error.errorIndex}
-                failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
-                innerRef={(node) => {
-                  if (node) cardRefs.current.set(error.errorIndex, node);
-                  else cardRefs.current.delete(error.errorIndex);
-                }}
-                onSelect={() => selectError(error.errorIndex)}
-                onReclassify={(category) =>
-                  patchError(error.errorIndex, { category }, { counted: true })
-                }
-                onDismiss={() =>
-                  patchError(error.errorIndex, { dismissed: true }, { counted: true })
-                }
-                onConfirm={() => patchError(error.errorIndex, { confidenceScore: 1 })}
-              />
+            {groups.map((group) => (
+              <section
+                key={group.category}
+                className="report__group"
+                aria-label={categoryFor(group.category).label}
+              >
+                <h3 className="report__group-heading">
+                  {categoryFor(group.category).label} — {plural(group.errors.length, 'error')}
+                </h3>
+                {group.errors.map((error) => (
+                  <ErrorCard
+                    key={error.errorIndex}
+                    error={error}
+                    multiPage={sample.imageCount > 1}
+                    selected={selected === error.errorIndex}
+                    busy={busy === error.errorIndex}
+                    failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
+                    innerRef={(node) => {
+                      if (node) cardRefs.current.set(error.errorIndex, node);
+                      else cardRefs.current.delete(error.errorIndex);
+                    }}
+                    onSelect={() => selectError(error.errorIndex)}
+                    onReclassify={(category) =>
+                      patchError(error.errorIndex, { category }, { counted: true })
+                    }
+                    onDismiss={() =>
+                      patchError(error.errorIndex, { dismissed: true }, { counted: true })
+                    }
+                    onConfirm={() => patchError(error.errorIndex, { confidenceScore: 1 })}
+                  />
+                ))}
+              </section>
             ))}
 
             {removed.length > 0 && (
