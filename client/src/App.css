@@ -112,6 +112,11 @@
   gap: 11px;
   padding: 14px 8px 2px;
   border-top: 1px solid var(--shell-line);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s;
+}
+.therapist:hover {
+  background: var(--shell-hover);
 }
 .therapist__avatar {
   display: grid;
@@ -2535,4 +2540,127 @@
   .ecard__said {
     display: none;
   }
+}
+
+/* ---- 14. Auth screens (login / forgot password / reset password) ------ */
+/* Standalone screens, outside .shell — no sidebar, so they centre
+   themselves on the plain paper background instead. Cards reuse the same
+   surface/border/shadow language as .analysing and .student-form. */
+
+.auth {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth > * {
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 36px 32px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.auth-card__mark {
+  margin-bottom: 4px;
+}
+
+.auth-card__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 24px;
+}
+
+.auth-card__sub {
+  margin-top: -8px;
+  color: var(--muted);
+  font-weight: 300;
+  font-size: 14.5px;
+}
+
+.auth-card .btn {
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.auth-card__link {
+  align-self: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sage-strong);
+}
+.auth-card__link:hover {
+  text-decoration: underline;
+}
+
+.password-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.password-rules__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.password-rules__item--met {
+  color: var(--done);
+}
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.account-details__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 21px;
+}
+.account-details__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+}
+.account-details__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.account-details__row dt {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--sage-strong);
+}
+.account-details__row dd {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.account-details__success {
+  font-size: 13.5px;
+  color: var(--done);
 }

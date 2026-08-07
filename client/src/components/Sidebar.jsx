@@ -1,14 +1,38 @@
 // The app shell's persistent sidebar: brand, navigation, and the signed-in
 // therapist. Present on every screen.
-// (No auth yet — the therapist here is a placeholder; see paths.txt.)
+//
+// The identity block reads lib/session.js (set by LoginPage on a successful
+// sign-in). Nothing gates the app behind login, so someone can still be
+// browsing signed out — the placeholder below covers that case rather than
+// assuming a session always exists.
 
 import { NavLink } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import Logo from './Logo.jsx';
+import { getSession } from '../lib/session.js';
 
-const THERAPIST = { name: 'Ms. Tan', role: 'Therapist', initials: 'MT' };
+const PLACEHOLDER = { name: 'Not signed in', role: 'Guest', initials: '?' };
+
+function initials(name) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
 
 export default function Sidebar() {
+  const session = getSession();
+  const identity = session
+    ? {
+        name: session.name || session.username,
+        role: session.role || 'Signed in',
+        initials: initials(session.name || session.username),
+      }
+    : PLACEHOLDER;
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -29,15 +53,15 @@ export default function Sidebar() {
         </NavLink>
       </nav>
 
-      <div className="therapist">
+      <NavLink to="/account" className="therapist">
         <span className="therapist__avatar" aria-hidden="true">
-          {THERAPIST.initials}
+          {identity.initials}
         </span>
         <span className="therapist__meta">
-          <span className="therapist__name">{THERAPIST.name}</span>
-          <span className="therapist__role">{THERAPIST.role}</span>
+          <span className="therapist__name">{identity.name}</span>
+          <span className="therapist__role">{identity.role}</span>
         </span>
-      </div>
+      </NavLink>
     </aside>
   );
 }

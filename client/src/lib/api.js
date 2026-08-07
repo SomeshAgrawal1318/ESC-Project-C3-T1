@@ -112,6 +112,39 @@ export function markSampleReviewed(sampleId) {
   });
 }
 
+// POST /api/auth/login  { username, password }  ->  account (no password)
+export function login({ username, password }) {
+  return request('/auth/login', { method: 'POST', body: { username, password } });
+}
+
+// POST /api/auth/forgot-password  { username }  ->  { message }
+// Always resolves 200 whether or not the username exists, so the caller
+// can't use this to discover which usernames are registered.
+export function requestPasswordReset({ username }) {
+  return request('/auth/forgot-password', { method: 'POST', body: { username } });
+}
+
+// POST /api/auth/reset-password/:token  { password }  ->  { message }
+export function resetPassword(token, { password }) {
+  return request(`/auth/reset-password/${token}`, { method: 'POST', body: { password } });
+}
+
+// GET /api/auth/account/:username  ->  { username, name, email, phoneNumber,
+// role, organisation, createdAt }. Powers AccountPage.
+export function getAccount(username) {
+  return request(`/auth/account/${encodeURIComponent(username)}`);
+}
+
+// PATCH /api/auth/change-password  { username, currentPassword, newPassword }
+// ->  { message }. Distinct from resetPassword() — this is the logged-in
+// "I know my current password" flow, not the emailed-token one.
+export function changePassword({ username, currentPassword, newPassword }) {
+  return request('/auth/change-password', {
+    method: 'PATCH',
+    body: { username, currentPassword, newPassword },
+  });
+}
+
 // POST /api/samples/:studentId  ->  the created sample summary.
 // Multipart, not JSON: the files go under the field "samples" (they all
 // become pages of ONE sample) with title/taskType alongside. We build the

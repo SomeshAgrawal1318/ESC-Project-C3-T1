@@ -13,13 +13,24 @@ import SampleReportPage from './pages/SampleReportPage.jsx';
 import ErrorTrendsPage from './pages/ErrorTrendsPage.jsx';
 import StyleguidePage from './pages/StyleguidePage.jsx';
 import Placeholder from './components/Placeholder.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import AccountPage from './pages/AccountPage.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        {/* Standalone screens — no sidebar shell, same design tokens.
+            Nothing else is gated behind these yet (see LoginPage.jsx). */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
         <Route path="/" element={<App />}>
           <Route index element={<StudentsListPage />} />
+          <Route path="account" element={<AccountPage />} />
           <Route path="students/:studentId" element={<StudentProfilePage />} />
           {/* Screens 2a/2b — upload + analyse flow */}
           <Route path="students/:studentId/upload" element={<UploadSamplePage />} />
