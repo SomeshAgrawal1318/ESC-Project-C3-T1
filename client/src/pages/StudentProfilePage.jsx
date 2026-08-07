@@ -11,7 +11,6 @@ import { statusFor } from '../lib/status.js';
 import Button from '../components/Button.jsx';
 import SampleRow from '../components/SampleRow.jsx';
 import EmptyState from '../components/EmptyState.jsx';
-import { statusFor } from '../lib/status.js';
 
 export default function StudentProfilePage() {
   const { studentId } = useParams();
