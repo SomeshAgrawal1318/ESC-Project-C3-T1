@@ -17,6 +17,7 @@ process.env.JWT_SECRET ??= 'test-only-secret-do-not-use-in-production';
 
 import errorHandler from '../middleware/errorHandler.js';
 import { Account } from '../models/account.js';
+import { signToken } from '../utils/jwt.js';
 
 const sentEmails = [];
 mock.module('../services/emailService.js', {
@@ -226,5 +227,43 @@ describe('auth API integration', () => {
     assert.equal(records[0].resetToken, null);
     assert.equal(records[0].resetTokenExpires, null);
     assert.ok(await bcrypt.compare('NewPass@456', records[0].passwordHash));
+  });
+
+  test('GET /account requires a session and only ever returns the caller\'s own account', async () => {
+    const anonymous = await request('/api/auth/account');
+    assert.equal(anonymous.response.status, 401);
+
+    const token = signToken({ username: 'Sandy@DAS' });
+    const { response, body } = await request('/api/auth/account', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(body.username, 'Sandy@DAS');
+    assert.equal(body.email, 'sandylim271@gmail.com');
+  });
+
+  test('PATCH /change-password requires a session and acts on whichever account the token belongs to', async () => {
+    const anonymous = await request('/api/auth/change-password', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ currentPassword: 'Pass@123', newPassword: 'NewPass@789' }),
+    });
+    // Reachable at all only with a session - the old body-supplied `username`
+    // is no longer read, so there's nothing to redirect this at any other
+    // account even if it were.
+    assert.equal(anonymous.response.status, 401);
+    assert.ok(await bcrypt.compare('Pass@123', records[0].passwordHash)); // untouched
+
+    const token = signToken({ username: 'Sandy@DAS' });
+    const { response, body } = await request('/api/auth/change-password', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword: 'Pass@123', newPassword: 'NewPass@789' }),
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(body.message, 'Your password has been updated.');
+    assert.ok(await bcrypt.compare('NewPass@789', records[0].passwordHash));
   });
 });

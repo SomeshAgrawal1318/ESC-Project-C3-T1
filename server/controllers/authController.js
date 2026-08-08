@@ -38,8 +38,11 @@ const login = async (req, res) => {
   res.status(200).json({ ...toClientAccount(account), token: signToken(account) });
 };
 
+// req.username comes from the verified token (requireAuth), never from a
+// param or body the caller controls — this route only ever answers "my own
+// account", never anyone else's.
 const getAccount = async (req, res) => {
-  const account = await Account.findOne({ username: req.params.username });
+  const account = await Account.findOne({ username: req.username });
   if (!account) {
     res.status(404);
     throw new Error('Account not found');
@@ -47,14 +50,17 @@ const getAccount = async (req, res) => {
   res.status(200).json(toClientAccount(account));
 };
 
+// Same identity rule as getAccount: acts on the signed-in caller's own
+// account (req.username from requireAuth), regardless of what the request
+// body contains.
 const changePassword = async (req, res) => {
-  const { username, currentPassword, newPassword } = req.body;
-  if (!username || !currentPassword || !newPassword) {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
     res.status(400);
-    throw new Error('Username, current password and new password are required');
+    throw new Error('Current password and new password are required');
   }
 
-  const account = await Account.findOne({ username });
+  const account = await Account.findOne({ username: req.username });
   const currentMatches = account && (await bcrypt.compare(currentPassword, account.passwordHash));
   if (!currentMatches) {
     res.status(401);

@@ -184,19 +184,23 @@ export function resetPassword(token, { password }) {
   return request(`/auth/reset-password/${token}`, { method: 'POST', body: { password } });
 }
 
-// GET /api/auth/account/:username  ->  { username, name, email, phoneNumber,
-// role, organisation, createdAt }. Powers AccountPage.
-export function getAccount(username) {
-  return request(`/auth/account/${encodeURIComponent(username)}`);
+// GET /api/auth/account  ->  { username, name, email, phoneNumber, role,
+// organisation, createdAt } for whoever the session token belongs to —
+// there's no way to ask for anyone else's. Powers AccountPage. Requires a
+// session (see request()'s Authorization header).
+export function getAccount() {
+  return request('/auth/account');
 }
 
-// PATCH /api/auth/change-password  { username, currentPassword, newPassword }
-// ->  { message }. Distinct from resetPassword() — this is the logged-in
-// "I know my current password" flow, not the emailed-token one.
-export function changePassword({ username, currentPassword, newPassword }) {
+// PATCH /api/auth/change-password  { currentPassword, newPassword }  ->
+// { message }. Acts on the signed-in caller's own account (the server reads
+// that from the session token, not from anything this call sends).
+// Distinct from resetPassword() — this is the logged-in "I know my current
+// password" flow, not the emailed-token one.
+export function changePassword({ currentPassword, newPassword }) {
   return request('/auth/change-password', {
     method: 'PATCH',
-    body: { username, currentPassword, newPassword },
+    body: { currentPassword, newPassword },
   });
 }
 
