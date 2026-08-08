@@ -121,7 +121,8 @@ below on why there is no separate /report endpoint.
 
 Returns:  200 + Sample { sampleId, title, studentId, taskType, uploadedAt,
                          analysisStatus, imageCount, illegibleNote,
-                         analysisError,
+                         analysisError, confidenceThreshold,
+                         statistics: { categoryCounts, total },
                          errors: [ { errorIndex, written, intended,
                                      category, confidenceScore,
                                      locationOnScan, note, dismissed } ] }

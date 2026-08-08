@@ -417,9 +417,11 @@ export async function runAnalysis(sampleId) {
       sample.illegibleNote = illegibleNote;
       sample.analysisError = "";
       sample.status = "ANALYSED";
+      sample.analysedAt = new Date();
     } catch (err) {
       sample.status = "FAILED";
       sample.analysisError = describeFailure(err);
+      sample.analysedAt = new Date();
     }
 
     await sample.save();

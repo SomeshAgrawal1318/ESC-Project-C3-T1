@@ -218,8 +218,9 @@ export default function SampleReportPage() {
   const removed = sample.errors.filter((e) => e.dismissed);
   const byIndex = new Map(liveErrors.map((e) => [e.errorIndex, e]));
 
-  const counts = {};
-  for (const e of liveErrors) counts[e.category] = (counts[e.category] ?? 0) + 1;
+  // Server-computed, not re-derived here - recalculated fresh on every
+  // read/write so it can never drift from the errors array it summarises.
+  const counts = sample.statistics.categoryCounts;
 
   const shown = filter ? liveErrors.filter((e) => e.category === filter) : liveErrors;
   // Grouped by category with a heading + count per group (wireframe 3a) —
@@ -271,10 +272,15 @@ export default function SampleReportPage() {
   }
 
   const reviewed = sample.analysisStatus === 'REVIEWED';
+  // analysedAt is null for samples analysed before this field existed -
+  // fall back to the generic "analysed by AI" rather than showing nothing.
+  const analysedLabel = sample.analysedAt
+    ? `analysed ${formatUploaded(sample.analysedAt)}`
+    : 'analysed by AI';
   const subline = [
     `Uploaded ${formatUploaded(sample.uploadedAt)}`,
-    'analysed by AI',
-    `${plural(liveErrors.length, 'error')} tagged`,
+    analysedLabel,
+    `${plural(sample.statistics.total, 'error')} tagged`,
     sample.imageCount > 1 ? plural(sample.imageCount, 'page') : null,
   ]
     .filter(Boolean)

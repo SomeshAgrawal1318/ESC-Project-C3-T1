@@ -69,6 +69,21 @@ async function toPageFiles(file) {
 // block that the writes had to keep in step by hand.
 //
 // students.js reuses this for GET /api/students/:studentId/samples.
+// Per-category counts of live (non-dismissed) errors, plus the running
+// total - computed fresh on every read/write rather than stored, so it can
+// never drift from the errors array it summarises. The client no longer
+// needs to re-derive this itself.
+function computeStatistics(errors) {
+  const categoryCounts = Object.fromEntries(ERROR_CATEGORIES.map((category) => [category, 0]));
+  let total = 0;
+  for (const error of errors) {
+    if (error.dismissed) continue;
+    categoryCounts[error.category] += 1;
+    total += 1;
+  }
+  return { categoryCounts, total };
+}
+
 function toClientSample(sample) {
   return {
     sampleId: sample._id,
@@ -83,11 +98,15 @@ function toClientSample(sample) {
     studentId: sample.student,
     illegibleNote: sample.illegibleNote,
     analysisError: sample.analysisError,
+    // null for samples still UPLOADED, or ones analysed before this field
+    // existed - the client falls back to generic copy in that case.
+    analysedAt: sample.analysedAt,
     // The live threshold driving each error's "uncertain" flag, so the
     // client renders the Uncertain card state from the server's actual
     // configured value instead of a hardcoded guess that can drift from a
     // deployment's ERROR_CONFIDENCE_THRESHOLD override.
     confidenceThreshold: getConfidenceThreshold(),
+    statistics: computeStatistics(sample.errors),
     // errorIndex is the position in errors[] - the errors sub-schema is
     // _id: false, so this is the only handle the client has on one error.
     // It is stable because a removed error is flagged dismissed, not deleted.

@@ -153,6 +153,11 @@ const sampleSchema = new mongoose.Schema(
     // Never a raw stack trace - the educator reads this directly.
     analysisError: { type: String, default: '' },
 
+    // When the AI finished (successfully or not) - null while status is
+    // still UPLOADED. Powers the review screen's subline instead of a
+    // hardcoded "analysed by AI" string with no real timestamp behind it.
+    analysedAt: { type: Date, default: null },
+
     // The flagged errors (see errorSchema above).
     errors: { type: [errorSchema], default: [] },
 
