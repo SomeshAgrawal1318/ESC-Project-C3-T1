@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Button from '../components/Button.jsx';
+import CategoryChip from '../components/CategoryChip.jsx';
 import {
   generateRecommendations,
   getLatestRecommendations,
   getStudent,
+  getStudentTrends,
   worksheetFileUrl,
 } from '../lib/api.js';
 
@@ -14,13 +16,17 @@ export default function RecommendationsPage() {
   const { studentId } = useParams();
   const [state, setState] = useState({ status: 'loading' });
 
-  // Load student metadata and the optional latest report together on route changes.
+  // Load student metadata, the optional latest report, and (for the two
+  // distinct empty states — wireframe 5c) whether this student has any
+  // analysed evidence at all, together on route changes. getStudentTrends
+  // already aggregates exactly {totalSamples, totalErrors} across
+  // ANALYSED/REVIEWED samples in one request.
   useEffect(() => {
     let live = true;
-    Promise.all([getStudent(studentId), getLatestRecommendations(studentId)])
-      .then(([student, report]) => {
+    Promise.all([getStudent(studentId), getLatestRecommendations(studentId), getStudentTrends(studentId)])
+      .then(([student, report, trends]) => {
         if (!student) throw new Error('Student not found.');
-        if (live) setState({ status: 'ready', student, report });
+        if (live) setState({ status: 'ready', student, report, trends });
       })
       .catch((error) => {
         if (live) setState({ status: 'error', message: error.message });
@@ -60,8 +66,9 @@ export default function RecommendationsPage() {
     );
   }
 
-  const { student, report } = state;
+  const { student, report, trends } = state;
   const generating = state.status === 'generating';
+  const hasAnalysedSamples = (trends?.totalSamples ?? 0) > 0;
 
   return (
     <div className="profile recommendations-page">
@@ -107,8 +114,36 @@ export default function RecommendationsPage() {
 
       {!report ? (
         <section className="recommendations-empty">
-          <h2>No recommendations yet</h2>
-          <p>Generate a report from this student’s analysed and reviewed writing samples.</p>
+          {hasAnalysedSamples ? (
+            // 5c(b): samples exist, nothing generated yet — name the real
+            // evidence this report would be based on.
+            <>
+              <h2>Nothing generated yet</h2>
+              <p>
+                {trends.totalSamples} analysed {trends.totalSamples === 1 ? 'sample' : 'samples'},{' '}
+                {trends.totalErrors} tagged {trends.totalErrors === 1 ? 'error' : 'errors'} ready to
+                reason over.
+              </p>
+              <Button
+                variant="primary"
+                icon="recommendations"
+                disabled={generating}
+                disabledHint="Gemini is reviewing the student’s analysed samples"
+                onClick={handleGenerate}
+              >
+                Generate recommendations
+              </Button>
+            </>
+          ) : (
+            // 5c(a): nothing to reason over at all yet.
+            <>
+              <h2>No error report yet</h2>
+              <p>Recommendations are based on analysed writing samples — upload one to get started.</p>
+              <Button variant="primary" icon="upload" to={`/students/${studentId}/upload`}>
+                Upload writing sample
+              </Button>
+            </>
+          )}
         </section>
       ) : (
         <section className="recommendations" aria-label="Intervention strategies">
@@ -123,6 +158,13 @@ export default function RecommendationsPage() {
               <article className="recommendation-card" key={`${strategy.strategy}-${index}`}>
                 <span className="recommendation-card__number">Strategy {index + 1}</span>
                 <h3>{strategy.strategy}</h3>
+                {strategy.targetCategories?.length > 0 && (
+                  <div className="recommendation-card__categories">
+                    {strategy.targetCategories.map((category) => (
+                      <CategoryChip key={category} category={category} short />
+                    ))}
+                  </div>
+                )}
                 <p>{strategy.rationale}</p>
                 {strategy.evidence?.length > 0 && (
                   <div className="recommendation-card__evidence">
