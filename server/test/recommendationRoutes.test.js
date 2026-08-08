@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 
+// A fixed secret, set before anything reads it - independent of whatever
+// (if anything) is in a real .env, since these tests never touch a real
+// account either.
+process.env.JWT_SECRET ??= 'test-only-secret-do-not-use-in-production';
+
 import app from '../app.js';
 import {
   generateStudentRecommendations,
@@ -11,6 +16,9 @@ import { RecommendationReport } from '../models/recommendationReport.js';
 import { Sample } from '../models/sample.js';
 import { Student } from '../models/student.js';
 import { recommendationEngine } from '../services/recommendationEngine.js';
+import { signToken } from '../utils/jwt.js';
+
+const authHeaders = { Authorization: `Bearer ${signToken({ username: 'test-user' })}` };
 
 async function withServer(run) {
   const server = app.listen(0);
@@ -35,7 +43,7 @@ test('simplified recommendation endpoints validate student and sample IDs', asyn
     ]) {
       const response = await fetch(`${baseUrl}${path}`, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: method === 'GET' ? undefined : '{}',
       });
       assert.equal(response.status, 400);
@@ -48,10 +56,11 @@ test('lifecycle endpoints were removed', async () => {
   await withServer(async (baseUrl) => {
     const regenerate = await fetch(
       `${baseUrl}/api/students/507f1f77bcf86cd799439011/recommendations/regenerate`,
-      { method: 'POST' }
+      { method: 'POST', headers: authHeaders }
     );
     const flag = await fetch(`${baseUrl}/api/recommendations/507f1f77bcf86cd799439011/flag`, {
       method: 'PATCH',
+      headers: authHeaders,
     });
     assert.equal(regenerate.status, 404);
     assert.equal(flag.status, 404);
@@ -60,7 +69,7 @@ test('lifecycle endpoints were removed', async () => {
 
 test('legacy recommendation route remains available during migration', async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/recommendation`);
+    const response = await fetch(`${baseUrl}/api/recommendation`, { headers: authHeaders });
     assert.equal(response.status, 200);
     assert.equal(await response.text(), 'Hello world');
   });
@@ -242,7 +251,9 @@ test('latest report is marked outdated when usable sample evidence changed', asy
 
 test('worksheet file endpoint rejects IDs outside the approved index', async () => {
   await withServer(async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/api/worksheets/not-approved/file`);
+    const response = await fetch(`${baseUrl}/api/worksheets/not-approved/file`, {
+      headers: authHeaders,
+    });
     assert.equal(response.status, 404);
     assert.equal((await response.json()).error.code, 'WORKSHEET_NOT_FOUND');
   });
@@ -258,7 +269,9 @@ test('worksheet file endpoint forces a non-sniffable PDF response', async () => 
   });
   try {
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`);
+      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`, {
+        headers: authHeaders,
+      });
       assert.equal(response.status, 200);
       assert.equal(response.headers.get('content-type'), 'application/pdf');
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
@@ -279,7 +292,9 @@ test('worksheet file endpoint rejects active upstream content', async () => {
   });
   try {
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`);
+      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`, {
+        headers: authHeaders,
+      });
       assert.equal(response.status, 502);
       assert.equal((await response.json()).error.code, 'INVALID_WORKSHEET_CONTENT_TYPE');
     });
@@ -299,7 +314,9 @@ test('worksheet file endpoint validates PDF bytes even for octet-stream metadata
   });
   try {
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`);
+      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`, {
+        headers: authHeaders,
+      });
       assert.equal(response.status, 502);
       assert.equal((await response.json()).error.code, 'INVALID_WORKSHEET_FILE');
     });
@@ -319,7 +336,9 @@ test('worksheet file endpoint rejects oversized approved blobs', async () => {
   });
   try {
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`);
+      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`, {
+        headers: authHeaders,
+      });
       assert.equal(response.status, 502);
       assert.equal((await response.json()).error.code, 'WORKSHEET_TOO_LARGE');
     });

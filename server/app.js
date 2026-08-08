@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 
 import errorHandler from './middleware/errorHandler.js';
+import requireAuth from './middleware/requireAuth.js';
 import auth from './routes/auth.js';
 import recommendation from './routes/recommendation.js';
 import samples from './routes/samples.js';
@@ -17,10 +18,12 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
-app.use('/api/samples', samples);
-app.use('/api/students', students);
-app.use('/api/worksheets', worksheets);
-app.use('/api/recommendation', recommendation);
+// /api/auth is the one router that must stay reachable without a token —
+// everything else requires the caller to have already signed in.
+app.use('/api/samples', requireAuth, samples);
+app.use('/api/students', requireAuth, students);
+app.use('/api/worksheets', requireAuth, worksheets);
+app.use('/api/recommendation', requireAuth, recommendation);
 app.use('/api/auth', auth);
 app.use((req, res, next) => {
   next(new AppError(404, 'ROUTE_NOT_FOUND', 'API route not found.'));

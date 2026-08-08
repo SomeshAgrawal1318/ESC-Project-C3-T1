@@ -1,8 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+// A fixed secret, set before anything reads it - independent of whatever
+// (if anything) is in a real .env, since these tests never touch Mongo or a
+// real account either.
+process.env.JWT_SECRET ??= 'test-only-secret-do-not-use-in-production';
+
 import app from '../app.js';
 import { recommendationEngine } from '../services/recommendationEngine.js';
+import { signToken } from '../utils/jwt.js';
+
+const authHeaders = { Authorization: `Bearer ${signToken({ username: 'test-user' })}` };
 
 async function withServer(run) {
   const server = app.listen(0);
@@ -35,7 +43,9 @@ test('worksheet proxy stops oversized chunked PDFs without Content-Length', asyn
   });
   try {
     await withServer(async (baseUrl) => {
-      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`);
+      const response = await fetch(`${baseUrl}/api/worksheets/approved/file`, {
+        headers: authHeaders,
+      });
       assert.equal(response.status, 502);
       assert.equal((await response.json()).error.code, 'WORKSHEET_TOO_LARGE');
     });

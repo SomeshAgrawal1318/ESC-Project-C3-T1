@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Account } from '../models/account.js';
 import { validatePasswordStrength } from '../services/passwordPolicy.js';
 import { sendPasswordResetEmail } from '../services/emailService.js';
+import { signToken } from '../utils/jwt.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 const SALT_ROUNDS = 10;
@@ -34,7 +35,7 @@ const login = async (req, res) => {
     throw new Error('Incorrect username or password');
   }
 
-  res.status(200).json(toClientAccount(account));
+  res.status(200).json({ ...toClientAccount(account), token: signToken(account) });
 };
 
 const getAccount = async (req, res) => {

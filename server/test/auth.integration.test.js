@@ -10,6 +10,11 @@ import { after, before, beforeEach, describe, mock, test } from 'node:test';
 import bcrypt from 'bcryptjs';
 import express from 'express';
 
+// A fixed secret, set before anything reads it - login() now signs a token
+// on every successful call, independent of whatever (if anything) is in a
+// real .env.
+process.env.JWT_SECRET ??= 'test-only-secret-do-not-use-in-production';
+
 import errorHandler from '../middleware/errorHandler.js';
 import { Account } from '../models/account.js';
 
@@ -102,7 +107,13 @@ describe('auth API integration', () => {
     });
 
     assert.equal(response.status, 200);
-    assert.deepEqual(body, { username: 'Sandy@DAS', email: 'sandylim271@gmail.com' });
+    // login() now also signs a session token (server/utils/jwt.js) - checked
+    // separately from the account fields since its exact value isn't
+    // deterministic across runs.
+    const { token, ...account } = body;
+    assert.equal(typeof token, 'string');
+    assert.ok(token.length > 0);
+    assert.deepEqual(account, { username: 'Sandy@DAS', email: 'sandylim271@gmail.com' });
   });
 
   test('POST /login rejects an unknown username', async () => {

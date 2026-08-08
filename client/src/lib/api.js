@@ -9,18 +9,31 @@
 // Students AND samples routes are live now — the old mockData.js is gone.
 // ------------------------------------------------------------------
 
+import { getToken, clearSession } from './session.js';
+
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request(path, { method = 'GET', body } = {}) {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...(body !== undefined && { 'Content-Type': 'application/json' }),
     },
     ...(body !== undefined && { body: JSON.stringify(body) }),
   });
   if (!res.ok) {
+    // A 401 on a request that carried a token means the session died
+    // server-side (expired, or the secret rotated) - send the user back to
+    // sign in. Login itself also answers 401 for wrong credentials, but that
+    // request never carries a token, so it's left alone here for LoginPage
+    // to show inline instead of bouncing someone who's still on that screen.
+    if (res.status === 401 && token) {
+      clearSession();
+      window.location.assign('/login');
+    }
     let detail;
     try {
       const payload = await res.json();
