@@ -51,7 +51,9 @@ exists. `node seedAccount.js` does the same for the demo login account.
 
 ## Structure
 
-- `server.js`: application setup and route mounting.
+- `app.js`: the Express app itself - middleware, route mounting, the 404 catch-all, and the error
+  handler. This is the single source of truth `server.js` and the test suite both build on.
+- `server.js`: connects to MongoDB and starts `app.js` listening.
 - `routes/`: URL definitions and multipart upload configuration.
 - `controllers/`: HTTP handling and public response serialization.
 - `services/errorClassificationEngine.js`: Gemini request, validation, retry, and background
@@ -62,6 +64,15 @@ exists. `node seedAccount.js` does the same for the demo login account.
 
 See `AGENTS.md` for implementation constraints and the repository root `README.md` for client
 setup.
+
+## Authentication
+
+There is no authentication in this prototype - it's a deliberate cut, not an oversight (see
+paths.txt). Every route is effectively public: `GET /api/students` returns every student in the
+database rather than scoping to a logged-in teacher, and `Student.teacherId` is accepted but never
+enforced. The separate login feature (`routes/auth.js`, `models/account.js`) authenticates a demo
+account for the UI but doesn't gate any other route yet - wiring that up, and scoping student
+queries to the signed-in teacher, is future work once real accounts exist.
 
 ## Error Classification Engine
 

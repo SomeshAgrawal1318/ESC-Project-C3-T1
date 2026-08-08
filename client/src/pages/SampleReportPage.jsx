@@ -396,6 +396,7 @@ export default function SampleReportPage() {
                     selected={selected === error.errorIndex}
                     busy={busy === error.errorIndex}
                     failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
+                    confidenceThreshold={sample.confidenceThreshold}
                     innerRef={(node) => {
                       if (node) cardRefs.current.set(error.errorIndex, node);
                       else cardRefs.current.delete(error.errorIndex);
@@ -430,6 +431,7 @@ export default function SampleReportPage() {
                       error={error}
                       busy={busy === error.errorIndex}
                       failure={failure?.errorIndex === error.errorIndex ? failure.message : null}
+                      confidenceThreshold={sample.confidenceThreshold}
                       onRestore={() => patchError(error.errorIndex, { dismissed: false })}
                     />
                   ))}

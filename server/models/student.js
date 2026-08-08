@@ -16,6 +16,13 @@ const studentSchema = new mongoose.Schema({
     required: true,
     trim: true, // remove accidental spaces around the ID
   },
+  // Optional while there is no auth (see paths.txt) - once login exists it
+  // comes from the session instead of the request body.
+  teacherId: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -79,45 +79,63 @@ Notes:
 SAMPLES
 ================================================================================
 
-POST /api/samples
------------------
+POST /api/samples/:studentId
+-----------------------------
 Uploads a new handwriting sample and starts analysis.
 
 Content-Type: multipart/form-data
-Fields:   studentId  (String)
-          images     (one or more image files)
-Returns:  202 + the created Sample, with analysisStatus = PROCESSING and the
+Path:     studentId  (String) - which student this sample belongs to.
+Fields:   samples    (one or more image/PDF files - the field name is
+                      "samples", not "images"; a multi-page PDF is split
+                      into one page per file server-side)
+          title      (String) - falls back to the first file's name if blank
+          taskType   (String) - ESSAY | LONG_ANSWER | SHORT_ANSWER
+Returns:  202 + the created Sample, with analysisStatus = UPLOADED and the
           server-generated sampleId.
-Errors:   400 if studentId is missing or no file was attached.
-          422 if validateSample() rejects the file (wrong MIME type,
-          oversized, unreadable).
+Errors:   400 if no file was attached, or if :studentId doesn't resolve to a
+          real student.
+          422 if the real content-sniffed file type isn't JPG/PNG/PDF, a PDF
+          can't be rendered, or a file exceeds the size ceiling.
 
-Maps to:  SampleController.validateSample(sample) -> submitSample(studentId, sample)
+Maps to:  sampleController.createSample(req, res) (server/controllers/sampleController.js)
 
 Notes:
+  - studentId is a route parameter (not a body field), and the file field is
+    named "samples" - settled differently than the shape first sketched here,
+    kept as the source of truth for whichever came later. See
+    client/src/lib/api.js's uploadSample() for the exact request shape.
   - The client does NOT send a sampleId. It reads it off the response and uses
     it to poll.
   - 202, not 201: the Gemini vision call takes seconds, so the request returns
     as soon as the Sample row exists and analysis continues in the background.
-    ErrorClassificationEngine.analyse() runs after the response is sent.
-  - DECISION POINT: if you would rather block until the report exists, this
-    becomes 201 + SampleReport and GET /samples/:sampleId stops being needed
-    for polling. Blocking is simpler to write but ties up a connection for the
-    full model latency and gives the UI no progress state. Pick one and make
-    sure the UC1 sequence diagram draws the return arrow in the matching place.
+    ErrorClassificationEngine.analyse() runs after the response is sent. This
+    was the "decision point" flagged in an earlier draft of this doc - 202 is
+    what's implemented.
 
 
 GET /api/samples/:sampleId
 --------------------------
-Fetches one sample's metadata. This is the polling target after upload.
+Fetches one sample. This is both the polling target after upload AND the
+full payload behind the scan-beside-errors review screen - see the note
+below on why there is no separate /report endpoint.
 
-Returns:  200 + Sample { sampleId, studentId, uploadedAt, analysisStatus,
-                         imageCount, sampleContent? }
+Returns:  200 + Sample { sampleId, title, studentId, taskType, uploadedAt,
+                         analysisStatus, imageCount, illegibleNote,
+                         analysisError,
+                         errors: [ { errorIndex, written, intended,
+                                     category, confidenceScore,
+                                     locationOnScan, note, dismissed } ] }
 Errors:   404 if no sample with that id.
 
 Notes:
-  - The client polls this until analysisStatus is COMPLETE, then requests the
-    report. Suggested interval: 2s, with a ceiling so a failed job does not
+  - The client polls this until analysisStatus reads as analysed, then reads
+    the SAME response's errors array for the review screen - no separate
+    request. An earlier draft of this doc described a standalone
+    GET /api/samples/:sampleId/report returning a distinct SampleReport
+    shape (reportId, detectedErrors, ...); that endpoint was never built.
+    Errors live embedded on this Sample (see the SAMPLES section intro), so
+    this one route already is "the report."
+  - Suggested poll interval: 2s, with a ceiling so a failed job does not
     poll forever.
   - If analysisStatus is FAILED, include the reason so the UI can show
     something better than a spinner that never stops.
@@ -139,62 +157,45 @@ Notes:
     any JSON response.
 
 
-GET /api/samples/:sampleId/report
----------------------------------
-Fetches the error report for one sample. This is the main payload behind the
-scan-beside-errors review screen.
-
-Returns:  200 + SampleReport {
-              reportId, sampleId, generatedAt,
-              statistics: { ... },
-              detectedErrors: [ { errorId, originalText, locationOnScan,
-                                  confidenceScore, category, status,
-                                  previousCategory, correctionNote,
-                                  correctedAt } ]
-          }
-Errors:   404 if the sample does not exist, or if analysis has not finished
-          yet - the client should be polling GET /samples/:sampleId instead.
-
-Maps to:  ReportController.getErrorReport(sampleId) : SampleReport
-
-Notes:
-  - detectedErrors is embedded, not linked. DetectedError is composed into
-    SampleReport, so it has no independent existence and gets no standalone
-    read route. One request loads the entire review screen.
-  - locationOnScan is what lets the UI draw the highlight over the image, so it
-    must survive serialisation intact.
+(No separate GET /api/samples/:sampleId/report route - see the note on
+GET /api/samples/:sampleId above.)
 
 
 ================================================================================
 ERROR CORRECTION
 ================================================================================
 
-PATCH /reports/:reportId/errors/:errorId
---------------------------------------------
-Applies a therapist's correction to a single detected error.
+PATCH /api/samples/:sampleId/errors/:errorIndex
+------------------------------------------------
+Applies a therapist's correction to a single detected error. errorIndex is
+the error's position in the sample's embedded errors array (there is no
+separate SampleReport/DetectedError collection or id - see the "embedded
+errors" note under SAMPLES above).
 
-Body:     { "action": "CONFIRM" | "RECATEGORISE" | "REMOVE",
-            "newCategory": String?,      // required when action=RECATEGORISE
-            "correctionNote": String? }
-Returns:  200 + the updated SampleReport (statistics included, already
-          recalculated).
-Errors:   400 if action is unrecognised, or RECATEGORISE arrives without a
-          newCategory.
-          404 if the report or error id does not resolve.
+Body:     a partial patch, at least one of:
+            { "category": String,          // one of the five categories
+              "dismissed": Boolean,        // true = remove the tag, false = restore it
+              "confidenceScore": Number }  // 0-1; 1 = educator confirmed an uncertain tag
+Returns:  200 + the updated Sample (same shape as GET /api/samples/:sampleId).
+Errors:   400 if the body has none of the three fields, or an invalid value
+          for one of them.
+          404 if the sample or errorIndex does not resolve.
 
-Maps to:  ReportController.modifyErrorTag(errorId, action, newCategory, note)
+Maps to:  sampleController.reclassifyError(req, res) (server/controllers/sampleController.js)
 
 Notes:
   - PATCH, not PUT. This is a partial update of a few fields; PUT means
     "replace the whole resource with the body I am sending", which is not what
     happens here.
-  - REMOVE is also PATCH, not DELETE. The record is kept and status flips to
-    REMOVED, because the correction history is the audit trail. Deleting the
-    row would destroy the evidence that the AI got it wrong.
-  - The handler sets previousCategory (from the old category), correctionNote,
-    and correctedAt before saving.
-  - Returns the whole report rather than the single error because
-    recalculateStatistics() has run and the summary panel needs the new numbers.
+  - "Remove" is also PATCH, not DELETE: the record is kept and dismissed
+    flips to true, so the array position (and errorIndex) stays stable and the
+    tag can be restored later. It does NOT keep a previousCategory/
+    correctionNote/correctedAt audit trail - reclassifying overwrites the
+    category in place with no history. That's a deliberate, logged scope cut
+    (see client/DESIGN.md), not an oversight, and it means the "audit trail"
+    half of this slice's original brief isn't implemented.
+  - Returns the whole sample rather than the single error so the summary
+    panel can repaint its counts from one response without a refetch.
   - Recommendation freshness is computed when the latest report is read: any
     usable sample updated after generation, or absent from basedOnSamples,
     marks the response isOutdated without adding audit-history fields.

@@ -7,6 +7,7 @@ const toClientStudent = (s) => ({
   studentId: s._id,
   name: s.name,
   currentGrade: s.currentGrade,
+  ...(s.teacherId && { teacherId: s.teacherId }),
 });
 
 const parseDateQuery = (value) => {
@@ -28,6 +29,11 @@ const parseDateQuery = (value) => {
 
 // Newest first, matching StudentsListPage, which drops a newly created
 // student at the top of the grid.
+//
+// Deliberately unscoped: with no auth (see server/README.md's
+// "Authentication" section) this returns every student in the database,
+// not just the signed-in teacher's caseload. A known prototype cut, not a
+// bug - see paths.txt.
 const getStudents = async (req, res) => {
   // Older development databases can contain documents from before these
   // required fields existed. Do not let one unusable legacy row crash the
@@ -49,7 +55,7 @@ const getStudent = async (req, res) => {
 };
 
 const createStudent = async (req, res) => {
-  const { name, currentGrade } = req.body;
+  const { name, currentGrade, teacherId } = req.body;
   if (!name || !currentGrade) {
     res.status(400);
     throw new Error('All fields are mandatory!');
@@ -57,6 +63,7 @@ const createStudent = async (req, res) => {
   const student = await Student.create({
     name,
     currentGrade,
+    ...(teacherId && { teacherId }),
   });
   res.status(201).json(toClientStudent(student));
 };

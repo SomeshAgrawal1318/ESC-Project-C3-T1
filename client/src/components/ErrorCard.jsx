@@ -32,6 +32,7 @@ export default function ErrorCard({
   busy,
   failure,
   innerRef,
+  confidenceThreshold,
   onSelect,
   onReclassify,
   onDismiss,
@@ -42,7 +43,7 @@ export default function ErrorCard({
   const [choice, setChoice] = useState(error.category);
 
   const cat = categoryFor(error.category);
-  const uncertain = isUncertain(error);
+  const uncertain = isUncertain(error, confidenceThreshold);
 
   function openReclassify() {
     setChoice(error.category);
@@ -110,7 +111,7 @@ export default function ErrorCard({
                 style={{ width: `${Math.round(error.confidenceScore * 100)}%` }}
               />
             </span>
-            <span className="ecard__conf-val">{confidenceLabel(error)}</span>
+            <span className="ecard__conf-val">{confidenceLabel(error, confidenceThreshold)}</span>
           </span>
         </span>
 

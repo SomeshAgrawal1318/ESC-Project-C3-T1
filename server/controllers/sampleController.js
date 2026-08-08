@@ -3,7 +3,7 @@ import { fileTypeFromFile } from 'file-type';
 import { pdf as renderPdf } from 'pdf-to-img';
 import { Sample, ERROR_CATEGORIES } from '../models/sample.js';
 import { Student } from '../models/student.js';
-import { runAnalysis } from '../services/errorClassificationEngine.js';
+import { runAnalysis, getConfidenceThreshold } from '../services/errorClassificationEngine.js';
 
 // Real accepted formats, matching the upload modal's copy ("JPG, PNG or PDF
 // only"). Combined in from aadi/sample-upload: multer's own mimetype/
@@ -83,6 +83,11 @@ function toClientSample(sample) {
     studentId: sample.student,
     illegibleNote: sample.illegibleNote,
     analysisError: sample.analysisError,
+    // The live threshold driving each error's "uncertain" flag, so the
+    // client renders the Uncertain card state from the server's actual
+    // configured value instead of a hardcoded guess that can drift from a
+    // deployment's ERROR_CONFIDENCE_THRESHOLD override.
+    confidenceThreshold: getConfidenceThreshold(),
     // errorIndex is the position in errors[] - the errors sub-schema is
     // _id: false, so this is the only handle the client has on one error.
     // It is stable because a removed error is flagged dismissed, not deleted.

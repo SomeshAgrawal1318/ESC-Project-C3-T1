@@ -33,20 +33,21 @@ export function categoryFor(category) {
 }
 
 // Mirrors CONFIDENCE_THRESHOLD_DEFAULT in
-// server/services/errorClassificationEngine.js. The server can override it
-// per-deployment via ERROR_CONFIDENCE_THRESHOLD; it does not send the value,
-// so this is the client's honest best guess at the same line.
+// server/services/errorClassificationEngine.js. Sample responses now carry
+// the server's live value as confidenceThreshold, so this constant is only
+// the fallback for callers that don't have a sample handy (e.g. before one
+// has loaded) - pass the real value through wherever one exists.
 export const CONFIDENCE_THRESHOLD = 0.6;
 
 // Drives the "Uncertain — AI needs your judgement" card state. Nothing is
 // stored for it: it is derived from the score every render, which is why
 // "Confirm tag" writes confidenceScore: 1 rather than setting a flag.
-export function isUncertain(error) {
-  return error.confidenceScore < CONFIDENCE_THRESHOLD;
+export function isUncertain(error, threshold = CONFIDENCE_THRESHOLD) {
+  return error.confidenceScore < threshold;
 }
 
 // "88%" / "48% — below threshold"
-export function confidenceLabel(error) {
+export function confidenceLabel(error, threshold = CONFIDENCE_THRESHOLD) {
   const pct = `${Math.round(error.confidenceScore * 100)}%`;
-  return isUncertain(error) ? `${pct} — below threshold` : pct;
+  return isUncertain(error, threshold) ? `${pct} — below threshold` : pct;
 }
