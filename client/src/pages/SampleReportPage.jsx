@@ -20,6 +20,7 @@ import {
   getSample,
   getStudent,
   getLatestRecommendations,
+  generateRecommendations,
   markSampleReviewed,
   updateSampleError,
 } from '../lib/api.js';
@@ -61,6 +62,8 @@ export default function SampleReportPage() {
   // undefined = not checked yet, null = no report exists for this student
   const [recommendationReport, setRecommendationReport] = useState(undefined);
   const [dismissedNow, setDismissedNow] = useState(false); // this-visit dismiss, for instant feedback
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateResult, setRegenerateResult] = useState(null); // 'done' | { error } | null
   const cardRefs = useRef(new Map());
 
   // Same render-phase reset the profile page uses (React's documented
@@ -80,6 +83,8 @@ export default function SampleReportPage() {
     setCorrections(0);
     setRecommendationReport(undefined);
     setDismissedNow(false);
+    setRegenerating(false);
+    setRegenerateResult(null);
     // cardRefs needs no reset — the callback refs drop their entry as each
     // card unmounts.
   }
@@ -271,6 +276,28 @@ export default function SampleReportPage() {
     }
   }
 
+  // Regenerates in place from the banner rather than only linking to the
+  // recommendations page. A successful regeneration produces a new report
+  // (new reportId) that reflects every correction made so far, so the
+  // "you corrected N tags" warning has nothing left to warn about - reset
+  // corrections instead of leaving the banner to reappear for a report it
+  // no longer describes.
+  async function handleRegenerate() {
+    if (!student) return;
+    setRegenerating(true);
+    setRegenerateResult(null);
+    try {
+      const fresh = await generateRecommendations(student.studentId);
+      setRecommendationReport(fresh);
+      setCorrections(0);
+      setRegenerateResult('done');
+    } catch (err) {
+      setRegenerateResult({ error: err.message });
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   const reviewed = sample.analysisStatus === 'REVIEWED';
   // analysedAt is null for samples analysed before this field existed -
   // fall back to the generic "analysed by AI" rather than showing nothing.
@@ -332,14 +359,25 @@ export default function SampleReportPage() {
             <Icon name="alert" size={19} className="report__banner-mark" />
             <p className="report__banner-text">
               You corrected {plural(corrections, 'tag')} — recommendations may be outdated.
+              {regenerateResult === 'done' && ' Regenerated just now.'}
+              {regenerateResult?.error && ` Couldn’t regenerate — ${regenerateResult.error}.`}
             </p>
             <Button
               variant="secondary"
+              icon="refresh"
+              onClick={handleRegenerate}
+              disabled={!student || regenerating}
+              disabledHint={!student ? 'Student details are still loading' : 'Regenerating…'}
+            >
+              {regenerating ? 'Regenerating…' : 'Regenerate now'}
+            </Button>
+            <Button
+              variant="tertiary"
               to={student ? `/students/${student.studentId}/recommendations` : undefined}
               disabled={!student}
               disabledHint="Student details are still loading"
             >
-              Review recommendations
+              Review
             </Button>
             <button
               type="button"
