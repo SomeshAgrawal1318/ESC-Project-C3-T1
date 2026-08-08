@@ -3,9 +3,9 @@
 // which is a *student's* record, not the logged-in user's own.
 //
 // Reads who's signed in from lib/session.js (set by LoginPage on success).
-// There's no route gating (see LoginPage.jsx's header comment), so this
-// page has its own "you're not signed in" fallback rather than assuming a
-// session exists.
+// RequireAuth.jsx already gates this route, so the "you're not signed in"
+// fallback below is defensive rather than a real code path — same reasoning
+// as Sidebar.jsx's placeholder identity.
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

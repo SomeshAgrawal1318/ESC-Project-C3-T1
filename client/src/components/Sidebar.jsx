@@ -1,10 +1,11 @@
 // The app shell's persistent sidebar: brand, navigation, and the signed-in
-// therapist. Present on every screen.
+// therapist. Present on every screen — and every screen this renders on
+// already passed RequireAuth.jsx's session check to get here.
 //
 // The identity block reads lib/session.js (set by LoginPage on a successful
-// sign-in). Nothing gates the app behind login, so someone can still be
-// browsing signed out — the placeholder below covers that case rather than
-// assuming a session always exists.
+// sign-in). The placeholder below is defensive rather than a real code
+// path: a session cleared out from under an already-open tab (e.g. via
+// devtools) wouldn't re-trigger the route guard until the next navigation.
 
 import { NavLink } from 'react-router-dom';
 import Icon from './Icon.jsx';

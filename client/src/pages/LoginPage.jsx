@@ -3,24 +3,32 @@
 // shared .field/.btn primitives), but this screen exists before the app's
 // internal navigation is relevant.
 //
-// Nothing in the app is actually gated behind this yet — signing in here
-// checks real credentials against the server, but every other page stays
-// reachable without it (auth was a deliberate later addition, not part of
-// the original scope; see CLAUDE.md).
+// Every other page is gated behind a session now (RequireAuth.jsx), so this
+// is effectively the app's front door — signing in here checks real
+// credentials against the server, but that gate is client-side only, not
+// real API security (see server/README.md's Authentication section for the
+// deliberate scope cut).
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { login } from '../lib/api.js';
-import { saveSession } from '../lib/session.js';
+import { getSession, saveSession } from '../lib/session.js';
 import Button from '../components/Button.jsx';
 import Logo from '../components/Logo.jsx';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Already signed in (e.g. followed an old bookmark to /login) — nothing to
+  // do here, so skip straight past the form.
+  if (getSession()) {
+    return <Navigate to="/" replace />;
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -30,7 +38,10 @@ export default function LoginPage() {
     try {
       const account = await login({ username: username.trim(), password });
       saveSession(account);
-      navigate('/');
+      // RequireAuth stashes where the visitor was actually headed before
+      // bouncing them here — send them back to it instead of always the
+      // caseload, so a deep link (or "Session expired") doesn't lose their place.
+      navigate(location.state?.from?.pathname ?? '/', { replace: true });
     } catch (err) {
       setError(err.message);
       setSubmitting(false);

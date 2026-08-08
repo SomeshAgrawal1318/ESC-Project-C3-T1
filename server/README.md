@@ -67,12 +67,16 @@ setup.
 
 ## Authentication
 
-There is no authentication in this prototype - it's a deliberate cut, not an oversight (see
-paths.txt). Every route is effectively public: `GET /api/students` returns every student in the
-database rather than scoping to a logged-in teacher, and `Student.teacherId` is accepted but never
-enforced. The separate login feature (`routes/auth.js`, `models/account.js`) authenticates a demo
-account for the UI but doesn't gate any other route yet - wiring that up, and scoping student
-queries to the signed-in teacher, is future work once real accounts exist.
+There is no *server-side* authentication in this prototype - it's a deliberate cut, not an
+oversight (see paths.txt). Every route is effectively public: `GET /api/students` returns every
+student in the database rather than scoping to a logged-in teacher, and `Student.teacherId` is
+accepted but never enforced. The login feature (`routes/auth.js`, `models/account.js`)
+authenticates a demo account against real credentials, and the client (`RequireAuth.jsx`) now
+gates navigation to every other screen behind a session - but that's a client-only guard: it
+decides what the browser lets you open, not what the API accepts. Any request to
+`/api/students`, `/api/samples`, etc. still succeeds with no token and no server-side check.
+Issuing real tokens, verifying them in middleware, and scoping student queries to the signed-in
+teacher is future work once real accounts exist.
 
 ## Error Classification Engine
 

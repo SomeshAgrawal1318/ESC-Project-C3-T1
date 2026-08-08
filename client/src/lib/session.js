@@ -1,8 +1,10 @@
 // Minimal client-side "who's signed in" state, persisted to localStorage so
-// it survives a reload. This is NOT auth gating — every route still works
-// without it (see LoginPage.jsx's header comment) — it only exists so pages
-// that want to show who's logged in (the sidebar, the account page) have
-// something to read after a successful sign-in.
+// it survives a reload. RequireAuth.jsx reads getSession() to gate every
+// route except /login, /forgot-password and /reset-password/:token — but
+// that's a client-side navigation gate only, not real API security (the
+// server accepts every request whether or not the caller has a session; see
+// server/README.md's Authentication section). Pages that want to show who's
+// logged in (the sidebar, the account page) also read this directly.
 
 const KEY = 'lexipath.session';
 
