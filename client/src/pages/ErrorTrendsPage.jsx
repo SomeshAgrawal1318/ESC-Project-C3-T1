@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Button from '../components/Button.jsx';
+import CategoryChip from '../components/CategoryChip.jsx';
 import Icon from '../components/Icon.jsx';
 import TrendChart from '../components/TrendChart.jsx';
 import { getStudent, getStudentTrends } from '../lib/api.js';
@@ -9,6 +10,7 @@ import { categoryFor } from '../lib/categories.js';
 import {
   DATE_RANGES,
   applySampleSelection,
+  filterSamplesByCustomRange,
   filterSamplesByRange,
   prepareTrendSamples,
   summariseTrends,
@@ -20,12 +22,15 @@ const longDate = new Intl.DateTimeFormat('en-SG', {
   year: 'numeric',
 });
 const EMPTY_SAMPLES = [];
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export default function ErrorTrendsPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const [state, setState] = useState({ status: 'loading' });
   const [range, setRange] = useState('3m');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [excludedIds, setExcludedIds] = useState(() => new Set());
   const [now] = useState(() => new Date());
 
@@ -56,8 +61,11 @@ export default function ErrorTrendsPage() {
 
   const allSamples = state.status === 'ready' ? state.samples : EMPTY_SAMPLES;
   const rangedSamples = useMemo(
-    () => filterSamplesByRange(allSamples, range, now),
-    [allSamples, range, now]
+    () =>
+      range === 'custom'
+        ? filterSamplesByCustomRange(allSamples, customFrom, customTo)
+        : filterSamplesByRange(allSamples, range, now),
+    [allSamples, range, now, customFrom, customTo]
   );
   const includedSamples = useMemo(
     () => applySampleSelection(rangedSamples, excludedIds),
@@ -83,6 +91,16 @@ export default function ErrorTrendsPage() {
 
   function changeRange(event) {
     setRange(event.target.value);
+    setExcludedIds(new Set());
+  }
+
+  function changeCustomFrom(event) {
+    setCustomFrom(event.target.value);
+    setExcludedIds(new Set());
+  }
+
+  function changeCustomTo(event) {
+    setCustomTo(event.target.value);
     setExcludedIds(new Set());
   }
 
@@ -119,6 +137,8 @@ export default function ErrorTrendsPage() {
 
       <TrendSummary summary={summary} />
 
+      <CategoryProportions summary={summary} />
+
       <section className="trend-controls" aria-labelledby="trend-controls-title">
         <div className="trend-controls__range">
           <label className="field" htmlFor="trend-range">
@@ -131,8 +151,36 @@ export default function ErrorTrendsPage() {
                   {option.label}
                 </option>
               ))}
+              <option value="custom">Custom range</option>
             </select>
           </label>
+
+          {range === 'custom' && (
+            <>
+              <label className="field" htmlFor="trend-custom-from">
+                <span className="field__label">From</span>
+                <input
+                  type="date"
+                  id="trend-custom-from"
+                  className="field__input"
+                  value={customFrom}
+                  max={customTo || undefined}
+                  onChange={changeCustomFrom}
+                />
+              </label>
+              <label className="field" htmlFor="trend-custom-to">
+                <span className="field__label">To</span>
+                <input
+                  type="date"
+                  id="trend-custom-to"
+                  className="field__input"
+                  value={customTo}
+                  min={customFrom || undefined}
+                  onChange={changeCustomTo}
+                />
+              </label>
+            </>
+          )}
         </div>
 
         <details className="trend-sample-picker">
@@ -250,6 +298,43 @@ function TrendSummary({ summary }) {
             : 'Select at least two analysed samples'}
         </span>
       </article>
+    </section>
+  );
+}
+
+// Same five chartable categories as TrendChart, plus "unsure" as a final row
+// when the selected samples have any — summary.totalErrors (the server's own
+// per-sample total) includes unsure while categoryTotals doesn't, so this is
+// the one place that has to reconcile the two to make the rows add to 100%.
+function CategoryProportions({ summary }) {
+  if (summary.totalErrors === 0) return null;
+
+  const categorised = Object.entries(summary.categoryTotals);
+  const categorisedTotal = categorised.reduce((sum, [, count]) => sum + count, 0);
+  const unsureTotal = summary.totalErrors - categorisedTotal;
+  const rows = unsureTotal > 0 ? [...categorised, ['unsure', unsureTotal]] : categorised;
+
+  return (
+    <section className="trend-proportions" aria-labelledby="trend-proportions-title">
+      <h2 id="trend-proportions-title" className="trend-proportions__title">
+        Share of tracked errors by category
+      </h2>
+      <ul className="trend-proportions__list">
+        {rows.map(([category, count]) => {
+          const pct = Math.round((count / summary.totalErrors) * 100);
+          return (
+            <li key={category} className="trend-proportions__row">
+              <CategoryChip category={category} />
+              <span className="trend-proportions__bar" aria-hidden="true">
+                <span className="trend-proportions__fill" style={{ width: `${pct}%` }} />
+              </span>
+              <span className="trend-proportions__value">
+                {pct}% <small>({plural(count, 'error')})</small>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

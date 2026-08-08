@@ -64,6 +64,20 @@ export function applySampleSelection(samples, excludedIds) {
   return samples.filter((sample) => !excludedIds.has(String(sample.sampleId)));
 }
 
+// Bounds are `<input type="date">` strings (YYYY-MM-DD) or '' when unset.
+// Inclusive on both ends, so picking the same day for from/to still matches
+// a sample uploaded that day.
+export function filterSamplesByCustomRange(samples, from, to) {
+  const start = from ? new Date(`${from}T00:00:00`) : null;
+  const end = to ? new Date(`${to}T23:59:59.999`) : null;
+  return samples.filter((sample) => {
+    const uploaded = new Date(sample.uploadedAt);
+    if (start && uploaded < start) return false;
+    if (end && uploaded > end) return false;
+    return true;
+  });
+}
+
 export function summariseTrends(samples) {
   const categoryTotals = emptyCounts();
   let totalErrors = 0;
