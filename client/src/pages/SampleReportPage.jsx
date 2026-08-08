@@ -370,6 +370,7 @@ export default function SampleReportPage() {
             selectedIndex={selected}
             onSelect={selectError}
             illegibleNote={sample.illegibleNote}
+            confidenceThreshold={sample.confidenceThreshold}
           />
         </div>
 

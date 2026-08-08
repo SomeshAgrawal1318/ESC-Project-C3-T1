@@ -13,8 +13,9 @@
 // of that element. So the boxes scale with the scan for free — no
 // recalculation on zoom, no chance of them drifting off the words.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
+import Button from './Button.jsx';
 import { sampleImageUrl } from '../lib/api.js';
 import { categoryFor, isUncertain } from '../lib/categories.js';
 
@@ -33,12 +34,24 @@ export default function ScanViewer({
   selectedIndex,
   onSelect,
   illegibleNote,
+  confidenceThreshold,
 }) {
   const [zoom, setZoom] = useState(1);
+  const [expanded, setExpanded] = useState(false);
   // Which page indices failed to load as an image. PDFs land here (the
   // server streams them straight through and an <img> cannot render one),
   // as does any file that has gone missing on disk.
   const [unrenderable, setUnrenderable] = useState(() => new Set());
+
+  // Escape closes the expanded view, same as the visible close button.
+  useEffect(() => {
+    if (!expanded) return undefined;
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setExpanded(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [expanded]);
 
   const pages = Array.from({ length: imageCount }, (_, i) => i);
   const onThisPage = errors.filter((e) => e.locationOnScan?.page === page);
@@ -46,6 +59,66 @@ export default function ScanViewer({
 
   function markBroken(index) {
     setUnrenderable((prev) => new Set(prev).add(index));
+  }
+
+  // Shared between the normal split-view viewport and the expanded overlay,
+  // so the scan + error outlines never have two independently-maintained
+  // copies of this rendering.
+  function renderPage() {
+    return (
+      <div className="scan__page" style={{ '--zoom': zoom }}>
+        {broken ? (
+          <div className="scan__broken">
+            <Icon name="page" size={26} />
+            <p className="scan__broken-title">This page can’t be shown</p>
+            <p className="scan__broken-text">
+              PDF uploads aren’t displayed yet. The AI still read this page, so its
+              errors are listed on the right.
+            </p>
+          </div>
+        ) : (
+          <img
+            className="scan__img"
+            src={sampleImageUrl(sampleId, page)}
+            alt={`Page ${page + 1} of the scanned sample`}
+            onError={() => markBroken(page)}
+          />
+        )}
+
+        {!broken &&
+          onThisPage.map((error) => {
+            const { x, y, z, w } = error.locationOnScan;
+            const selected = error.errorIndex === selectedIndex;
+            const uncertain = isUncertain(error, confidenceThreshold);
+            const { label, short } = categoryFor(error.category);
+            return (
+              <button
+                key={error.errorIndex}
+                type="button"
+                className={
+                  'scan-box' +
+                  (selected ? ' scan-box--selected' : '') +
+                  (uncertain ? ' scan-box--uncertain' : '')
+                }
+                style={{
+                  left: `${x * 100}%`,
+                  top: `${y * 100}%`,
+                  width: `${z * 100}%`,
+                  height: `${w * 100}%`,
+                }}
+                onClick={() => onSelect(error.errorIndex)}
+                aria-pressed={selected}
+                aria-label={`Error ${error.n}, “${error.written}”, ${label}`}
+              >
+                <span className="scan-box__tag">
+                  {error.n} · {short}
+                  {uncertain && '?'}
+                </span>
+              </button>
+            );
+          })}
+      </div>
+    );
   }
 
   return (
@@ -82,6 +155,15 @@ export default function ScanViewer({
             title="Fit to width"
           >
             <Icon name="fit" size={17} />
+          </button>
+          <button
+            type="button"
+            className="scan__ctrl"
+            onClick={() => setExpanded(true)}
+            aria-label="Expand scan"
+            title="Expand scan"
+          >
+            <Icon name="expand" size={17} />
           </button>
         </div>
       </div>
@@ -120,64 +202,59 @@ export default function ScanViewer({
         </div>
       )}
 
-      <div className="scan__viewport">
-        <div className="scan__page" style={{ '--zoom': zoom }}>
-          {broken ? (
-            <div className="scan__broken">
-              <Icon name="page" size={26} />
-              <p className="scan__broken-title">This page can’t be shown</p>
-              <p className="scan__broken-text">
-                PDF uploads aren’t displayed yet. The AI still read this page, so its
-                errors are listed on the right.
-              </p>
-            </div>
-          ) : (
-            <img
-              className="scan__img"
-              src={sampleImageUrl(sampleId, page)}
-              alt={`Page ${page + 1} of the scanned sample`}
-              onError={() => markBroken(page)}
-            />
-          )}
-
-          {!broken &&
-            onThisPage.map((error) => {
-              const { x, y, z, w } = error.locationOnScan;
-              const selected = error.errorIndex === selectedIndex;
-              const uncertain = isUncertain(error);
-              const { label, short } = categoryFor(error.category);
-              return (
-                <button
-                  key={error.errorIndex}
-                  type="button"
-                  className={
-                    'scan-box' +
-                    (selected ? ' scan-box--selected' : '') +
-                    (uncertain ? ' scan-box--uncertain' : '')
-                  }
-                  style={{
-                    left: `${x * 100}%`,
-                    top: `${y * 100}%`,
-                    width: `${z * 100}%`,
-                    height: `${w * 100}%`,
-                  }}
-                  onClick={() => onSelect(error.errorIndex)}
-                  aria-pressed={selected}
-                  aria-label={`Error ${error.n}, “${error.written}”, ${label}`}
-                >
-                  <span className="scan-box__tag">
-                    {error.n} · {short}
-                    {uncertain && '?'}
-                  </span>
-                </button>
-              );
-            })}
-        </div>
-      </div>
+      <div className="scan__viewport">{renderPage()}</div>
 
       <p className="scan__hint">
         Click an outline to select its card on the right, and the other way round.
       </p>
+
+      {expanded && (
+        <div
+          className="scan__expand-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Expanded scanned sample"
+        >
+          <div className="scan__expand-bar">
+            <div className="scan__zoom">
+              <button
+                type="button"
+                className="scan__ctrl"
+                onClick={() => setZoom((z) => clamp(z - ZOOM_STEP))}
+                disabled={zoom <= ZOOM_MIN}
+                aria-label="Zoom out"
+              >
+                <Icon name="zoomOut" size={17} />
+              </button>
+              <span className="scan__readout" aria-live="polite">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                className="scan__ctrl"
+                onClick={() => setZoom((z) => clamp(z + ZOOM_STEP))}
+                disabled={zoom >= ZOOM_MAX}
+                aria-label="Zoom in"
+              >
+                <Icon name="zoomIn" size={17} />
+              </button>
+              <button
+                type="button"
+                className="scan__ctrl"
+                onClick={() => setZoom(1)}
+                aria-label="Fit to width"
+                title="Fit to width"
+              >
+                <Icon name="fit" size={17} />
+              </button>
+            </div>
+            <Button variant="secondary" icon="cross" onClick={() => setExpanded(false)}>
+              Close
+            </Button>
+          </div>
+          <div className="scan__expand-viewport">{renderPage()}</div>
+        </div>
+      )}
 
       {illegibleNote && (
         <p className="scan__illegible">
