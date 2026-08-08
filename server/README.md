@@ -151,3 +151,77 @@ chosen here in the absence of a written agreement with Person 4 (the review
 screen owner) — confirm it still matches what they render before wiring up
 the real review screen. (It does: this is already what ScanViewer.jsx renders
 against.)
+
+## Error Correction
+
+`PATCH /api/samples/:sampleId/errors/:errorIndex` (sampleController.reclassifyError) is the
+therapist-overrules-the-AI endpoint. `errorIndex` addresses a position in the sample's embedded
+`errors` array — there's no separate error id, since the sub-schema is `{ _id: false }` (see
+`SAMPLES` in paths.txt for why errors are embedded rather than a standalone collection).
+
+Body is a partial patch — send only what changed:
+
+```text
+{ category }           reclassify (must be one of ERROR_CATEGORIES)
+{ dismissed: true }    remove the tag   { dismissed: false }  restore it
+{ confidenceScore }    1 when the educator confirms an uncertain tag
+```
+
+"Remove" flips `dismissed`, it never deletes the array entry — an index that stayed stable is what
+lets the client re-request the exact same error later (e.g. to restore it) without a lookup. There
+is deliberately no correction-history (`previousCategory`/`correctionNote`/`correctedAt`): an
+earlier draft of this feature planned one, but reclassifying was shipped as an in-place overwrite
+with no audit trail (see `client/DESIGN.md`) — flag this to the class hand-in if that history turns
+out to matter for grading, since it would need a real schema change to add back.
+
+## Intervention Recommendations
+
+`server/services/recommendationEngine.js` is the second AI service: it reasons over a student's
+reviewed errors to produce worksheet picks and intervention strategies. It's a lightweight
+retrieval-augmented pipeline, not a single prompt — see `server/controllers/recommendationController.js`
+for the two things it actually generates:
+
+- **Per-sample worksheet picks** (`POST /api/samples/:sampleId/recommendations`): up to three
+  approved PDF worksheets, matched to that sample's error categories.
+- **Per-student intervention report** (`POST /api/students/:studentId/recommendations`): a set of
+  named strategies with a rationale grounded in the student's actual error counts and misspellings,
+  stored as the student's one `RecommendationReport` (regenerating replaces it - there is no
+  history/lifecycle by design, see `models/recommendationReport.js`).
+
+### How the grounding works
+
+Worksheet text/strategy rationale isn't hand-authored by the model from nothing - it's retrieved
+from a private Azure Blob Storage container the server reads through a manifest file, never the
+whole store at once:
+
+1. A manifest (`AZURE_KNOWLEDGE_MANIFEST_PATH`) lists many small Markdown documents; only that list
+   is loaded first, not the corpus itself.
+2. Documents are fetched individually (8 at a time), each capped at `AZURE_MAX_DOCUMENT_BYTES` -
+   anything larger is rejected rather than read.
+3. Fetched documents are cached in memory and ranked locally by simple keyword overlap against the
+   student's error categories/words/grade level - not embeddings, not a vector search.
+4. Only the top 12 ranked documents are sent to Gemini as grounding context.
+5. Worksheet picks are constrained to a separate approved-PDF manifest
+   (`AZURE_ASSET_MANIFEST_PATH`) - Gemini can only choose a worksheet that's on that list, never
+   invent one, and the client only ever receives a stable `worksheetId`
+   (`GET /api/worksheets/:worksheetId/file` proxies the real file) - never an Azure path or SAS URL.
+
+### Mock mode vs real mode
+
+Same pattern as the Error Classification Engine: **mock mode** (`RECOMMENDATION_USE_MOCKS=true`,
+the default) needs no Azure/Gemini credentials and picks from a small fixture worksheet list by
+category match, so the rest of the team can build the UI against a stable shape. **Real mode**
+(`RECOMMENDATION_USE_MOCKS=false`) requires the Azure and Gemini variables below.
+
+### Environment variables
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RECOMMENDATION_USE_MOCKS` | `true` | Mock mode switch, independent of the Error Classification Engine's own `USE_MOCK_AI`. |
+| `GEMINI_RECOMMENDATION_API_KEY` | falls back to `GEMINI_API_KEY` | Separate key so recommendation quota/billing can be tracked apart from classification, if desired. |
+| `GEMINI_RECOMMENDATION_MODEL` | `gemini-flash-latest` | Model used for strategy/worksheet generation. |
+| `AZURE_STORAGE_ACCOUNT_NAME` / `AZURE_STORAGE_CONTAINER_NAME` / `AZURE_STORAGE_SAS_TOKEN` | (empty) | Read-only container SAS - keep the real token only in the git-ignored `.env`, never `.env.example`. |
+| `AZURE_KNOWLEDGE_MANIFEST_PATH` | `_manifests/gemini-canonical-markdown.jsonl` | List of retrievable Markdown documents. |
+| `AZURE_ASSET_MANIFEST_PATH` | `_manifests/blob-upload-manifest.json` | List of approved worksheet PDFs. |
+| `AZURE_FETCH_TIMEOUT_MS` | `15000` | Per-blob fetch timeout. |
+| `AZURE_MAX_DOCUMENT_BYTES` / `AZURE_MAX_MANIFEST_BYTES` / `AZURE_MAX_WORKSHEET_BYTES` | `1048576` / `5242880` / `20971520` | Byte ceilings enforced while streaming each blob type - oversized blobs are rejected (502), never partially buffered. |

@@ -1300,7 +1300,7 @@
   display: grid;
   place-items: center;
   width: 46px;
-  height: 40px;
+  height: 44px;
   flex: none;
   padding: 0;
   overflow: hidden;
@@ -2127,7 +2127,7 @@
   flex-direction: column;
   font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 .trend-sample-option small {
   overflow: hidden;
@@ -3181,6 +3181,7 @@
 
 .recommendation-card > p,
 .worksheet-card p {
+  max-width: 62ch;
   color: var(--muted);
 }
 
