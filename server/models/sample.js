@@ -110,6 +110,7 @@ const sampleSchema = new mongoose.Schema(
     title: {
       type: String,
       required: true,
+      trim: true,
     },
 
     // The uploaded images, one entry per file/page, in upload order. We
@@ -123,7 +124,7 @@ const sampleSchema = new mongoose.Schema(
       },
     },
 
-    // EDIT_DIAGRAM tasks have one known correct answer; NARRATIVE writing
+    // LONG_ANSWER and SHORT_ANSWER tasks have one known correct answer; ESSAY
     // does not. This matters because closed tasks can give the AI an
     // answer key as reading context.
     taskType: {
