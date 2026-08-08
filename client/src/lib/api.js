@@ -116,8 +116,14 @@ export async function generateRecommendations(studentId) {
 
 // The browser receives only a stable approved ID, never an Azure blob path or SAS URL.
 // Mock worksheet records carry available=false, so the UI does not offer a dead link.
+//
+// Opened via a plain <a href>, not fetch() - can't attach an Authorization
+// header, so the token rides along as ?token= instead (requireAuth's
+// documented fallback for exactly this case).
 export function worksheetFileUrl(worksheetId) {
-  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file`;
+  const token = getToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file${query}`;
 }
 
 // GET /api/samples/:sampleId  ->  one sample, with its errors.
@@ -137,10 +143,13 @@ export function getSample(sampleId) {
 }
 
 // The scan itself. NOT routed through request() — that parses JSON, and this
-// is an image the browser loads via <img src>. index is 0-based into the
-// sample's pages, so it runs 0 .. imageCount - 1.
+// is an image the browser loads via <img src>, so (like worksheetFileUrl
+// above) the token has to travel as ?token= rather than a header. index is
+// 0-based into the sample's pages, so it runs 0 .. imageCount - 1.
 export function sampleImageUrl(sampleId, index) {
-  return `${BASE}/samples/${sampleId}/images/${index}`;
+  const token = getToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${BASE}/samples/${sampleId}/images/${index}${query}`;
 }
 
 // PATCH /api/samples/:sampleId/errors/:errorIndex  ->  the updated sample
