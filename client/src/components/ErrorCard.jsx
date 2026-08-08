@@ -15,7 +15,6 @@
 // (CLAUDE.md, DESIGN.md §10), not a styling choice.
 
 import { useState } from 'react';
-import Icon from './Icon.jsx';
 import Button from './Button.jsx';
 import CategoryChip from './CategoryChip.jsx';
 import {
@@ -59,15 +58,9 @@ export default function ErrorCard({
           <span className="ecard__removed-note">Removed — not counted</span>
         </div>
         <div className="ecard__actions">
-          <button
-            type="button"
-            className="ecard__act"
-            onClick={onRestore}
-            disabled={busy}
-          >
-            <Icon name="undo" size={15} />
-            <span>Restore tag</span>
-          </button>
+          <Button variant="secondary" icon="undo" onClick={onRestore} disabled={busy}>
+            Restore tag
+          </Button>
         </div>
         {failure && <p className="ecard__failure">{failure}</p>}
       </article>
@@ -141,36 +134,28 @@ export default function ErrorCard({
 
       <div className="ecard__actions">
         {uncertain && (
-          <button
-            type="button"
-            className="ecard__act ecard__act--strong"
-            onClick={onConfirm}
-            disabled={busy}
-          >
-            <Icon name="check" size={15} />
-            <span>Confirm tag</span>
-          </button>
+          <Button variant="primary" icon="check" onClick={onConfirm} disabled={busy}>
+            Confirm tag
+          </Button>
         )}
-        <button
-          type="button"
-          className="ecard__act"
+        <Button
+          variant="secondary"
+          icon="swap"
           onClick={() => (panel === 'reclassify' ? setPanel(null) : openReclassify())}
           disabled={busy}
           aria-expanded={panel === 'reclassify'}
         >
-          <Icon name="swap" size={15} />
-          <span>Reclassify</span>
-        </button>
-        <button
-          type="button"
-          className="ecard__act ecard__act--quiet"
+          Reclassify
+        </Button>
+        <Button
+          variant="tertiary"
+          icon="trash"
           onClick={() => setPanel(panel === 'remove' ? null : 'remove')}
           disabled={busy}
           aria-expanded={panel === 'remove'}
         >
-          <Icon name="trash" size={15} />
-          <span>Remove tag</span>
-        </button>
+          Remove tag
+        </Button>
       </div>
 
       {failure && <p className="ecard__failure">{failure}</p>}
