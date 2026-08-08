@@ -13,8 +13,13 @@ CONVENTIONS
       { "error": { "code": "SAMPLE_NOT_FOUND", "message": "..." } }
 - Status codes used: 200 OK, 201 Created, 202 Accepted, 400 Bad Request,
   404 Not Found, 422 Unprocessable Entity, 500 Internal Server Error.
-- No authentication in the prototype. This is a deliberate cut, not an
-  oversight - see NOTES AND DEFERRED at the bottom.
+- Every route below except /api/auth/* requires a signed-in caller (a JWT
+  from POST /api/auth/login, sent as `Authorization: Bearer <token>`) - a
+  request with no token or an invalid one gets a 401. What's still missing is
+  authorization: nothing scopes a request to the caller's own students, so
+  the per-route notes below about teacherId and "returns every student" are
+  still accurate. That gap is a deliberate cut, not an oversight - see NOTES
+  AND DEFERRED at the bottom.
 
 
 ================================================================================
@@ -263,11 +268,12 @@ VERTICAL SLICE COVERED BY THE ABOVE
   create student -> upload sample -> poll status -> view report -> correct an
   error -> view trends. That is a complete demoable path with no gaps.
 
-DEFERRED - AUTH
-  No login route exists. Teacher is in the domain model but nothing enforces
-  ownership, so every route is effectively public and GET /api/students returns
-  everyone. Fine for a prototype demo; record it as a known cut so it does not
-  get discovered live during the presentation.
+DEFERRED - AUTHORIZATION (not authentication - that part is done)
+  POST /api/auth/login issues a JWT and every other route requires it. What's
+  still deferred is ownership: Teacher is in the domain model but nothing
+  scopes a request to the caller's own students, so GET /api/students still
+  returns everyone regardless of who's signed in. Record it as a known cut so
+  it does not get discovered live during the presentation.
 
 ROUTE COLLISIONS TO AVOID
   Two routes that differ only by parameter NAME are the same route. Express
