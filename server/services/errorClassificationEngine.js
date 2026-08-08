@@ -81,6 +81,7 @@ function readConfig() {
     modelName: process.env.GEMINI_MODEL_NAME || "gemini-flash-latest",
     timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS) || 30000,
     maxRetries: Number(process.env.GEMINI_MAX_RETRIES) || 2,
+    retryBaseMs: Number(process.env.GEMINI_RETRY_BASE_MS) || 500,
   };
 }
 
@@ -314,7 +315,9 @@ async function callModelWithRetry(ai, parts, config, pageCount) {
     } catch (err) {
       lastError = err;
       if (attempt < config.maxRetries) {
-        const baseDelayMs = isRateLimitError(err) ? 2000 : 500;
+        // Rate-limit backs off harder (4x the configured base) since retrying
+        // quickly after a 429 just trips the limit again.
+        const baseDelayMs = isRateLimitError(err) ? config.retryBaseMs * 4 : config.retryBaseMs;
         await sleep(baseDelayMs * 2 ** attempt);
       }
     }

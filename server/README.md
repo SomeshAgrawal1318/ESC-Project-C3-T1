@@ -142,8 +142,12 @@ mid-analysis, even if every retry fails.
 
 ### `locationOnScan` coordinate system
 
-`{ x, y, z, w }`, all normalised 0–1 against the full page image: `x, y` is
-the bounding box's top-left corner, `z, w` are its width and height. This was
+`{ page, x, y, z, w }`. `page` is a 0-based index into the sample's `pages`
+array (matching upload order), since a sample can span several images or PDF
+pages - `x, y, z, w` are only meaningful relative to that one page's image.
+`x, y, z, w` are normalised 0–1 against the full page image: `x, y` is the
+bounding box's top-left corner, `z, w` are its width and height. This was
 chosen here in the absence of a written agreement with Person 4 (the review
 screen owner) — confirm it still matches what they render before wiring up
-the real review screen.
+the real review screen. (It does: this is already what ScanViewer.jsx renders
+against.)

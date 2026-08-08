@@ -335,6 +335,7 @@ describe("callModelWithRetry", () => {
     modelName: "test-model",
     timeoutMs,
     maxRetries,
+    retryBaseMs: 500,
   });
 
   // Stand-in for the Gemini client: one queued step per attempt, each either
