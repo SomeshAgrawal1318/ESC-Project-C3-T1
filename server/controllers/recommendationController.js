@@ -127,8 +127,10 @@ export async function getLatestStudentRecommendations(req, res) {
   res.json({ report: reportResponse(report, isOutdated) });
 }
 
-// Run recommendation generation and persist its latest worksheet list on the sample.
-export async function generateAndSaveSampleWorksheets(sampleId) {
+// Run recommendation generation and persist its latest worksheet list on the
+// sample. Only called from generateSampleWorksheets below - not exported,
+// since nothing outside this file uses it.
+async function generateAndSaveSampleWorksheets(sampleId) {
   const startedAt = Date.now();
   logAction('sample-worksheets-start', { sampleId });
   assertObjectId(sampleId);
