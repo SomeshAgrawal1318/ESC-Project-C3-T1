@@ -79,6 +79,12 @@ export default function RecommendationsPage() {
           {student?.currentGrade && <span className="grade">{student.currentGrade}</span>}
         </div>
         <div className="profile__actions">
+          {generating && (
+            <span className="generating-indicator" role="status" aria-live="polite">
+              <span className="generating-indicator__spinner" aria-hidden="true" />
+              Gemini is reviewing the evidence…
+            </span>
+          )}
           <Button
             variant="primary"
             icon="recommendations"
@@ -86,7 +92,13 @@ export default function RecommendationsPage() {
             disabledHint="Gemini is reviewing the student’s analysed samples"
             onClick={handleGenerate}
           >
-            {report ? 'Refresh recommendations' : 'Generate recommendations'}
+            {generating
+              ? report
+                ? 'Refreshing…'
+                : 'Generating…'
+              : report
+                ? 'Refresh recommendations'
+                : 'Generate recommendations'}
           </Button>
           <Button variant="secondary" to={`/students/${studentId}`}>
             Back to student
@@ -107,7 +119,7 @@ export default function RecommendationsPage() {
             <p>The reviewed sample evidence changed after this report was generated.</p>
           </div>
           <Button variant="secondary" onClick={handleGenerate} disabled={generating}>
-            Refresh now
+            {generating ? 'Refreshing…' : 'Refresh now'}
           </Button>
         </div>
       )}
@@ -131,8 +143,14 @@ export default function RecommendationsPage() {
                 disabledHint="Gemini is reviewing the student’s analysed samples"
                 onClick={handleGenerate}
               >
-                Generate recommendations
+                {generating ? 'Generating…' : 'Generate recommendations'}
               </Button>
+              {generating && (
+                <span className="generating-indicator" role="status" aria-live="polite">
+                  <span className="generating-indicator__spinner" aria-hidden="true" />
+                  Gemini is reviewing the evidence…
+                </span>
+              )}
             </>
           ) : (
             // 5c(a): nothing to reason over at all yet.

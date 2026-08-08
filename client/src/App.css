@@ -3364,6 +3364,23 @@
   color: var(--muted);
 }
 
+.generating-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sage-strong);
+}
+.generating-indicator__spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--sage-strong);
+  animation: spin 0.9s linear infinite;
+}
+
 .recommendations-error {
   margin-bottom: 14px;
   padding: 12px 14px;
