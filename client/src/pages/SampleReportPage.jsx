@@ -16,9 +16,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSample, getStudent, markSampleReviewed, updateSampleError } from '../lib/api.js';
+import {
+  getSample,
+  getStudent,
+  getLatestRecommendations,
+  markSampleReviewed,
+  updateSampleError,
+} from '../lib/api.js';
 import { statusFor } from '../lib/status.js';
 import { CATEGORY_ORDER, categoryFor } from '../lib/categories.js';
+import { isOutdatedBannerDismissed, dismissOutdatedBanner } from '../lib/outdatedBanner.js';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
 import StatusPill from '../components/StatusPill.jsx';
@@ -51,7 +58,9 @@ export default function SampleReportPage() {
   const [busy, setBusy] = useState(null); // errorIndex currently being written
   const [failure, setFailure] = useState(null); // { errorIndex, message }
   const [corrections, setCorrections] = useState(0);
-  const [bannerOff, setBannerOff] = useState(false);
+  // undefined = not checked yet, null = no report exists for this student
+  const [recommendationReport, setRecommendationReport] = useState(undefined);
+  const [dismissedNow, setDismissedNow] = useState(false); // this-visit dismiss, for instant feedback
   const cardRefs = useRef(new Map());
 
   // Same render-phase reset the profile page uses (React's documented
@@ -69,7 +78,8 @@ export default function SampleReportPage() {
     setBusy(null);
     setFailure(null);
     setCorrections(0);
-    setBannerOff(false);
+    setRecommendationReport(undefined);
+    setDismissedNow(false);
     // cardRefs needs no reset — the callback refs drop their entry as each
     // card unmounts.
   }
@@ -101,6 +111,20 @@ export default function SampleReportPage() {
       live = false;
     };
   }, [sampleId]);
+
+  // The outdated-tags banner only makes sense once a recommendation report
+  // actually exists — otherwise there's nothing for it to be stale against.
+  const studentId = state.status === 'ready' ? state.sample.studentId : null;
+  useEffect(() => {
+    if (!studentId) return undefined;
+    let live = true;
+    getLatestRecommendations(studentId).then((report) => {
+      if (live) setRecommendationReport(report);
+    });
+    return () => {
+      live = false;
+    };
+  }, [studentId]);
 
   if (state.status === 'loading') return <ReportSkeleton />;
   if (state.status === 'notfound') {
@@ -289,31 +313,41 @@ export default function SampleReportPage() {
 
       {/* Corrections are counted for this visit only — nothing is stored
           about who changed what, by design. The recommendation endpoint
-          computes freshness from sample timestamps. */}
-      {corrections > 0 && !bannerOff && (
-        <div className="report__banner">
-          <Icon name="alert" size={19} className="report__banner-mark" />
-          <p className="report__banner-text">
-            You corrected {plural(corrections, 'tag')} — recommendations may be outdated.
-          </p>
-          <Button
-            variant="secondary"
-            to={student ? `/students/${student.studentId}/recommendations` : undefined}
-            disabled={!student}
-            disabledHint="Student details are still loading"
-          >
-            Review recommendations
-          </Button>
-          <button
-            type="button"
-            className="report__banner-x"
-            onClick={() => setBannerOff(true)}
-            aria-label="Dismiss"
-          >
-            <Icon name="cross" size={16} />
-          </button>
-        </div>
-      )}
+          computes freshness from sample timestamps. Only shown once a
+          recommendation report actually exists — otherwise there is
+          nothing for it to be stale against — and only once per report:
+          dismissing it persists (client/lib/outdatedBanner.js) so it stays
+          gone across a reload until a new report is generated. */}
+      {corrections > 0 &&
+        recommendationReport &&
+        !dismissedNow &&
+        !isOutdatedBannerDismissed(recommendationReport.reportId) && (
+          <div className="report__banner">
+            <Icon name="alert" size={19} className="report__banner-mark" />
+            <p className="report__banner-text">
+              You corrected {plural(corrections, 'tag')} — recommendations may be outdated.
+            </p>
+            <Button
+              variant="secondary"
+              to={student ? `/students/${student.studentId}/recommendations` : undefined}
+              disabled={!student}
+              disabledHint="Student details are still loading"
+            >
+              Review recommendations
+            </Button>
+            <button
+              type="button"
+              className="report__banner-x"
+              onClick={() => {
+                dismissOutdatedBanner(recommendationReport.reportId);
+                setDismissedNow(true);
+              }}
+              aria-label="Dismiss"
+            >
+              <Icon name="cross" size={16} />
+            </button>
+          </div>
+        )}
 
       <div className="report__split">
         <div className="report__scan">
