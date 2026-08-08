@@ -112,6 +112,34 @@ export function markSampleReviewed(sampleId) {
   });
 }
 
+// GET /api/students/:studentId/recommendations/latest -> latest report or null.
+// A missing report is the normal first-visit state, not a page-level failure.
+export function getLatestRecommendations(studentId) {
+  return request(`/students/${studentId}/recommendations/latest`)
+    .then(({ report }) => report)
+    .catch((error) => {
+      if (error.status === 404) return null;
+      throw error;
+    });
+}
+
+// POST /api/students/:studentId/recommendations -> newly generated report.
+export function generateRecommendations(studentId) {
+  return request(`/students/${studentId}/recommendations`, {
+    method: 'POST',
+    body: {},
+  }).then(({ report }) => report);
+}
+
+// Only the stable catalogue ID reaches the browser. The server resolves the
+// private Blob path and keeps the signed Azure URL on its side of the API.
+export function worksheetFileUrl(worksheetId) {
+  if (typeof worksheetId !== 'string' || !/^[a-z0-9-]+$/i.test(worksheetId)) {
+    throw new TypeError('A valid worksheet ID is required');
+  }
+  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file`;
+}
+
 // POST /api/samples/:studentId  ->  the created sample summary.
 // Multipart, not JSON: the files go under the field "samples" (they all
 // become pages of ONE sample) with title/taskType alongside. We build the

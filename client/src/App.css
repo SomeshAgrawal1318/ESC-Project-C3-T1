@@ -19,7 +19,9 @@
      9. Feedback + skeletons
     10. Styleguide page
     11. Error report (3a–3c): scan pane, error list, cards, panels
-    12. Responsive
+    12. Error trends (4a / 4b)
+    13. Recommendations
+    14. Responsive
    ================================================================== */
 
 /* ---- 1. Shell -------------------------------------------------------- */
@@ -2396,7 +2398,166 @@
   min-height: 390px;
 }
 
-/* ---- 13. Responsive ------------------------------------------------------ */
+/* ---- 13. Recommendations ------------------------------------------------- */
+
+.recommendations-page,
+.recommendations,
+.recommendations__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recommendations-head .btn--tertiary {
+  align-self: flex-start;
+  margin-left: -14px;
+}
+
+.recommendation-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.recommendation-card h3 {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.recommendation-card > p,
+.worksheet-card p {
+  color: var(--muted);
+}
+
+.recommendation-card__number {
+  color: var(--sage-strong);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.recommendation-card__targets {
+  font-size: 13.5px;
+}
+
+.recommendation-card__targets strong {
+  color: var(--ink);
+}
+
+.recommendation-card__evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--sage);
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.recommendation-card__evidence strong {
+  color: var(--ink);
+}
+
+.worksheet-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.worksheet-card > div {
+  display: flex;
+  flex: 1 1 420px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.worksheet-card h4 {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.worksheet-card small,
+.worksheet-card__unavailable {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.worksheet-card__unavailable {
+  max-width: 220px;
+  text-align: right;
+}
+
+.recommendations-empty {
+  min-height: 190px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-band);
+  background: var(--surface);
+  text-align: center;
+}
+
+.recommendations-empty h2 {
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.recommendations-empty p {
+  max-width: 620px;
+  color: var(--muted);
+}
+
+.recommendations-empty__spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--border);
+  border-top-color: var(--sage-strong);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.recommendations-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--pending);
+  background: var(--pending-wash);
+}
+
+.recommendations-warning--error {
+  border-left-color: var(--failed);
+  background: var(--failed-wash);
+}
+
+.recommendations-warning p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.recommendations__skeleton-card {
+  height: 220px;
+  border-radius: var(--radius);
+}
+
+/* ---- 14. Responsive ------------------------------------------------------ */
 
 /* Narrower desktops: slimmer sidebar, tighter paddings */
 @media (max-width: 1024px) {
@@ -2520,6 +2681,24 @@
   .trend-sample-option {
     width: 100%;
     max-width: none;
+  }
+  .recommendations-warning {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .recommendation-card {
+    padding: 18px;
+  }
+  .worksheet-card {
+    align-items: stretch;
+  }
+  .worksheet-card .btn {
+    justify-content: center;
+    white-space: normal;
+  }
+  .worksheet-card__unavailable {
+    max-width: none;
+    text-align: left;
   }
   /* Zoom controls and the page rail both scroll rather than wrap, so the
      scan card never forces the page sideways. */

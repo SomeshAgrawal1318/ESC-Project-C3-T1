@@ -294,9 +294,8 @@ export default function SampleReportPage() {
         <p className="report__failure">{failure.message}</p>
       )}
 
-      {/* Corrections are counted for this visit only — nothing is stored
-          about who changed what, by design. Enough to prompt a regenerate;
-          the action stays locked until the recommendations screen exists. */}
+      {/* Corrections are counted for this visit only. The recommendation route
+          computes freshness from the updated sample and offers regeneration. */}
       {corrections > 0 && !bannerOff && (
         <div className="report__banner">
           <Icon name="alert" size={19} className="report__banner-mark" />
@@ -305,10 +304,14 @@ export default function SampleReportPage() {
           </p>
           <Button
             variant="secondary"
-            disabled
-            disabledHint="Available once recommendations exist"
+            to={
+              sample.studentId
+                ? `/students/${sample.studentId}/recommendations`
+                : undefined
+            }
+            disabled={!sample.studentId}
           >
-            Regenerate recommendations
+            Review recommendations
           </Button>
           <button
             type="button"

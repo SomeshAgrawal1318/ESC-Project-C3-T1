@@ -286,8 +286,9 @@ definition not unsure.
 Also dropped, because the data no longer exists: the `✎ Teacher-corrected — was …` state and 3b's
 optional note fields. Corrections overwrite `category` in place and no history is kept (owner call,
 July 2026), so there is nothing to render them from. The outdated-recommendations banner counts
-corrections **for the current visit only** and its action stays locked until the recommendations
-screen exists.
+corrections **for the current visit only** and links to the student's live recommendations screen.
+Freshness is computed by the server from the updated sample; the banner does not create a
+sample-level recommendation.
 
 **Not the ruled motif.** §7 allows exactly four places and this screen is not one of them. The
 only motif use here is the page-rail thumbnails (allowed spot #3), and they show the real scan.
@@ -311,3 +312,29 @@ The summary is one bordered surface with internal dividers rather than three com
 small screens its sections stack, the category switcher scrolls horizontally, and the fixed-width
 chart scrolls rather than shrinking its labels and sample names below a legible size. The complete
 five-category dataset remains available in the accessible table below the chart.
+
+## 15. Recommendations screen
+
+`src/pages/RecommendationsPage.jsx` at `/students/:studentId/recommendations`. This is a
+student-level teaching aid, not a sample-level AI result: generation uses every analysed and
+reviewed sample and the page always presents the one current report.
+
+**States are explicit.** The route has separate loading, missing-student, request-failure, empty,
+generating, current-report, outdated-report, and failed-refresh presentations. Generating a new
+report does not clear the old one. If generation fails, the existing strategies remain visible
+with an inline failed-wash warning. An outdated report uses the pending-wash warning and a clear
+`Refresh now` action.
+
+**Strategy hierarchy.** Each surface card reads in teaching order: sequence number, intervention
+title, rationale, target categories, reviewed evidence, then optional worksheets. Evidence shows
+the stored category, count, and the child's exact `written` forms. These examples must never be
+trimmed, corrected, or paraphrased.
+
+**Worksheets.** Worksheet cards use the paper surface and squared application radii. Live resources
+offer `Open worksheet PDF`; the URL contains only the stable worksheet ID and opens through the
+server proxy. Mock resources render plain unavailable text rather than a disabled or dead link.
+Cards and actions wrap naturally on narrow screens, and unavailable text becomes left-aligned.
+
+The screen introduces no status pills or new colour vocabulary. Warnings reuse pending/failed
+tokens, evidence reuses the sage margin edge, and the page stays inside the centered content
+column at wide widths.

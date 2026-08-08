@@ -55,5 +55,10 @@ the relevant documentation with the implementation.
 
 - Upload, analysis, and review are implemented end to end.
 - Authentication is not implemented; routes are currently public.
-- Recommendations are not implemented beyond a server stub and client placeholder.
-- The client trends page is still a placeholder, although the server has a trends endpoint.
+- Error trends and student-level recommendations are implemented end to end.
+- Recommendations combine every `ANALYSED` and `REVIEWED` sample, exclude dismissed errors, and
+  retain only one latest report per student.
+- Recommendation worksheets are selected from the approved Azure catalogue and opened through a
+  server proxy; Blob paths, SAS values, and signed URLs never belong in client data.
+- There are no sample-level recommendation routes and no authentication layer. The legacy
+  `/api/recommendation` stub remains available only for compatibility.

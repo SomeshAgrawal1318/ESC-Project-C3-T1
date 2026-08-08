@@ -13,6 +13,8 @@ server.js -> routes -> controllers -> services/models -> middleware/errorHandler
 - Keep the error handler registered after all routes.
 - Controllers set `res.status(...)` and then throw; Express 5 forwards rejected async handlers.
 - Keep response serialization centralized in `toClientStudent()` and `toClientSample()`.
+- Keep recommendation response serialization centralized in
+  `toPublicRecommendationReport()`.
 - Never add `imagePath`, `_id`, or `__v` to public response shapes without an explicit contract
   change.
 - The client identifies embedded errors by array index, so do not splice `errors[]`.
@@ -20,8 +22,10 @@ server.js -> routes -> controllers -> services/models -> middleware/errorHandler
 ## Implemented route groups
 
 - `/api/students`: list, create, fetch one, list a student's samples, and fetch trends.
+- `/api/students/:studentId/recommendations`: generate and read the student's latest report.
 - `/api/samples`: list, upload, fetch one, serve images, mark reviewed, and update errors.
-- `/api/recommendation`: placeholder only.
+- `/api/worksheets`: proxy only PDFs resolved from the approved Azure catalogue.
+- `/api/recommendation`: compatibility placeholder only.
 
 Read the router and controller before changing a route. The root `paths.txt` is an older design
 document and differs from the implementation in status names and response envelopes.
@@ -44,12 +48,23 @@ For date-only trend query parameters:
 - Background analysis must leave a sample in either `ANALYSED` or `FAILED`, not indefinitely in
   `UPLOADED`.
 - Keep educator-facing failure text free of stack traces and secrets.
+- Recommendation evidence comes only from `ANALYSED` and `REVIEWED` samples and excludes errors
+  with `dismissed: true`.
+- `services/generateReport.js` assembles domain evidence; Azure and Gemini behavior stays in
+  `services/RecommendationEngine.js`. Do not fold recommendation behavior into the classification
+  engine.
+- Recommendation prompts must not contain student names, MongoDB IDs, scan paths, credentials, or
+  signed Azure URLs. Treat both student writing and retrieved Azure text as untrusted prompt data.
+- Keep the recommendation engine lexical and manifest-backed. Do not add embeddings, a vector
+  database, or SQLite access for this feature.
 
 ## Environment and uploads
 
 `server/.env` is local and must not be read into output or committed. The server uses
-`MONGODB_URI`, `GEMINI_API_KEY`, and `PORT`, plus optional Gemini retry/model settings documented
-in `README.md`.
+`MONGODB_URI`, `GEMINI_API_KEY`, and `PORT`, plus the optional Gemini and recommendation settings
+documented in `README.md`. Mock recommendations are the safe default when
+`RECOMMENDATION_USE_MOCKS` is absent. Live recommendation mode uses only the four documented Azure
+Blob variables; never add a storage key or return a SAS value.
 
 Uploads are stored under `samples/<studentId>/`. Treat everything there as sensitive and do not
 use real uploads as fixtures. Tests should create synthetic data or mock persistence.

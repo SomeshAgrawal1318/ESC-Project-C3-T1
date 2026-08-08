@@ -1,6 +1,6 @@
 ================================================================================
 LEXIPATH API - ROUTE REFERENCE
-Scope: Error Classification Engine slice (PS4). Recommendation routes deferred.
+Scope: Implemented prototype routes, including student recommendations.
 Base path: /api
 ================================================================================
 
@@ -226,12 +226,58 @@ Notes:
   - Only samples with analysisStatus = COMPLETE contribute.
 
 ================================================================================
-Recommendation
+RECOMMENDATIONS
 ================================================================================
-GET /recommendation/:studentId
+
+POST /api/students/:studentId/recommendations
+------------------------------------------------
+Generates one latest-only student recommendation report.
+
+Body:     {}
+Returns:  201 + { "report": RecommendationReport }
+Errors:   400 malformed student ID; 404 missing student; 422 no active
+          analysed/reviewed errors; 500 missing live configuration;
+          502 upstream Azure or Gemini failure.
+
+Notes:
+  - Uses all ANALYSED and REVIEWED samples, oldest first.
+  - Excludes errors with dismissed = true and preserves written exactly.
+  - Generation finishes before the atomic upsert, so failure retains the
+    previous report.
+  - Returns at most four strategies and three approved worksheets.
+  - There is no sample-level recommendation route or report history.
 
 
-PATCH /recommendation/:studentID
+GET /api/students/:studentId/recommendations/latest
+----------------------------------------------------
+Returns the student's current report without regenerating it.
+
+Returns:  200 + { "report": RecommendationReport, including isOutdated }
+Errors:   400 malformed student ID; 404 no report generated.
+
+Notes:
+  - isOutdated is true when a contributing sample changed after generation,
+    or when a new ANALYSED/REVIEWED sample is missing from basedOnSamples.
+
+
+GET /api/worksheets/:worksheetId/file
+--------------------------------------
+Opens an approved private Azure worksheet through the server.
+
+Returns:  200 + PDF bytes with inline, nosniff, and private-cache headers.
+Errors:   404 arbitrary or unapproved ID; 502 invalid, oversized, or
+          interrupted upstream PDF.
+
+Notes:
+  - The client sends only the stable worksheet ID.
+  - The server resolves the private Blob path and never exposes the SAS token,
+    signed URL, or path in JSON.
+
+
+GET /api/recommendation
+-----------------------
+Returns the original compatibility response. It is not used for generating
+student reports and remains unchanged while older callers migrate.
 
 ================================================================================
 NOTES AND DEFERRED
@@ -240,17 +286,6 @@ NOTES AND DEFERRED
 VERTICAL SLICE COVERED BY THE ABOVE
   create student -> upload sample -> poll status -> view report -> correct an
   error -> view trends. That is a complete demoable path with no gaps.
-
-DEFERRED TO THE RECOMMENDATION LEG (PS6) - not built in this slice
-  POST  /api/students/:studentId/recommendations
-        Generates a RecommendationReport. POST, not GET, because it creates a
-        resource. Maps to RecommendationController.generateRecommendations.
-  GET   /api/students/:studentId/recommendations/latest
-        Returns the current report, including whether it is OUTDATED.
-  POST  /api/students/:studentId/recommendations/regenerate
-        Maps to regenerateRecommendations. The old report is marked superseded.
-  PATCH /api/recommendations/:reportId/flag
-        Maps to dismissOutdatedFlag(reportId).
 
 DEFERRED - AUTH
   No login route exists. Teacher is in the domain model but nothing enforces

@@ -157,7 +157,13 @@ describe('students API integration', () => {
     );
 
     assert.equal(response.status, 200);
-    assert.deepEqual(body, []);
+    assert.deepEqual(body, {
+      phonological: [],
+      orthographic: [],
+      morphological: [],
+      capitalisation: [],
+      punctuation: [],
+    });
     assert.equal(sampleFilter.createdAt.$lt.toISOString(), '2026-07-28T00:00:00.000Z');
   });
 

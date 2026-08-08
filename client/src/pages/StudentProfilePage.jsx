@@ -88,8 +88,8 @@ export default function StudentProfilePage() {
           <Button
             variant="secondary"
             icon="recommendations"
-            to={hasSamples ? `/students/${studentId}/recommendations` : undefined}
-            disabled={!hasSamples}
+            to={hasAnalysedSamples ? `/students/${studentId}/recommendations` : undefined}
+            disabled={!hasAnalysedSamples}
             disabledHint="Available once a sample has been analysed"
           >
             View recommendations

@@ -6,6 +6,10 @@ import {
   getTrends,
 } from '../controllers/studentController.js';
 import { getStudentSamples } from '../controllers/sampleController.js';
+import {
+  generateStudentRecommendations,
+  getLatestStudentRecommendations,
+} from '../controllers/recommendationController.js';
 
 const router = express.Router();
 
@@ -22,5 +26,7 @@ router.route('/:studentId').get(getStudent);
 
 router.route('/:studentId/samples').get(getStudentSamples);
 router.route('/:studentId/trends').get(getTrends);
+router.route('/:studentId/recommendations').post(generateStudentRecommendations);
+router.route('/:studentId/recommendations/latest').get(getLatestStudentRecommendations);
 
 export default router;
