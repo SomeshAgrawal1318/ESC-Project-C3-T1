@@ -1513,6 +1513,37 @@
   max-height: min(72svh, 780px);
   padding: 16px 18px 20px;
 }
+.report__add-error {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin: 16px 18px 0;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.report__add-error-title,
+.report__add-error-failure,
+.report__add-error > .btn {
+  grid-column: 1 / -1;
+}
+.report__add-error > .btn {
+  justify-self: start;
+}
+.report__add-error-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 500;
+}
+.report__add-error-failure {
+  margin: 0;
+  font-size: 13px;
+  color: var(--failed);
+}
 .report__none {
   padding: 22px 2px;
   font-size: 14.5px;
@@ -2672,6 +2703,10 @@
   .cat-filter,
   .report__cards {
     padding-inline: 13px;
+  }
+  .report__add-error {
+    grid-template-columns: 1fr;
+    margin-inline: 13px;
   }
   .ecard__said {
     display: none;

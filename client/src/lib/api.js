@@ -138,6 +138,7 @@ export function sampleImageUrl(sampleId, index) {
 //   { category }         reclassify (must be one of ERROR_CATEGORIES)
 //   { dismissed: true }  remove the tag   { dismissed: false }  restore it
 //   { confidenceScore }  1 when the educator confirms an uncertain tag
+// Use errorIndex "new" with { written, category } to record an error the AI missed.
 export function updateSampleError(sampleId, errorIndex, patch) {
   return request(`/samples/${sampleId}/errors/${errorIndex}`, {
     method: 'PATCH',

@@ -25,7 +25,7 @@ import {
   updateSampleError,
 } from '../lib/api.js';
 import { statusFor } from '../lib/status.js';
-import { CATEGORY_ORDER, categoryFor } from '../lib/categories.js';
+import { CATEGORY_ORDER, RECLASSIFY_ORDER, categoryFor } from '../lib/categories.js';
 import { isOutdatedBannerDismissed, dismissOutdatedBanner } from '../lib/outdatedBanner.js';
 import Button from '../components/Button.jsx';
 import Icon from '../components/Icon.jsx';
@@ -56,6 +56,7 @@ export default function SampleReportPage() {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(null);
   const [showRemoved, setShowRemoved] = useState(false);
+  const [missedError, setMissedError] = useState({ written: '', category: '' });
   const [busy, setBusy] = useState(null); // errorIndex currently being written
   const [failure, setFailure] = useState(null); // { errorIndex, message }
   const [corrections, setCorrections] = useState(0);
@@ -78,6 +79,7 @@ export default function SampleReportPage() {
     setSelected(null);
     setFilter(null);
     setShowRemoved(false);
+    setMissedError({ written: '', category: '' });
     setBusy(null);
     setFailure(null);
     setCorrections(0);
@@ -249,11 +251,19 @@ export default function SampleReportPage() {
       const fresh = await updateSampleError(sampleId, errorIndex, patch);
       setState((s) => ({ ...s, sample: fresh }));
       if (counted) setCorrections((c) => c + 1);
+      return true;
     } catch (err) {
       setFailure({ errorIndex, message: `Couldn’t save that change — ${err.message}` });
+      return false;
     } finally {
       setBusy(null);
     }
+  }
+
+  async function addMissedError(event) {
+    event.preventDefault();
+    const saved = await patchError('new', missedError, { counted: true });
+    if (saved) setMissedError({ written: '', category: '' });
   }
 
   // Marking done ends the visit to this sample, so hand the educator back to
@@ -414,6 +424,45 @@ export default function SampleReportPage() {
 
         <section className="report__list" aria-label="Flagged errors">
           <CategoryFilter counts={counts} active={filter} onToggle={setFilter} />
+
+          <form className="report__add-error" onSubmit={addMissedError}>
+            <h2 className="report__add-error-title">Add an error the AI missed</h2>
+            <label className="field">
+              <span className="field__label">Written text</span>
+              <input
+                className="field__input"
+                value={missedError.written}
+                onChange={(event) =>
+                  setMissedError((current) => ({ ...current, written: event.target.value }))
+                }
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field__label">Error category</span>
+              <select
+                className="field__input"
+                value={missedError.category}
+                onChange={(event) =>
+                  setMissedError((current) => ({ ...current, category: event.target.value }))
+                }
+                required
+              >
+                <option value="">Choose a category</option>
+                {RECLASSIFY_ORDER.map((category) => (
+                  <option key={category} value={category}>
+                    {categoryFor(category).label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button type="submit" variant="secondary" disabled={busy === 'new'}>
+              Add missed error
+            </Button>
+            {failure?.errorIndex === 'new' && (
+              <p className="report__add-error-failure">{failure.message}</p>
+            )}
+          </form>
 
           <div className="report__cards">
             {shown.length === 0 && (

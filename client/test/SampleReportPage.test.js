@@ -73,6 +73,8 @@ const sample = {
   },
 };
 
+const errorUpdates = [];
+
 mock.module('../src/lib/api.js', {
   namedExports: {
     getSample: async () => sample,
@@ -88,15 +90,19 @@ mock.module('../src/lib/api.js', {
     markSampleReviewed: async () => {
       throw new Error('not exercised by this test');
     },
-    updateSampleError: async () => {
-      throw new Error('not exercised by this test');
+    updateSampleError: async (...args) => {
+      errorUpdates.push(args);
+      return sample;
     },
   },
 });
 
 const { default: SampleReportPage } = await import('../src/pages/SampleReportPage.jsx');
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  errorUpdates.length = 0;
+});
 
 function renderReport() {
   return render(
@@ -138,4 +144,22 @@ test('the category filter narrows the visible groups to the chosen category', as
   const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
   assert.deepEqual(headings, ['Capitalisation — 1 error']);
   assert.equal(screen.queryByText('beacuse'), null);
+});
+
+test('an educator can submit an error the AI missed', async () => {
+  renderReport();
+  await waitFor(() => screen.getByText('Journal Entry'));
+
+  fireEvent.change(screen.getByLabelText('Written text'), { target: { value: 'becos' } });
+  fireEvent.change(screen.getByLabelText('Error category'), {
+    target: { value: 'phonological' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Add missed error' }));
+
+  await waitFor(() => assert.equal(errorUpdates.length, 1));
+  assert.deepEqual(errorUpdates[0], [
+    'sample-1',
+    'new',
+    { written: 'becos', category: 'phonological' },
+  ]);
 });

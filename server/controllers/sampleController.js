@@ -249,12 +249,31 @@ const reclassifyError = async (req, res) => {
     res.status(404);
     throw new Error('Sample Not found');
   }
+  const body = req.body ?? {};
+  if (req.params.errorIndex === 'new') {
+    if (typeof body.written !== 'string' || body.written.trim() === '') {
+      res.status(400);
+      throw new Error('Written text is required');
+    }
+    if (!ERROR_CATEGORIES.includes(body.category)) {
+      res.status(400);
+      throw new Error('Category wrong');
+    }
+    sample.errors.push({
+      written: body.written,
+      category: body.category,
+      confidenceScore: 1,
+      dismissed: false,
+    });
+    await sample.save();
+    res.status(200).json(toClientSample(sample));
+    return;
+  }
   const index = Number(req.params.errorIndex);
   if (!Number.isInteger(index) || index < 0 || index >= sample.errors.length) {
     res.status(404);
     throw new Error('Error not found');
   }
-  const body = req.body ?? {};
   const hasCategory = Object.hasOwn(body, 'category');
   const hasDismissed = Object.hasOwn(body, 'dismissed');
   const hasConfidence = Object.hasOwn(body, 'confidenceScore');

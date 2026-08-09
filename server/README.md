@@ -171,6 +171,14 @@ Body is a partial patch — send only what changed:
 { confidenceScore }    1 when the educator confirms an uncertain tag
 ```
 
+To record an error the AI missed, use `new` in place of the index and send the child's text exactly
+as written with an educator-selected category:
+
+```text
+PATCH /api/samples/:sampleId/errors/new
+{ written, category }
+```
+
 "Remove" flips `dismissed`, it never deletes the array entry — an index that stayed stable is what
 lets the client re-request the exact same error later (e.g. to restore it) without a lookup. There
 is deliberately no correction-history (`previousCategory`/`correctionNote`/`correctedAt`): an
