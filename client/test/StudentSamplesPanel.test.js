@@ -14,6 +14,10 @@ mock.module('../src/lib/api.js', {
       if (samplesResult instanceof Error) throw samplesResult;
       return samplesResult;
     },
+    // SampleRow renders a thumbnail via this URL builder - it needs a real
+    // export here too, or the module mock leaves it undefined and the
+    // import in SampleRow.jsx throws.
+    sampleImageUrl: (sampleId, index) => `/mock/samples/${sampleId}/images/${index}`,
   },
 });
 
