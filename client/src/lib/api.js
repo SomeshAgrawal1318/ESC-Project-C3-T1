@@ -25,21 +25,25 @@ async function request(path, { method = 'GET', body } = {}) {
     ...(body !== undefined && { body: JSON.stringify(body) }),
   });
   if (!res.ok) {
-    // A 401 on a request that carried a token means the session died
-    // server-side (expired, or the secret rotated) - send the user back to
-    // sign in. Login itself also answers 401 for wrong credentials, but that
-    // request never carries a token, so it's left alone here for LoginPage
-    // to show inline instead of bouncing someone who's still on that screen.
-    if (res.status === 401 && token) {
-      clearSession();
-      window.location.assign('/login');
-    }
-    let detail;
+    let payload;
     try {
-      const payload = await res.json();
-      detail = payload?.error?.message ?? payload?.message;
+      payload = await res.json();
     } catch {
       /* body was not JSON */
+    }
+    const detail = payload?.error?.message ?? payload?.message;
+
+    // Only an actual dead token (UNAUTHENTICATED, from requireAuth - missing,
+    // invalid, or expired) should force a sign-out. Other 401s on an
+    // authenticated request - e.g. "current password is incorrect" on
+    // change-password - are an answer to the request itself, not a verdict
+    // on the session, and must be left for the calling page to show inline
+    // instead of silently bouncing someone who's still signed in. Login's
+    // own 401 for wrong credentials never carries a token in the first
+    // place, so it was already excluded by the `token` check alone.
+    if (res.status === 401 && token && payload?.error?.code === 'UNAUTHENTICATED') {
+      clearSession();
+      window.location.assign('/login');
     }
     const error = new Error(detail || `Request failed (${res.status})`);
     error.status = res.status;
