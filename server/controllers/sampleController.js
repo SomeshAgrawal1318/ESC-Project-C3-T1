@@ -198,12 +198,22 @@ const createSample = async (req, res) => {
     throw err;
   }
 
-  const sample = await Sample.create({
-    student: req.params.studentId,
-    title: req.body.title || req.files[0].originalname,
-    pages: pageEntries,
-    taskType: req.body.taskType,
-  });
+  let sample;
+  try {
+    sample = await Sample.create({
+      student: req.params.studentId,
+      title: req.body.title || req.files[0].originalname,
+      pages: pageEntries,
+      taskType: req.body.taskType,
+    });
+  } catch (err) {
+    // A bad taskType (or any other schema validation failure) must not
+    // leave the split PDF pages or the original upload(s) behind on disk -
+    // the Sample row that would have owned them was never created.
+    await Promise.all(pageEntries.map((page) => fs.unlink(page.imagePath).catch(() => {})));
+    await Promise.all(req.files.map((file) => fs.unlink(file.path).catch(() => {})));
+    throw err;
+  }
   // 202, not 201: the Sample row exists, but analysis (below) has not run
   // yet and continues after this response is sent - see errorClassificationEngine.js.
   res.status(202).json(toClientSample(sample));

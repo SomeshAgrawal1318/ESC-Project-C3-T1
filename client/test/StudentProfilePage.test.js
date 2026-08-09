@@ -14,6 +14,9 @@ mock.module('../src/lib/api.js', {
   namedExports: {
     getStudent: async () => studentResult,
     getStudentSamples: async () => samplesResult,
+    // StudentSamplesPanel renders SampleRow, which builds a thumbnail URL
+    // from this export - needs a real value or the import throws.
+    sampleImageUrl: (sampleId, index) => `/mock-api/samples/${sampleId}/images/${index}`,
   },
 });
 
