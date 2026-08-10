@@ -2,12 +2,6 @@ import { expect, test } from '@playwright/test';
 
 const STUDENT = '64b000000000000000000001';
 const SAMPLE = '64b000000000000000000101';
-const session = {
-  username: 'Synthetic@DAS',
-  name: 'Synthetic Educator',
-  email: 'synthetic@example.invalid',
-};
-
 const cases = [
   'E2E-UC1-01',
   'E2E-UC1-02',
@@ -41,6 +35,11 @@ const cases = [
 ];
 
 async function withSession(page) {
+  const response = await page.request.post('http://127.0.0.1:5000/api/auth/login', {
+    data: { username: 'Synthetic@DAS', password: 'Pass@123' },
+  });
+  expect(response.ok()).toBeTruthy();
+  const session = await response.json();
   await page.addInitScript((value) => {
     window.localStorage.setItem('lexipath.session', JSON.stringify(value));
   }, session);

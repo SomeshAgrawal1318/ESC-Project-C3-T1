@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 process.env.NODE_ENV = 'test';
 process.env.USE_MOCK_AI = 'true';
 process.env.RECOMMENDATION_USE_MOCKS = 'true';
+process.env.JWT_SECRET = 'lexipath-e2e-test-secret';
 delete process.env.RESEND_API_KEY;
 
 const STUDENT_ID = new mongoose.Types.ObjectId('64b000000000000000000001');

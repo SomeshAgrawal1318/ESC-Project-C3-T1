@@ -8,6 +8,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 process.env.USE_MOCK_AI = 'true';
 process.env.RECOMMENDATION_USE_MOCKS = 'true';
 process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'lexipath-revised-plan-test-secret';
 
 const { default: app } = await import('../app.js');
 const { Account } = await import('../models/account.js');
@@ -15,6 +16,9 @@ const { RecommendationReport } = await import('../models/recommendationReport.js
 const { Sample } = await import('../models/sample.js');
 const { Student } = await import('../models/student.js');
 const { runAnalysis } = await import('../services/errorClassificationEngine.js');
+const { signToken } = await import('../utils/jwt.js');
+
+const authorization = `Bearer ${signToken({ username: 'Synthetic@DAS' })}`;
 
 const ids = [
   'BI-UC1-01',
@@ -123,7 +127,10 @@ let server;
 let baseUrl;
 
 async function json(path, options) {
-  const response = await fetch(`${baseUrl}${path}`, options);
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: { authorization, ...options?.headers },
+  });
   return { response, body: await response.json() };
 }
 
