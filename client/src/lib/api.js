@@ -9,24 +9,41 @@
 // Students AND samples routes are live now — the old mockData.js is gone.
 // ------------------------------------------------------------------
 
+import { getToken, clearSession } from './session.js';
+
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request(path, { method = 'GET', body } = {}) {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...(body !== undefined && { 'Content-Type': 'application/json' }),
     },
     ...(body !== undefined && { body: JSON.stringify(body) }),
   });
   if (!res.ok) {
-    let detail;
+    let payload;
     try {
-      const payload = await res.json();
-      detail = payload?.error?.message ?? payload?.message;
+      payload = await res.json();
     } catch {
       /* body was not JSON */
+    }
+    const detail = payload?.error?.message ?? payload?.message;
+
+    // Only an actual dead token (UNAUTHENTICATED, from requireAuth - missing,
+    // invalid, or expired) should force a sign-out. Other 401s on an
+    // authenticated request - e.g. "current password is incorrect" on
+    // change-password - are an answer to the request itself, not a verdict
+    // on the session, and must be left for the calling page to show inline
+    // instead of silently bouncing someone who's still signed in. Login's
+    // own 401 for wrong credentials never carries a token in the first
+    // place, so it was already excluded by the `token` check alone.
+    if (res.status === 401 && token && payload?.error?.code === 'UNAUTHENTICATED') {
+      clearSession();
+      window.location.assign('/login');
     }
     const error = new Error(detail || `Request failed (${res.status})`);
     error.status = res.status;
@@ -103,8 +120,14 @@ export async function generateRecommendations(studentId) {
 
 // The browser receives only a stable approved ID, never an Azure blob path or SAS URL.
 // Mock worksheet records carry available=false, so the UI does not offer a dead link.
+//
+// Opened via a plain <a href>, not fetch() - can't attach an Authorization
+// header, so the token rides along as ?token= instead (requireAuth's
+// documented fallback for exactly this case).
 export function worksheetFileUrl(worksheetId) {
-  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file`;
+  const token = getToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${BASE}/worksheets/${encodeURIComponent(worksheetId)}/file${query}`;
 }
 
 // GET /api/samples/:sampleId  ->  one sample, with its errors.
@@ -124,10 +147,13 @@ export function getSample(sampleId) {
 }
 
 // The scan itself. NOT routed through request() — that parses JSON, and this
-// is an image the browser loads via <img src>. index is 0-based into the
-// sample's pages, so it runs 0 .. imageCount - 1.
+// is an image the browser loads via <img src>, so (like worksheetFileUrl
+// above) the token has to travel as ?token= rather than a header. index is
+// 0-based into the sample's pages, so it runs 0 .. imageCount - 1.
 export function sampleImageUrl(sampleId, index) {
-  return `${BASE}/samples/${sampleId}/images/${index}`;
+  const token = getToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${BASE}/samples/${sampleId}/images/${index}${query}`;
 }
 
 // PATCH /api/samples/:sampleId/errors/:errorIndex  ->  the updated sample
@@ -172,19 +198,23 @@ export function resetPassword(token, { password }) {
   return request(`/auth/reset-password/${token}`, { method: 'POST', body: { password } });
 }
 
-// GET /api/auth/account/:username  ->  { username, name, email, phoneNumber,
-// role, organisation, createdAt }. Powers AccountPage.
-export function getAccount(username) {
-  return request(`/auth/account/${encodeURIComponent(username)}`);
+// GET /api/auth/account  ->  { username, name, email, phoneNumber, role,
+// organisation, createdAt } for whoever the session token belongs to —
+// there's no way to ask for anyone else's. Powers AccountPage. Requires a
+// session (see request()'s Authorization header).
+export function getAccount() {
+  return request('/auth/account');
 }
 
-// PATCH /api/auth/change-password  { username, currentPassword, newPassword }
-// ->  { message }. Distinct from resetPassword() — this is the logged-in
-// "I know my current password" flow, not the emailed-token one.
-export function changePassword({ username, currentPassword, newPassword }) {
+// PATCH /api/auth/change-password  { currentPassword, newPassword }  ->
+// { message }. Acts on the signed-in caller's own account (the server reads
+// that from the session token, not from anything this call sends).
+// Distinct from resetPassword() — this is the logged-in "I know my current
+// password" flow, not the emailed-token one.
+export function changePassword({ currentPassword, newPassword }) {
   return request('/auth/change-password', {
     method: 'PATCH',
-    body: { username, currentPassword, newPassword },
+    body: { currentPassword, newPassword },
   });
 }
 

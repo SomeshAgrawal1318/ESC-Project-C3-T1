@@ -1,10 +1,12 @@
 // Minimal client-side "who's signed in" state, persisted to localStorage so
 // it survives a reload. RequireAuth.jsx reads getSession() to gate every
-// route except /login, /forgot-password and /reset-password/:token — but
-// that's a client-side navigation gate only, not real API security (the
-// server accepts every request whether or not the caller has a session; see
-// server/README.md's Authentication section). Pages that want to show who's
-// logged in (the sidebar, the account page) also read this directly.
+// route except /login, /forgot-password and /reset-password/:token.
+//
+// The stored object is exactly what POST /api/auth/login returns - the
+// account fields plus a signed `token` (server/utils/jwt.js). That token is
+// what actually gates the API now (server/middleware/requireAuth.js reads
+// and verifies it on every protected route); lib/api.js's request() helper
+// reads it back via getToken() and sends it as an Authorization header.
 
 const KEY = 'lexipath.session';
 
@@ -19,6 +21,10 @@ export function getSession() {
   } catch {
     return null;
   }
+}
+
+export function getToken() {
+  return getSession()?.token ?? null;
 }
 
 export function clearSession() {

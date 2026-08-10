@@ -15,10 +15,10 @@ const accountSchema = new mongoose.Schema(
 
     // Profile fields shown on the account page — none of these affect
     // login, which is keyed on username alone.
-    name: { type: String, default: '' },
-    phoneNumber: { type: String, default: '' },
-    role: { type: String, default: '' },
-    organisation: { type: String, default: '' },
+    name: { type: String, default: '', trim: true },
+    phoneNumber: { type: String, default: '', trim: true },
+    role: { type: String, default: '', trim: true },
+    organisation: { type: String, default: '', trim: true },
 
     // Set only while a "forgot password" reset is pending; cleared the
     // moment it is used or replaced by a newer request.

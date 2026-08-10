@@ -23,7 +23,7 @@ export default function AccountPage() {
   useEffect(() => {
     if (!session) return undefined;
     let live = true;
-    getAccount(session.username)
+    getAccount()
       .then((account) => live && setState({ status: 'ready', account }))
       .catch((err) => live && setState({ status: 'error', message: err.message }));
     return () => {
@@ -74,7 +74,7 @@ export default function AccountPage() {
       </header>
 
       <AccountDetails account={account} />
-      <ChangePasswordForm username={account.username} />
+      <ChangePasswordForm />
     </div>
   );
 }
@@ -112,7 +112,7 @@ function AccountDetails({ account }) {
   );
 }
 
-function ChangePasswordForm({ username }) {
+function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -133,7 +133,7 @@ function ChangePasswordForm({ username }) {
     setError(null);
     setSuccess(false);
     try {
-      await changePassword({ username, currentPassword, newPassword });
+      await changePassword({ currentPassword, newPassword });
       setSuccess(true);
       setCurrentPassword('');
       setNewPassword('');

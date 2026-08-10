@@ -67,16 +67,18 @@ setup.
 
 ## Authentication
 
-There is no *server-side* authentication in this prototype - it's a deliberate cut, not an
-oversight (see paths.txt). Every route is effectively public: `GET /api/students` returns every
-student in the database rather than scoping to a logged-in teacher, and `Student.teacherId` is
-accepted but never enforced. The login feature (`routes/auth.js`, `models/account.js`)
-authenticates a demo account against real credentials, and the client (`RequireAuth.jsx`) now
-gates navigation to every other screen behind a session - but that's a client-only guard: it
-decides what the browser lets you open, not what the API accepts. Any request to
-`/api/students`, `/api/samples`, etc. still succeeds with no token and no server-side check.
-Issuing real tokens, verifying them in middleware, and scoping student queries to the signed-in
-teacher is future work once real accounts exist.
+`POST /api/auth/login` (`routes/auth.js`, `models/account.js`) checks real credentials and signs
+a stateless JWT (`utils/jwt.js`, `JWT_SECRET`) instead of just returning the account. Every route
+except `/api/auth/*` is mounted behind `middleware/requireAuth.js` (see `app.js`), which verifies
+that token on every request and rejects anything missing or invalid with a 401 - the API itself
+now actually enforces sign-in, not just the client's navigation gate (`RequireAuth.jsx`).
+
+What this still doesn't do: the token only proves *someone* signed in, not *which* teacher owns
+which student. `GET /api/students` still returns every student in the database rather than
+scoping to the caller, and `Student.teacherId` is accepted but never enforced against the token's
+identity. Scoping queries to the signed-in teacher is future work - it needs deciding what
+"ownership" of a student even means (one teacher? a shared caseload per organisation?) before it
+can be enforced, which is a product question as much as a code change.
 
 ## Error Classification Engine
 
