@@ -111,4 +111,28 @@ Prediction files should follow the same top-level shape as ground truth and may 
 }
 ```
 
+## Generate live Gemini predictions
+
+Load the API key from `server/.env` without printing it and name each model explicitly:
+
+```bash
+node --env-file=server/.env evaluation/scripts/generate-model-predictions.mjs \
+  gemini-flash-lite-latest gemini-flash-latest gemini-pro-latest
+```
+
+The generator mirrors the production upload path by rendering every PDF into one PNG per page before inference. Predictions are written to `evaluation/predictions/<model>/`. Useful optional controls are:
+
+- `BENCHMARK_SAMPLE_IDS=sample-a,sample-b` — run only selected vetted samples.
+- `BENCHMARK_RETRY_FAILED_ONLY=true` — preserve successful predictions and retry failures.
+- `BENCHMARK_DELAY_MS=2000` — delay between requests to reduce quota pressure.
+
+Evaluate one generated model directory with:
+
+```bash
+node evaluation/scripts/evaluate-error-detection.mjs \
+  evaluation/predictions/gemini-flash-latest
+```
+
+Live model failures remain in the prediction set with `status: "failed"` and count toward false negatives and the reported failure rate. Do not describe a partial or quota-blocked run as a successful model benchmark.
+
 For direct comparison, only compare equivalent pipelines. For example, Gemini direct vision should not be presented as the same architecture as DeepSeek over OCR text unless the report clearly labels it as `ocr-plus-text`.

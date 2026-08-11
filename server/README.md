@@ -119,7 +119,7 @@ except `/api/auth/*` is mounted behind `middleware/requireAuth.js` (see `app.js`
 that token on every request and rejects anything missing or invalid with a 401 - the API itself
 now actually enforces sign-in, not just the client's navigation gate (`RequireAuth.jsx`).
 
-What this still doesn't do: the token only proves *someone* signed in, not *which* teacher owns
+What this still doesn't do: the token only proves _someone_ signed in, not _which_ teacher owns
 which student. `GET /api/students` still returns every student in the database rather than
 scoping to the caller, and `Student.teacherId` is accepted but never enforced against the token's
 identity. Scoping queries to the signed-in teacher is future work - it needs deciding what
@@ -168,14 +168,14 @@ message the real path uses for an unreadable file.
 
 ### Environment variables
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `GEMINI_API_KEY` | (empty) | Gemini API key. Leave blank to force mock mode. Never sent to the client. |
-| `USE_MOCK_AI` | `true` if no API key, else `false` | Explicit override for mock vs real mode. |
-| `GEMINI_MODEL_NAME` | `gemini-flash-latest` | Gemini model used for the vision call. The `-latest` alias is deliberate: pinned versions get retired for new API keys. |
-| `GEMINI_TIMEOUT_MS` | `30000` | Per-attempt timeout before the request is treated as failed. |
-| `GEMINI_MAX_RETRIES` | `2` | Additional attempts after a timeout/error/malformed response, with exponential backoff. |
-| `ERROR_CONFIDENCE_THRESHOLD` | `0.6` | Confidence score below which a detected error is flagged "uncertain" for the educator. |
+| Variable                     | Default                            | Meaning                                                                                                                 |
+| ---------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`             | (empty)                            | Gemini API key. Leave blank to force mock mode. Never sent to the client.                                               |
+| `USE_MOCK_AI`                | `true` if no API key, else `false` | Explicit override for mock vs real mode.                                                                                |
+| `GEMINI_MODEL_NAME`          | `gemini-flash-latest`              | Gemini model used for the vision call. The `-latest` alias is deliberate: pinned versions get retired for new API keys. |
+| `GEMINI_TIMEOUT_MS`          | `30000`                            | Per-attempt timeout before the request is treated as failed.                                                            |
+| `GEMINI_MAX_RETRIES`         | `2`                                | Additional attempts after a timeout/error/malformed response, with exponential backoff.                                 |
+| `ERROR_CONFIDENCE_THRESHOLD` | `0.6`                              | Confidence score below which a detected error is flagged "uncertain" for the educator.                                  |
 
 ### Integration point for Person 2 (Sample Upload)
 
@@ -275,13 +275,29 @@ category match, so the rest of the team can build the UI against a stable shape.
 
 ### Environment variables
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `RECOMMENDATION_USE_MOCKS` | `true` | Mock mode switch, independent of the Error Classification Engine's own `USE_MOCK_AI`. |
-| `GEMINI_RECOMMENDATION_API_KEY` | falls back to `GEMINI_API_KEY` | Separate key so recommendation quota/billing can be tracked apart from classification, if desired. |
-| `GEMINI_RECOMMENDATION_MODEL` | `gemini-flash-latest` | Model used for strategy/worksheet generation. |
-| `AZURE_STORAGE_ACCOUNT_NAME` / `AZURE_STORAGE_CONTAINER_NAME` / `AZURE_STORAGE_SAS_TOKEN` | (empty) | Read-only container SAS - keep the real token only in the git-ignored `.env`, never `.env.example`. |
-| `AZURE_KNOWLEDGE_MANIFEST_PATH` | `_manifests/gemini-canonical-markdown.jsonl` | List of retrievable Markdown documents. |
-| `AZURE_ASSET_MANIFEST_PATH` | `_manifests/blob-upload-manifest.json` | List of approved worksheet PDFs. |
-| `AZURE_FETCH_TIMEOUT_MS` | `15000` | Per-blob fetch timeout. |
-| `AZURE_MAX_DOCUMENT_BYTES` / `AZURE_MAX_MANIFEST_BYTES` / `AZURE_MAX_WORKSHEET_BYTES` | `1048576` / `5242880` / `20971520` | Byte ceilings enforced while streaming each blob type - oversized blobs are rejected (502), never partially buffered. |
+| Variable                                                                                  | Default                                      | Meaning                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RECOMMENDATION_USE_MOCKS`                                                                | `true`                                       | Mock mode switch, independent of the Error Classification Engine's own `USE_MOCK_AI`.                                                                                                      |
+| `GEMINI_RECOMMENDATION_API_KEY`                                                           | falls back to `GEMINI_API_KEY`               | Separate key so recommendation quota/billing can be tracked apart from classification, if desired.                                                                                         |
+| `GEMINI_RECOMMENDATION_MODEL`                                                             | `gemini-flash-latest`                        | Model used for strategy/worksheet generation.                                                                                                                                              |
+| `AZURE_STORAGE_ACCOUNT_NAME` / `AZURE_STORAGE_CONTAINER_NAME` / `AZURE_STORAGE_SAS_TOKEN` | (empty)                                      | Read-only container SAS - keep the real token only in the git-ignored `.env`, never `.env.example`.                                                                                        |
+| `AZURE_KNOWLEDGE_MANIFEST_PATH`                                                           | `_manifests/gemini-canonical-markdown.jsonl` | List of retrievable Markdown documents.                                                                                                                                                    |
+| `AZURE_ASSET_MANIFEST_PATH`                                                               | `_manifests/blob-upload-manifest.json`       | List of approved worksheet PDFs.                                                                                                                                                           |
+| `WORKSHEET_SECTIONS_PATH`                                                                 | `server/data/worksheetSections.json`         | Curated 2–3-page section metadata. Live entries must reference worksheet IDs from the active Azure asset manifest; use an ignored private override when those IDs should not be committed. |
+| `AZURE_FETCH_TIMEOUT_MS`                                                                  | `15000`                                      | Per-blob fetch timeout.                                                                                                                                                                    |
+| `AZURE_MAX_DOCUMENT_BYTES` / `AZURE_MAX_MANIFEST_BYTES` / `AZURE_MAX_WORKSHEET_BYTES`     | `1048576` / `5242880` / `20971520`           | Byte ceilings enforced while streaming each blob type - oversized blobs are rejected (502), never partially buffered.                                                                      |
+
+### Worksheet page-level scoping
+
+Worksheet recommendations select an approved 2–3-page section rather than an unrestricted whole
+PDF. `server/data/worksheetSections.json` is the committed catalogue for deterministic mock mode.
+Each active section must reference an existing worksheet ID, use `pageStart >= 1`, end on or after
+its start page, span exactly two or three pages, and name only supported error categories. Gemini
+receives the approved section list and must copy the worksheet ID and both page numbers exactly;
+server validation rejects invented IDs or ranges before persistence.
+
+Live Azure worksheet IDs are derived from the private asset manifest. Configure
+`WORKSHEET_SECTIONS_PATH` to an ignored, reviewed JSON file containing those live IDs. If no live
+sections are configured, recommendation generation fails closed instead of falling back to a broad
+whole-PDF recommendation. The client displays the approved range and opens the PDF at its first
+suggested page.

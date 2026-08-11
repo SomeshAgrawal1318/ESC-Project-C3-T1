@@ -213,14 +213,14 @@ Metrics to record:
 
 Suggested acceptance targets for a small demo deployment:
 
-| Feature | Suggested target |
-|---|---:|
-| Login | p95 < 500 ms |
-| Student list | p95 < 800 ms |
-| Sample report | p95 < 1000 ms |
-| Trends | p95 < 1500 ms |
-| Mock recommendation generation | p95 < 3000 ms |
-| Error rate | < 1% |
+| Feature                        | Suggested target |
+| ------------------------------ | ---------------: |
+| Login                          |     p95 < 500 ms |
+| Student list                   |     p95 < 800 ms |
+| Sample report                  |    p95 < 1000 ms |
+| Trends                         |    p95 < 1500 ms |
+| Mock recommendation generation |    p95 < 3000 ms |
+| Error rate                     |             < 1% |
 
 Report update required:
 
@@ -417,6 +417,9 @@ Important:
 ---
 
 ## Phase 7 — Narrow recommendation resources to 2–3 pages
+
+Implementation status: implemented on `feat/worksheet-page-sections`; see
+`WORKSHEET_PAGE_SCOPING_DEVIATIONS.md` for the one deployment-specific catalogue deviation.
 
 Purpose: improve PS6 so it recommends actionable worksheet sections rather than a whole 100+ page file.
 

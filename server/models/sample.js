@@ -89,6 +89,25 @@ const worksheetSchema = new mongoose.Schema(
   {
     worksheetId: { type: String, required: true },
     title: { type: String, required: true },
+    pageStart: { type: Number, min: 1, default: null },
+    pageEnd: {
+      type: Number,
+      min: 1,
+      default: null,
+      validate: {
+        validator(value) {
+          if (value == null) return this.pageStart == null;
+          return (
+            Number.isInteger(this.pageStart) &&
+            Number.isInteger(value) &&
+            value >= this.pageStart &&
+            value - this.pageStart + 1 >= 2 &&
+            value - this.pageStart + 1 <= 3
+          );
+        },
+        message: 'Worksheet recommendations must reference an approved 2-3 page range',
+      },
+    },
     pdfPages: { type: String, default: '' },
     available: { type: Boolean, default: false },
     targetCategories: [{ type: String, enum: ERROR_CATEGORIES }],

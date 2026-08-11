@@ -39,6 +39,8 @@ export async function evaluatePredictionDirectory({
   const metrics = {
     samples: truthFiles.length,
     predictions: 0,
+    missingPredictionFiles: 0,
+    failedPredictions: 0,
     groundTruthErrors: 0,
     truePositives: 0,
     falsePositives: 0,
@@ -46,12 +48,20 @@ export async function evaluatePredictionDirectory({
     categoryMatches: 0,
     latencyTotalMs: 0,
     latencyCount: 0,
+    latencies: [],
     confusion: {},
+    actualByCategory: {},
+    predictedByCategory: {},
+    correctByCategory: {},
   };
 
   for (const truthFile of truthFiles) {
     const truth = JSON.parse(await readFile(truthFile, "utf8"));
     metrics.groundTruthErrors += truth.errors.length;
+    for (const error of truth.errors) {
+      metrics.actualByCategory[error.category] =
+        (metrics.actualByCategory[error.category] || 0) + 1;
+    }
     const predictionFile = path.join(
       predictionsDirectory,
       `${truth.sampleId}.json`,
@@ -62,19 +72,25 @@ export async function evaluatePredictionDirectory({
       metrics.predictions += 1;
     } catch (error) {
       if (error.code === "ENOENT") {
+        metrics.missingPredictionFiles += 1;
         metrics.falseNegatives += truth.errors.length;
         continue;
       }
       throw error;
     }
 
+    if (prediction.status === "failed") metrics.failedPredictions += 1;
+
     if (typeof prediction.latencyMs === "number") {
       metrics.latencyTotalMs += prediction.latencyMs;
       metrics.latencyCount += 1;
+      metrics.latencies.push(prediction.latencyMs);
     }
 
     const remaining = [...truth.errors];
     for (const predicted of prediction.errors || []) {
+      metrics.predictedByCategory[predicted.category] =
+        (metrics.predictedByCategory[predicted.category] || 0) + 1;
       const matchIndex = remaining.findIndex(
         (actual) => errorKey(actual) === errorKey(predicted),
       );
@@ -90,7 +106,11 @@ export async function evaluatePredictionDirectory({
       metrics.confusion[actualCategory] ||= {};
       metrics.confusion[actualCategory][predictedCategory] =
         (metrics.confusion[actualCategory][predictedCategory] || 0) + 1;
-      if (actualCategory === predictedCategory) metrics.categoryMatches += 1;
+      if (actualCategory === predictedCategory) {
+        metrics.categoryMatches += 1;
+        metrics.correctByCategory[actualCategory] =
+          (metrics.correctByCategory[actualCategory] || 0) + 1;
+      }
     }
     metrics.falseNegatives += remaining.length;
   }
@@ -116,5 +136,12 @@ export async function evaluatePredictionDirectory({
     metrics.latencyCount === 0
       ? null
       : metrics.latencyTotalMs / metrics.latencyCount;
+  const sortedLatencies = [...metrics.latencies].sort((a, b) => a - b);
+  metrics.p95LatencyMs =
+    sortedLatencies.length === 0
+      ? null
+      : sortedLatencies[
+          Math.max(0, Math.ceil(sortedLatencies.length * 0.95) - 1)
+        ];
   return metrics;
 }

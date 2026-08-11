@@ -19,6 +19,10 @@ function format(value) {
   return value.toFixed(3);
 }
 
+function ratio(numerator, denominator) {
+  return denominator === 0 ? 0 : numerator / denominator;
+}
+
 const truthFiles = await jsonFiles(truthDirectory);
 if (truthFiles.length === 0) {
   console.log(
@@ -35,9 +39,19 @@ console.log(
   `# Error detection evaluation for ${path.relative(process.cwd(), predictionsDirectory)}`,
 );
 console.log("");
-console.log(`- Samples with ground truth: ${metrics.samples}`);
+console.log(`- Vetted samples: ${metrics.samples}`);
 console.log(`- Samples with predictions: ${metrics.predictions}`);
 console.log(`- Ground-truth errors: ${metrics.groundTruthErrors}`);
+console.log(`- Missing prediction files: ${metrics.missingPredictionFiles}`);
+console.log(`- Failed model predictions: ${metrics.failedPredictions}`);
+console.log(
+  `- Missing/failed sample rate: ${format(
+    ratio(
+      metrics.missingPredictionFiles + metrics.failedPredictions,
+      metrics.samples,
+    ),
+  )}`,
+);
 console.log(`- True positives: ${metrics.truePositives}`);
 console.log(`- False positives: ${metrics.falsePositives}`);
 console.log(`- False negatives: ${metrics.falseNegatives}`);
@@ -49,6 +63,30 @@ console.log(
 );
 if (metrics.averageLatencyMs !== null) {
   console.log(`- Average latency: ${format(metrics.averageLatencyMs)} ms`);
+}
+if (metrics.p95LatencyMs !== null) {
+  console.log(`- P95 latency: ${format(metrics.p95LatencyMs)} ms`);
+}
+console.log("");
+console.log("## Per-category exact-match metrics");
+for (const category of new Set([
+  ...Object.keys(metrics.actualByCategory),
+  ...Object.keys(metrics.predictedByCategory),
+])) {
+  const correct = metrics.correctByCategory[category] || 0;
+  const categoryPrecision = ratio(
+    correct,
+    metrics.predictedByCategory[category] || 0,
+  );
+  const categoryRecall = ratio(
+    correct,
+    metrics.actualByCategory[category] || 0,
+  );
+  console.log(
+    `- ${category}: precision=${format(categoryPrecision)}, recall=${format(categoryRecall)}, ` +
+      `correct=${correct}, actual=${metrics.actualByCategory[category] || 0}, ` +
+      `predicted=${metrics.predictedByCategory[category] || 0}`,
+  );
 }
 console.log("");
 console.log("## Confusion counts");

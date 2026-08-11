@@ -1,7 +1,7 @@
 // Layout-route guard: sits above the app shell in main.jsx so every screen
 // under it requires a session. Not real security (see lib/session.js) — the
-// API stays unauthenticated — this only decides what the browser lets you
-// navigate to (see server/README.md's Authentication section).
+// API still enforces the signed token; this guard keeps stale localStorage
+// shells from rendering protected screens that cannot actually fetch data.
 //
 // Remembers where the visitor was headed (state.from) so LoginPage.jsx can
 // send them back there instead of always landing on the caseload.

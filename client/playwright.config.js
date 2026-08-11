@@ -7,6 +7,9 @@ export default defineConfig({
   retries: 0,
   reporter: 'line',
   use: {
+    launchOptions: {
+      slowMo: 1000, // 1000ms (1 second) delay per action
+    },
     baseURL: 'http://127.0.0.1:4173',
     headless: true,
     trace: 'retain-on-failure',
