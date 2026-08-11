@@ -14,6 +14,8 @@ evaluation/
   schemas/ground-truth.schema.json
   scripts/validate-ground-truth.mjs
   scripts/evaluate-error-detection.mjs
+  scripts/run-model-evaluation.mjs
+  scripts/compare-models.mjs
 ```
 
 ## Ground-truth rule
@@ -45,9 +47,45 @@ Evaluate a specific model or pipeline directory:
 node evaluation/scripts/evaluate-error-detection.mjs evaluation/predictions/<model-or-pipeline>
 ```
 
+Run an isolated live vision evaluation. The inference runner reads only the sample manifest and
+scan files; it never reads `ground-truth-vetted/` or earlier predictions. Copy
+`evaluation/.env.example` to the ignored `evaluation/.env` and provide local credentials first.
+
+```bash
+node evaluation/scripts/run-model-evaluation.mjs \
+  --provider gemini \
+  --model gemini-flash-latest \
+  --run-id gemini-preprocessed-minimal-guardrail \
+  --guardrail-profile minimal
+
+node evaluation/scripts/run-model-evaluation.mjs \
+  --provider openrouter \
+  --model qwen/qwen-2.5-vl-7b-instruct:free \
+  --run-id qwen-2.5-vl-preprocessed-guardrail
+
+node evaluation/scripts/run-model-evaluation.mjs \
+  --provider cloudflare \
+  --model @cf/meta/llama-3.2-11b-vision-instruct \
+  --run-id llama-3.2-vision-preprocessed-guardrail
+```
+
+Use `--guardrail-profile none`, `minimal`, or `full` to isolate prompt constraints. The legacy
+`--no-guardrails` flag is equivalent to `--guardrail-profile none`. Omit `--no-preprocess` for the
+preprocessed pipeline; include it for raw-image controls.
+
+After inference, generate the comparison table. This separate post-run step is the only part that
+reads both predictions and human-vetted truth.
+
+```bash
+node evaluation/scripts/compare-models.mjs
+```
+
 These scripts are evaluation utilities, not deterministic CI tests. They report meaningful metrics
 only when `ground-truth-vetted/` contains human-reviewed labels and the selected predictions
 directory contains matching JSON files.
+
+Never paste provider tokens into source, tests, commands, reports, or Git. Credentials disclosed in
+chat must be rotated before use. Live-provider calls are opt-in and are not part of CI.
 
 ## Error detection/classification metrics
 
