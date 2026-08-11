@@ -230,7 +230,15 @@ export function uploadSample(studentId, { title, taskType, files }) {
   for (const file of files) {
     form.append('samples', file);
   }
-  return fetch(`${BASE}/samples/${studentId}`, { method: 'POST', body: form }).then(async (res) => {
+  const token = getToken();
+  return fetch(`${BASE}/samples/${studentId}`, {
+    method: 'POST',
+    // No Content-Type here - browser writes its own multipart boundary -
+    // but requireAuth still needs the same Bearer header every other
+    // authenticated call sends, or this 401s before createSample ever runs.
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  }).then(async (res) => {
     if (!res.ok) {
       let detail;
       try {

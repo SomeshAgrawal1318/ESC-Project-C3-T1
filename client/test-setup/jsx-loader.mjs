@@ -24,7 +24,12 @@ export async function load(url, context, nextLoad) {
       sourceMaps: 'inline',
       plugins: [['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }]],
     });
-    return { format: 'module', source: code, shortCircuit: true };
+    // Vite injects import.meta.env at build time; plain Node never defines
+    // it, so any source reading e.g. import.meta.env.VITE_API_URL throws
+    // before the module even finishes loading. Default it to an empty
+    // object so that code falls through to its own `?? fallback` instead.
+    const withEnvShim = `if (typeof import.meta.env === 'undefined') { import.meta.env = {}; }\n${code}`;
+    return { format: 'module', source: withEnvShim, shortCircuit: true };
   }
   return nextLoad(url, context);
 }
