@@ -92,6 +92,44 @@ No error
 | student-191379-e003 | student-191379 | Hoops | hops | orthographic | 0.70 | Likely intended verb is `hops`; written form has an extra `o` and capital H mid-line. | bad transcription, hallucinated error |
 | student-92398-e001 | student-92398 | cats | cats. | punctuation | 0.55 | Final sentence appears to end without a full stop; confirm whether punctuation was expected. | good |
 
+## AI-missed error
+Capitalisation of "one" (Sentence Opening): The very first word of the passage, one, is written in lower case at the start of the sentence (one Day ...).
+
+Missing word / Grammar error ("and say I my mom"): In line 3, the handwritten text reads ... phone and say I peed my pant ... (or say I pee...), but the AI agent completely skipped flagging the missing preposition to (should be say to my mom) or the missing word that.
+
+on my pant
+in my pants
+lexical / preposition
+0.80
+You normally say peed in my pants, not "on my pants." Agent caught pant → pants but not on → in.
+
+Capitalisation of "She": In line 3, She is capitalized mid-sentence (... pant She say ...).
+
+Punctuation & Sentence Splice (Exclamation Mark): In line 3/4, there is an exclamation mark after home! (hurry come back home!). The AI agent missed flagging missing terminal punctuation across the rest of the text.
+
+Insertion of "and" / Transcription gap: Between hid and I run back home, the teacher/corrector added the insertion symbol ^ and wrote and above it (so I hid and I run back home). The original student text omitted this conjunction.
+
+Capitalisation of "So" / "I": Multiple occurrences of mid-sentence capitalization (e.g., so I where I is lowercase or So is capitalized mid-clause) were not flagged by the agent.
+
+second say
+said
+morphological
+0.90
+There are apparently two say occurrences: "and say..." and "she say...". Your agent only generated one row.
+
+...pant she say...
+...pants. She said...
+sentence structure / punctuation
+0.90
+This is a run-on sentence. The teacher's margin annotation also appears to flag sentence structure.
+
+Line 1
+pee! so
+pee! So
+capitalisation
+0.80
+If ! ends the sentence, so should begin with a capital.
+
 ## Category summary before vetting
 
 | Category | Candidate count |
