@@ -20,11 +20,11 @@ not improve Gemini under the strict scorer.
 
 ## Same-pipeline cross-model comparison
 
-| Model                       | Input | Guardrail profile |  TP |  FP |  FN | Precision | Recall |    F1 | Avg latency (ms) | Status                                        |
-| --------------------------- | ----- | ----------------- | --: | --: | --: | --------: | -----: | ----: | ---------------: | --------------------------------------------- |
-| Gemini Flash                | Raw   | None              |  11 |   9 |  11 |     0.550 |  0.500 | 0.524 |        11643.333 | Complete                                      |
-| Qwen 2.5 VL 72B             | Raw   | None              |   2 |  14 |  20 |     0.125 |  0.091 | 0.105 |        24239.000 | Complete                                      |
-| Cloudflare Llama 3.2 Vision | Raw   | None              |   — |   — |   — |         — |      — |     — |                — | Blocked: Cloudflare account ID not configured |
+| Model                       | Input | Guardrail profile |  TP |  FP |  FN | Precision | Recall |    F1 | Avg latency (ms) | Status   |
+| --------------------------- | ----- | ----------------- | --: | --: | --: | --------: | -----: | ----: | ---------------: | -------- |
+| Gemini Flash                | Raw   | None              |  11 |   9 |  11 |     0.550 |  0.500 | 0.524 |        11643.333 | Complete |
+| Qwen 2.5 VL 72B             | Raw   | None              |   2 |  14 |  20 |     0.125 |  0.091 | 0.105 |        24239.000 | Complete |
+| Cloudflare Llama 3.2 Vision | Raw   | None              |   0 |  12 |  22 |     0.000 |  0.000 | 0.000 |        14068.667 | Complete |
 
 ## Interpretation limits
 
