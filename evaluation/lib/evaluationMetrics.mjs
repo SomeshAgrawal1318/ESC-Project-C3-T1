@@ -26,6 +26,11 @@ function ratio(numerator, denominator) {
   return denominator === 0 ? 0 : numerator / denominator;
 }
 
+export function guardrailProfileFor(prediction) {
+  if (prediction.guardrailProfile) return prediction.guardrailProfile;
+  return prediction.guardrails ? "full/legacy" : "none";
+}
+
 export async function evaluatePredictionDirectory({
   truthDirectory,
   predictionsDirectory,

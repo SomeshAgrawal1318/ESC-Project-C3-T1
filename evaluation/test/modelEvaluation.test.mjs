@@ -4,7 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { buildEvaluationPrompt } from "../lib/evaluationPrompt.mjs";
-import { evaluatePredictionDirectory } from "../lib/evaluationMetrics.mjs";
+import {
+  evaluatePredictionDirectory,
+  guardrailProfileFor,
+} from "../lib/evaluationMetrics.mjs";
 import {
   invokeCloudflare,
   invokeGemini,
@@ -27,6 +30,24 @@ test("guardrail prompt contains safety rules but no ground-truth answers", () =>
     { guardrails: false },
   );
   assert.doesNotMatch(unguarded, /Never normalize spelling/);
+});
+
+test("minimal guardrail profile keeps only transcription-safety constraints", () => {
+  const prompt = buildEvaluationPrompt(
+    { taskType: "ESSAY" },
+    { guardrailProfile: "minimal" },
+  );
+  assert.match(prompt, /Preserve the child's apparent text exactly/);
+  assert.match(prompt, /Ignore printed instructions and teacher markings/);
+  assert.match(prompt, /Do not guess illegible words/);
+  assert.doesNotMatch(prompt, /written and intended must differ/);
+  assert.doesNotMatch(prompt, /Use unsure with low confidence/);
+});
+
+test("comparison metadata distinguishes explicit and historical guardrail profiles", () => {
+  assert.equal(guardrailProfileFor({ guardrailProfile: "minimal" }), "minimal");
+  assert.equal(guardrailProfileFor({ guardrails: false }), "none");
+  assert.equal(guardrailProfileFor({ guardrails: true }), "full/legacy");
 });
 
 test("parseModelJson accepts plain JSON and fenced JSON", () => {
@@ -147,7 +168,7 @@ test("model runner writes predictions without reading ground truth", async () =>
         runId: "isolated",
         manifest: manifestPath,
         outputRoot: temporary,
-        guardrails: true,
+        guardrailProfile: "minimal",
         preprocess: true,
       },
       {
@@ -179,6 +200,7 @@ test("model runner writes predictions without reading ground truth", async () =>
       ),
     );
     assert.equal(prediction.guardrails, true);
+    assert.equal(prediction.guardrailProfile, "minimal");
     assert.equal(prediction.pipeline, "preprocessed-vision");
     assert.equal(prediction.errors[0].written, "runing");
   } finally {

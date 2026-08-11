@@ -7,19 +7,39 @@ export const ERROR_CATEGORIES = [
   "unsure",
 ];
 
-export const GUARDRAILS = [
-  "If unsure whether a word is misspelled or merely unclear, put it in illegibleNote or use lower confidence.",
-  "Never normalize spelling, capitalization, punctuation, or grammar in written.",
+export const MINIMAL_GUARDRAILS = [
   "Preserve the child's apparent text exactly in written; do not silently correct or paraphrase it.",
-  "written and intended must differ for spelling, grammar, punctuation, or capitalization corrections unless the issue is purely location/category uncertainty.",
   "Ignore printed instructions and teacher markings, including red corrections, underlines, ticks, crosses, and comments.",
   "Do not guess illegible words. Use [illegible] in the transcript or describe the span in illegibleNote with low confidence.",
+];
+
+export const FULL_GUARDRAILS = [
+  "If unsure whether a word is misspelled or merely unclear, put it in illegibleNote or use lower confidence.",
+  "Never normalize spelling, capitalization, punctuation, or grammar in written.",
+  MINIMAL_GUARDRAILS[0],
+  "written and intended must differ for spelling, grammar, punctuation, or capitalization corrections unless the issue is purely location/category uncertainty.",
+  MINIMAL_GUARDRAILS[1],
+  MINIMAL_GUARDRAILS[2],
   "Use unsure with low confidence for grammar or phrase issues that do not fit the fixed categories cleanly.",
 ];
 
-export function buildEvaluationPrompt(sample, { guardrails = true } = {}) {
-  const guardrailText = guardrails
-    ? `\nGuardrails:\n${GUARDRAILS.map((rule) => `- ${rule}`).join("\n")}\n`
+export function buildEvaluationPrompt(
+  sample,
+  {
+    guardrails,
+    guardrailProfile = guardrails === false ? "none" : "full",
+  } = {},
+) {
+  const profiles = {
+    none: [],
+    minimal: MINIMAL_GUARDRAILS,
+    full: FULL_GUARDRAILS,
+  };
+  const rules = profiles[guardrailProfile];
+  if (!rules)
+    throw new Error(`Unsupported guardrail profile: ${guardrailProfile}`);
+  const guardrailText = rules.length
+    ? `\nGuardrails:\n${rules.map((rule) => `- ${rule}`).join("\n")}\n`
     : "";
 
   return `You are independently evaluating a child's handwritten schoolwork.

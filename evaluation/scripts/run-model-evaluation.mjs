@@ -16,10 +16,10 @@ const EVALUATION_DIR = path.resolve(
 const REPOSITORY_ROOT = path.resolve(EVALUATION_DIR, "..");
 
 function parseArgs(argv) {
-  const options = { guardrails: true, preprocess: true };
+  const options = { guardrailProfile: "full", preprocess: true };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--no-guardrails") options.guardrails = false;
+    if (argument === "--no-guardrails") options.guardrailProfile = "none";
     else if (argument === "--no-preprocess") options.preprocess = false;
     else if (argument.startsWith("--")) {
       const name = argument
@@ -84,6 +84,10 @@ export async function runModelEvaluation(options, dependencies = {}) {
   const model = options.model;
   const runId = safeRunId(options.runId);
   const invoke = dependencies.invoke || PROVIDERS[provider];
+  const guardrailProfile =
+    options.guardrailProfile ||
+    (options.guardrails === false ? "none" : "full");
+  const guardrails = guardrailProfile !== "none";
   if (!invoke) throw new Error(`Unsupported provider: ${provider}`);
   if (!model) throw new Error("--model is required");
 
@@ -106,9 +110,7 @@ export async function runModelEvaluation(options, dependencies = {}) {
       sourceFile,
       { preprocess: options.preprocess },
     );
-    const prompt = buildEvaluationPrompt(sample, {
-      guardrails: options.guardrails,
-    });
+    const prompt = buildEvaluationPrompt(sample, { guardrailProfile });
     const startedAt = performance.now();
     const raw = await invoke({
       model,
@@ -123,12 +125,13 @@ export async function runModelEvaluation(options, dependencies = {}) {
       model,
       provider,
       pipeline: options.preprocess ? "preprocessed-vision" : "direct-vision",
-      guardrails: options.guardrails,
+      guardrails,
+      guardrailProfile,
       latencyMs: Math.round(latencyMs),
       transcript: typeof raw?.transcript === "string" ? raw.transcript : "",
       illegibleNote:
         typeof raw?.illegibleNote === "string" ? raw.illegibleNote : "",
-      errors: normaliseErrors(sample.sampleId, raw?.errors, options.guardrails),
+      errors: normaliseErrors(sample.sampleId, raw?.errors, guardrails),
     };
     await writeFile(
       path.join(outputDir, `${sample.sampleId}.json`),

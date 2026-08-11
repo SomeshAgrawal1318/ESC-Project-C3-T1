@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   evaluatePredictionDirectory,
+  guardrailProfileFor,
   jsonFiles,
 } from "../lib/evaluationMetrics.mjs";
 
@@ -64,7 +65,7 @@ const headers = [
   "Model",
   "Provider",
   "Pipeline",
-  "Guardrails",
+  "Guardrail profile",
   "Samples",
   "GT errors",
   "TP",
@@ -98,7 +99,7 @@ const rows = runs.map(({ runId, metadata, metrics }) => [
   metadata.model || "unknown",
   metadata.provider || "unknown",
   metadata.pipeline || "unknown",
-  metadata.guardrails ? "yes" : "no",
+  guardrailProfileFor(metadata),
   `${metrics.predictions}/${metrics.samples}`,
   metrics.groundTruthErrors,
   metrics.truePositives,

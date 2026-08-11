@@ -55,7 +55,8 @@ scan files; it never reads `ground-truth-vetted/` or earlier predictions. Copy
 node evaluation/scripts/run-model-evaluation.mjs \
   --provider gemini \
   --model gemini-flash-latest \
-  --run-id gemini-preprocessed-guardrail
+  --run-id gemini-preprocessed-minimal-guardrail \
+  --guardrail-profile minimal
 
 node evaluation/scripts/run-model-evaluation.mjs \
   --provider openrouter \
@@ -67,6 +68,10 @@ node evaluation/scripts/run-model-evaluation.mjs \
   --model @cf/meta/llama-3.2-11b-vision-instruct \
   --run-id llama-3.2-vision-preprocessed-guardrail
 ```
+
+Use `--guardrail-profile none`, `minimal`, or `full` to isolate prompt constraints. The legacy
+`--no-guardrails` flag is equivalent to `--guardrail-profile none`. Omit `--no-preprocess` for the
+preprocessed pipeline; include it for raw-image controls.
 
 After inference, generate the comparison table. This separate post-run step is the only part that
 reads both predictions and human-vetted truth.
