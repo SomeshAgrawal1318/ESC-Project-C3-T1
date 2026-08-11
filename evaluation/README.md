@@ -22,6 +22,33 @@ Model-generated labels are only candidates. A file becomes ground truth only aft
 
 Do not fake accuracy numbers. If there is not enough vetted data, report the method or a clearly-labelled small pilot.
 
+## Commands
+
+Run from the repository root.
+
+Validate all human-vetted ground-truth JSON files:
+
+```bash
+node evaluation/scripts/validate-ground-truth.mjs
+```
+
+Evaluate predictions in the default `evaluation/predictions/gemini/` directory against the vetted
+ground truth:
+
+```bash
+node evaluation/scripts/evaluate-error-detection.mjs
+```
+
+Evaluate a specific model or pipeline directory:
+
+```bash
+node evaluation/scripts/evaluate-error-detection.mjs evaluation/predictions/<model-or-pipeline>
+```
+
+These scripts are evaluation utilities, not deterministic CI tests. They report meaningful metrics
+only when `ground-truth-vetted/` contains human-reviewed labels and the selected predictions
+directory contains matching JSON files.
+
 ## Error detection/classification metrics
 
 The evaluation scripts are designed to report:

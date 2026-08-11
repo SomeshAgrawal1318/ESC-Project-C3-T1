@@ -35,14 +35,60 @@ The client normally expects the API at `http://localhost:4000/api`.
 ## Scripts
 
 ```text
+npm start
 npm test
+npm run test:live
 npm run lint
 npm run format:check
 npm run format
 npm run seed:students
 ```
 
-Tests use Node's built-in test runner and are stored in `test/`.
+### Tests
+
+Server tests use Node's built-in test runner. Most test files live in `test/`; the error
+classification engine also has tests under `services/`.
+
+Run the normal deterministic suite:
+
+```text
+npm test
+```
+
+This runs unit, controller/component, recommendation, authentication, and isolated-database
+integration tests. It also discovers `test/live-recommendation.test.js`, but that live test skips
+unless `RUN_LIVE_RECOMMENDATION_TESTS=true`. The older
+`services/errorClassificationEngine.integration.test.js` suite requires `MONGODB_URI` and skips
+cleanly when no MongoDB URI is available.
+
+Run one focused test file while developing:
+
+```text
+npm test -- test/recommendationEngine.test.js
+npm test -- services/errorClassificationEngine.test.js
+```
+
+Run the opt-in live external recommendation test:
+
+```text
+npm run test:live
+```
+
+`npm run test:live` loads `server/.env`, sets `RUN_LIVE_RECOMMENDATION_TESTS=true`, disables
+recommendation mocks with `RECOMMENDATION_USE_MOCKS=false`, and runs only
+`test/live-recommendation.test.js`. It requires live Gemini and Azure recommendation settings:
+`GEMINI_RECOMMENDATION_API_KEY` or `GEMINI_API_KEY`, plus the Azure storage/manifest variables in
+the Intervention Recommendations section below. Keep this command opt-in because it can be slow,
+costly, quota-limited, and non-deterministic.
+
+Run static checks:
+
+```text
+npm run lint
+npm run format:check
+```
+
+Use `npm run format` only when you intentionally want Prettier to rewrite files.
 
 `npm run seed:students` creates the two canonical demo students (Wei Jie Lim /
 Primary 4, Aisha Rahman / Primary 3) so everyone develops against the same
@@ -94,7 +140,7 @@ already has.
 ```
 cd server
 npm install
-npm test        # runs the unit tests with node's built-in test runner
+npm test        # normal deterministic suite; live recommendation test skips by default
 ```
 
 No `.env` variables are required to run in mock mode (the default). Copy

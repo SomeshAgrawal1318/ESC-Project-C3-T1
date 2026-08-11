@@ -27,11 +27,57 @@ uses `VITE_API_URL` directly.
 ```text
 npm run dev
 npm run build
+npm test
+npm run test:e2e
+npm run test:e2e:demo
 npm run lint
 npm run format:check
 npm run format
 npm run preview
 ```
+
+### Tests
+
+Run the React unit/component tests:
+
+```text
+npm test
+```
+
+This uses Node's built-in test runner with `test-setup/preload.mjs` and discovers tests under
+`client/test/`.
+
+Run the deterministic Playwright browser E2E suite:
+
+```text
+npx playwright install chromium
+npm run test:e2e
+```
+
+`npm run test:e2e` uses `playwright.config.js` to start both required services automatically:
+
+- `node ../server/test-support/e2eServer.js` on port `5000`, backed by synthetic data,
+  mock AI/recommendations, and an in-memory MongoDB server.
+- Vite on port `4173` with `VITE_API_URL=http://127.0.0.1:5000/api`.
+
+The E2E suite currently runs `e2e/revised-plan.spec.js` headlessly and does not need live Gemini,
+Azure, email, or production MongoDB credentials.
+
+Run the headed browser walkthrough for demos/debugging:
+
+```text
+npm run test:e2e:demo
+```
+
+Run static checks and production build:
+
+```text
+npm run lint
+npm run build
+npm run format:check
+```
+
+Use `npm run format` only when you intentionally want Prettier to rewrite files.
 
 ## Structure
 
