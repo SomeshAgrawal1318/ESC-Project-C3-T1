@@ -4,12 +4,10 @@ For anyone on the team setting this up fresh. Written against `main` as of commi
 `fec37da` (2026-08-11). Client and server are separate npm packages, not a monorepo —
 install and run both independently.
 
-The server runs on **port 5000** — `README.md`, `server/README.md` and
-`client/README.md` previously said `4000`, which was stale; they've since been
-corrected to match the actual code (`server.js`'s default, `vite.config.js`'s dev
-proxy, and `playwright.config.js`'s E2E config all agree on 5000). This guide has the
-full variable list those READMEs intentionally don't duplicate — see step 4b for the
-client env file.
+The server runs on **port 5000** (`server.js`'s default, matching `vite.config.js`'s
+dev proxy target and `playwright.config.js`'s E2E config). This guide has the full
+environment-variable list — `README.md`, `server/README.md` and `client/README.md`
+intentionally don't duplicate it, see step 4b for the client env file.
 
 ## 1. Prerequisites
 
