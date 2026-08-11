@@ -8,6 +8,7 @@
     "build": "vite build",
     "test": "node --import ./test-setup/preload.mjs --experimental-test-module-mocks --test",
     "test:e2e": "playwright test",
+    "test:e2e:demo": "playwright test e2e/revised-plan.spec.js --headed --workers=1",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
