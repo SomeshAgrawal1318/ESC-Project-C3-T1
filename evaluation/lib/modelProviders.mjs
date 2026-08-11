@@ -130,7 +130,7 @@ export async function invokeCloudflare({
   const apiToken = requireEnv("CLOUDFLARE_API_TOKEN", env);
   const accountId = requireEnv("CLOUDFLARE_ACCOUNT_ID", env);
   const response = await fetchImpl(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`,
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`,
     {
       method: "POST",
       headers: {
@@ -138,15 +138,19 @@ export async function invokeCloudflare({
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        prompt,
+        model,
+        messages: [{ role: "user", content: prompt }],
         image: Array.from(images[0].data),
         max_tokens: 4096,
+        temperature: 0,
       }),
       signal: AbortSignal.timeout(120000),
     },
   );
   const body = await checkedJson(response);
-  return parseModelJson(body?.result?.response ?? body?.result);
+  const content = body?.choices?.[0]?.message?.content;
+  if (content && typeof content === "object") return content;
+  return parseModelJson(content);
 }
 
 export const PROVIDERS = Object.freeze({

@@ -133,15 +133,23 @@ test("Cloudflare adapter sends a single raster page and parses JSON output", asy
       return {
         ok: true,
         async json() {
-          return { result: { response: '{"errors":[]}' } };
+          return {
+            choices: [{ message: { content: { errors: [] } } }],
+          };
         },
       };
     },
   });
 
   assert.deepEqual(result.errors, []);
-  assert.match(request.url, /test-account\/ai\/run\/@cf\/meta\/test-vision$/);
-  assert.deepEqual(JSON.parse(request.options.body).image, [6, 7]);
+  assert.match(request.url, /test-account\/ai\/v1\/chat\/completions$/);
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.model, "@cf/meta/test-vision");
+  assert.equal(body.messages[0].role, "user");
+  assert.equal(body.messages[0].content, "isolated prompt");
+  assert.deepEqual(body.image, [6, 7]);
+  assert.equal(body.temperature, 0);
+  assert.equal(body.max_tokens, 4096);
 });
 
 test("model runner writes predictions without reading ground truth", async () => {
