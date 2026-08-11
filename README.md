@@ -23,14 +23,19 @@ Create local environment files without committing them:
 ```text
 MONGODB_URI=<MongoDB connection string>
 GEMINI_API_KEY=<Gemini API key>
-PORT=4000
+JWT_SECRET=<any long random string — required, login throws without it>
+PORT=5000
 ```
 
 `client/.env.local`:
 
 ```text
-VITE_API_URL=http://localhost:4000/api
+VITE_API_URL=http://localhost:5000/api
 ```
+
+See `SETUP_GUIDE.md` at the repo root for the full list of environment variables
+(Resend, Azure, recommendation-engine settings, etc.), seeding demo data, and running
+the test suites.
 
 Install and start each package in its own terminal:
 

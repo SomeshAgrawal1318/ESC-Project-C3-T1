@@ -9,7 +9,7 @@ worksheets.
 Create `client/.env.local`:
 
 ```text
-VITE_API_URL=http://localhost:4000/api
+VITE_API_URL=http://localhost:5000/api
 ```
 
 Then run:
@@ -19,8 +19,11 @@ npm install
 npm run dev
 ```
 
-The API server should normally be running on port `4000`. There is no Vite proxy; the client
-uses `VITE_API_URL` directly.
+The API server should normally be running on port `5000`. `vite.config.js` also proxies
+`/api` requests to `http://localhost:5000` in dev, so this would work without
+`VITE_API_URL` set at all — but setting it explicitly, as above, is what's actually
+configured locally and is the more reliable path. See the repo root's `SETUP_GUIDE.md`
+for the full setup walkthrough.
 
 ## Scripts
 

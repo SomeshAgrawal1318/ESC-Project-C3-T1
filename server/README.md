@@ -5,12 +5,14 @@ educator review.
 
 ## Setup
 
-Create `server/.env`:
+Create `server/.env` (see `.env.example` for the full list of variables, and the repo
+root's `SETUP_GUIDE.md` for a complete walkthrough):
 
 ```text
 MONGODB_URI=<MongoDB connection string>
 GEMINI_API_KEY=<Gemini API key>
-PORT=4000
+JWT_SECRET=<any long random string — required, login throws without it>
+PORT=5000
 ```
 
 Optional AI settings:
@@ -30,7 +32,7 @@ npm install
 npm start
 ```
 
-The client normally expects the API at `http://localhost:4000/api`.
+The client expects the API at `http://localhost:5000/api` (see `client/README.md`).
 
 ## Scripts
 
