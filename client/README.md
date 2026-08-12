@@ -12,6 +12,21 @@ Create `client/.env.local`:
 VITE_API_URL=http://localhost:5000/api
 ```
 
+Optional, only needed against a genuinely live (non-mock) backend:
+
+```text
+# Default 12000ms is too short for live recommendation generation, which
+# chains two sequential Gemini calls plus Azure retrieval - a real run was
+# observed taking ~24s. Too short doesn't lose the result (it still saves
+# server-side), it just shows a false "API request timed out" instead of
+# the report that was about to be ready.
+VITE_API_TIMEOUT_MS=60000
+
+# Logs request/response details (method, url, status, timing) to the
+# console - useful when diagnosing exactly this kind of timeout.
+VITE_DEBUG_API=true
+```
+
 Then run:
 
 ```text
