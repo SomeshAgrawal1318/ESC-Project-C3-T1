@@ -1,5 +1,6 @@
 import { Student } from '../models/student.js';
 import { Sample, ERROR_CATEGORIES } from '../models/sample.js';
+import { hasPlacement, placementFromBody } from '../services/studentContext.js';
 // The client shape for a student. Every route in this file answers with
 // this instead of the raw Mongoose document, so `_id`/`__v` never reach the
 // UI — client/src/lib/api.js and the pages key off `studentId`.
@@ -7,6 +8,13 @@ const toClientStudent = (s) => ({
   studentId: s._id,
   name: s.name,
   currentGrade: s.currentGrade,
+  ...(hasPlacement(s) && {
+    programme: s.programme ?? null,
+    band: s.band ?? null,
+    programmeYear: s.programmeYear ?? null,
+    term: s.term ?? null,
+    week: s.week ?? null,
+  }),
   ...(s.teacherId && { teacherId: s.teacherId }),
 });
 
@@ -26,6 +34,24 @@ const parseDateQuery = (value) => {
 
   return isRealDate ? date : null;
 };
+
+function assertPlacementIsValid({ programme, band, programmeYear, term, week }) {
+  if (programme && !['SLP', 'ELL-MLP'].includes(programme)) {
+    throw new Error('Programme must be SLP or ELL-MLP.');
+  }
+  if (band && !['A', 'B', 'C'].includes(band)) {
+    throw new Error('Band must be A, B, or C.');
+  }
+  if (programmeYear !== null && (programmeYear < 1 || programmeYear > 6)) {
+    throw new Error('Programme year must be between 1 and 6.');
+  }
+  if (term !== null && (term < 1 || term > 4)) {
+    throw new Error('Term must be between 1 and 4.');
+  }
+  if (week !== null && (week < 1 || week > 20)) {
+    throw new Error('Week must be between 1 and 20.');
+  }
+}
 
 // Newest first, matching StudentsListPage, which drops a newly created
 // student at the top of the grid.
@@ -60,9 +86,13 @@ const createStudent = async (req, res) => {
     res.status(400);
     throw new Error('All fields are mandatory!');
   }
+  const placement = placementFromBody(req.body);
+  res.status(400);
+  assertPlacementIsValid(placement);
   const student = await Student.create({
     name,
     currentGrade,
+    ...placement,
     ...(teacherId && { teacherId }),
   });
   res.status(201).json(toClientStudent(student));

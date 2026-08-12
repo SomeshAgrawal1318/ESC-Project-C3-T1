@@ -418,6 +418,9 @@ Important:
 
 ## Phase 7 — Narrow recommendation resources to 2–3 pages
 
+Implementation status: implemented on `feat/worksheet-page-sections`; see
+`WORKSHEET_PAGE_SCOPING_DEVIATIONS.md` for the one deployment-specific catalogue deviation.
+
 Purpose: improve PS6 so it recommends actionable worksheet sections rather than a whole 100+ page file.
 
 Add or prepare page-level worksheet metadata:

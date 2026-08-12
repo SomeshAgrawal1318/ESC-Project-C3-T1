@@ -1,5 +1,5 @@
 // RequireAuth is the layout-route guard main.jsx wraps every non-auth route
-// in: no session redirects to /login, a session lets the wrapped route render.
+// in: no signed session redirects to /login, a token-bearing session renders.
 
 import assert from 'node:assert/strict';
 import { afterEach, mock, test } from 'node:test';
@@ -9,7 +9,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 let sessionValue;
 mock.module('../src/lib/session.js', {
   namedExports: {
-    getSession: () => sessionValue,
+    getSession: () => (sessionValue?.token ? sessionValue : null),
   },
 });
 
@@ -38,8 +38,16 @@ test('redirects to /login when there is no session', () => {
   assert.equal(screen.queryByText('Protected student profile'), null);
 });
 
-test('renders the protected route once a session exists', () => {
+test('redirects to /login when the stored session is missing its token', () => {
   sessionValue = { username: 'Sandy@DAS', name: 'Sandy Lim' };
+  renderGuarded();
+
+  assert.ok(screen.getByText('Sign in screen'));
+  assert.equal(screen.queryByText('Protected student profile'), null);
+});
+
+test('renders the protected route once a signed session exists', () => {
+  sessionValue = { username: 'Sandy@DAS', name: 'Sandy Lim', token: 'signed-token' };
   renderGuarded();
 
   assert.ok(screen.getByText('Protected student profile'));

@@ -8,7 +8,7 @@ export default defineConfig({
     // The client calls relative "/api/..." paths (see src/lib/api.js);
     // in dev, forward those to the Express server so no CORS is involved.
     proxy: {
-      '/api': 'http://localhost:5000',
+      '/api': 'http://localhost:4000',
     },
   },
 })

@@ -19,22 +19,17 @@ export default function StudentsListPage() {
     let live = true;
     getStudents()
       .then((students) => live && setState({ status: 'ready', students }))
-      .catch(
-        (err) => live && setState({ status: 'error', message: err.message }),
-      );
+      .catch((err) => live && setState({ status: 'error', message: err.message }));
     return () => {
       live = false;
     };
   }, []);
 
-  const visibleStudents =
-    state.status === 'ready' ? filterByName(state.students, query) : [];
+  const visibleStudents = state.status === 'ready' ? filterByName(state.students, query) : [];
 
   const handleCreated = (student) => {
     setState((s) =>
-      s.status === 'ready'
-        ? { status: 'ready', students: [student, ...s.students] }
-        : s,
+      s.status === 'ready' ? { status: 'ready', students: [student, ...s.students] } : s
     );
     setFormOpen(false);
   };
@@ -46,9 +41,7 @@ export default function StudentsListPage() {
         <div className="students__id">
           <span className="eyebrow">Caseload</span>
           <h1 className="students__title">My students</h1>
-          <p className="students__sub">
-            Choose a student to open their profile.
-          </p>
+          <p className="students__sub">Choose a student to open their profile.</p>
         </div>
 
         <div className="students__tools">
@@ -63,22 +56,13 @@ export default function StudentsListPage() {
               aria-label="Search students by name"
             />
           </div>
-          <Button
-            variant="primary"
-            icon="plus"
-            onClick={() => setFormOpen((open) => !open)}
-          >
+          <Button variant="primary" icon="plus" onClick={() => setFormOpen((open) => !open)}>
             Add student
           </Button>
         </div>
       </header>
 
-      {formOpen && (
-        <NewStudentForm
-          onCreated={handleCreated}
-          onCancel={() => setFormOpen(false)}
-        />
-      )}
+      {formOpen && <NewStudentForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />}
 
       {state.status === 'loading' && (
         <div className="students__grid" aria-hidden="true">
@@ -106,9 +90,7 @@ export default function StudentsListPage() {
                 </span>
                 <span className="student-card__body">
                   <span className="student-card__name">{student.name}</span>
-                  <span className="student-card__grade">
-                    {student.currentGrade}
-                  </span>
+                  <span className="student-card__grade">{student.currentGrade}</span>
                 </span>
                 <Icon name="arrow" size={20} className="student-card__go" />
               </Link>
@@ -120,8 +102,7 @@ export default function StudentsListPage() {
           </p>
         ) : (
           <p className="students__sub">
-            No students match “{query}”. Clear the search to see the full
-            caseload.
+            No students match “{query}”. Clear the search to see the full caseload.
           </p>
         ))}
     </div>
@@ -134,6 +115,11 @@ export default function StudentsListPage() {
 function NewStudentForm({ onCreated, onCancel }) {
   const [name, setName] = useState('');
   const [currentGrade, setCurrentGrade] = useState('');
+  const [programme, setProgramme] = useState('');
+  const [band, setBand] = useState('');
+  const [programmeYear, setProgrammeYear] = useState('');
+  const [term, setTerm] = useState('');
+  const [week, setWeek] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -146,6 +132,11 @@ function NewStudentForm({ onCreated, onCancel }) {
       const student = await createStudent({
         name: name.trim(),
         currentGrade: currentGrade.trim(),
+        ...(programme.trim() && { programme: programme.trim() }),
+        ...(band.trim() && { band: band.trim().toUpperCase() }),
+        ...(programmeYear && { programmeYear: Number.parseInt(programmeYear, 10) }),
+        ...(term && { term: Number.parseInt(term, 10) }),
+        ...(week && { week: Number.parseInt(week, 10) }),
       });
       onCreated(student);
     } catch (err) {
@@ -179,6 +170,63 @@ function NewStudentForm({ onCreated, onCancel }) {
             onChange={(event) => setCurrentGrade(event.target.value)}
             placeholder="e.g. Primary 4"
             required
+          />
+        </label>
+        <label className="field">
+          <span className="field__label">Programme</span>
+          <input
+            className="field__input"
+            type="text"
+            value={programme}
+            onChange={(event) => setProgramme(event.target.value)}
+            placeholder="e.g. SLP"
+          />
+        </label>
+        <label className="field">
+          <span className="field__label">Band</span>
+          <input
+            className="field__input"
+            type="text"
+            value={band}
+            onChange={(event) => setBand(event.target.value)}
+            placeholder="A, B, or C"
+            maxLength={1}
+          />
+        </label>
+        <label className="field">
+          <span className="field__label">Programme year</span>
+          <input
+            className="field__input"
+            type="number"
+            name="programmeYear"
+            min="1"
+            value={programmeYear}
+            onChange={(event) => setProgrammeYear(event.target.value)}
+            placeholder="e.g. 1"
+          />
+        </label>
+        <label className="field">
+          <span className="field__label">Term</span>
+          <input
+            className="field__input"
+            type="number"
+            name="term"
+            min="1"
+            max="4"
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="e.g. 1"
+          />
+        </label>
+        <label className="field">
+          <span className="field__label">Week</span>
+          <input
+            className="field__input"
+            type="number"
+            min="1"
+            value={week}
+            onChange={(event) => setWeek(event.target.value)}
+            placeholder="e.g. 4"
           />
         </label>
       </div>

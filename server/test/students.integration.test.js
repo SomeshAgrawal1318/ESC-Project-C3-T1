@@ -36,11 +36,16 @@ beforeEach(() => {
   nextId = 1;
   sampleFilter = null;
 
-  Student.create = async ({ name, currentGrade }) => {
+  Student.create = async ({ name, currentGrade, programme, band, programmeYear, term, week }) => {
     const student = {
       _id: String(nextId++).padStart(24, '0'),
       name: name.trim(),
       currentGrade: currentGrade.trim(),
+      programme: programme ?? null,
+      band: band ?? null,
+      programmeYear: programmeYear ?? null,
+      term: term ?? null,
+      week: week ?? null,
       createdAt: new Date(),
       __v: 0,
     };
@@ -49,8 +54,7 @@ beforeEach(() => {
   };
 
   Student.find = () => ({
-    sort: async () =>
-      [...records].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    sort: async () => [...records].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
   });
 
   Student.findById = async (id) => records.find((student) => student._id === id) ?? null;
@@ -94,6 +98,35 @@ describe('students API integration', () => {
     assert.equal('__v' in body, false);
   });
 
+  test('POST round-trips optional programme placement metadata', async () => {
+    const { response, body } = await request('/api/students', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: '  Context Student  ',
+        currentGrade: ' Secondary 1 ',
+        programme: ' SLP ',
+        band: ' B ',
+        programmeYear: 1,
+        term: 1,
+        week: 4,
+      }),
+    });
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(body, {
+      studentId: '000000000000000000000001',
+      name: 'Context Student',
+      currentGrade: 'Secondary 1',
+      programme: 'SLP',
+      band: 'B',
+      programmeYear: 1,
+      term: 1,
+      week: 4,
+    });
+    assert.deepEqual((await request('/api/students/000000000000000000000001')).body, body);
+  });
+
   test('POST rejects missing required fields through the error middleware', async () => {
     const { response, body } = await request('/api/students', {
       method: 'POST',
@@ -104,6 +137,23 @@ describe('students API integration', () => {
     assert.equal(response.status, 400);
     assert.equal(body.title, 'Validation error');
     assert.equal(body.message, 'All fields are mandatory!');
+    assert.equal(records.length, 0);
+  });
+
+  test('POST rejects invalid placement metadata', async () => {
+    for (const body of [
+      { name: 'Aisha Rahman', currentGrade: 'Primary 3', band: 'D' },
+      { name: 'Aisha Rahman', currentGrade: 'Primary 3', programmeYear: 0 },
+      { name: 'Aisha Rahman', currentGrade: 'Primary 3', term: 5 },
+      { name: 'Aisha Rahman', currentGrade: 'Primary 3', week: 21 },
+    ]) {
+      const { response } = await request('/api/students', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 400);
+    }
     assert.equal(records.length, 0);
   });
 
@@ -202,9 +252,7 @@ describe('students API integration', () => {
   });
 
   test('GET trends reports an unknown student as 404', async () => {
-    const { response, body } = await request(
-      '/api/students/000000000000000000000099/trends'
-    );
+    const { response, body } = await request('/api/students/000000000000000000000099/trends');
 
     assert.equal(response.status, 404);
     assert.equal(body.message, 'Student not found');

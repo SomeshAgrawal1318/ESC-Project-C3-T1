@@ -25,6 +25,9 @@ const strategy = {
       worksheetId: 'approved-worksheet',
       title: 'Approved worksheet',
       pdfPath: '_private/internal-path.pdf',
+      pageStart: 12,
+      pageEnd: 14,
+      pdfPages: '12-14',
       available: true,
       targetCategories: ['phonological'],
       rationale: 'Targets the reviewed pattern.',
@@ -54,6 +57,8 @@ test('student recommendation report contains only the latest-report fields', asy
   assert.equal(json.student.toString(), studentId.toString());
   assert.equal(json.strategies.length, 1);
   assert.equal(json.strategies[0].worksheets[0].pdfPath, undefined);
+  assert.equal(json.strategies[0].worksheets[0].pageStart, 12);
+  assert.equal(json.strategies[0].worksheets[0].pageEnd, 14);
   assert.equal(json.strategies[0].worksheets[0].available, true);
   assert.ok(json.reportId);
 });
@@ -82,5 +87,7 @@ test('sample recommendations preserve the merged multi-page analysis shape', asy
   assert.equal(sample.errors[0].confidenceScore, 0.5);
   assert.equal(sample.errors[0].locationOnScan.page, 0);
   assert.equal(sample.recommendedWorksheets[0].pdfPath, undefined);
+  assert.equal(sample.recommendedWorksheets[0].pageStart, 12);
+  assert.equal(sample.recommendedWorksheets[0].pageEnd, 14);
   assert.equal(sample.recommendedWorksheets[0].available, true);
 });

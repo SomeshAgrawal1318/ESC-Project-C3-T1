@@ -1,0 +1,57 @@
+[
+  {
+    "catalogueMode": "live",
+    "worksheetId": "azure-3f46a8c9bda746a6",
+    "title": "Phonics focused practice",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "targetCategories": ["phonological"],
+    "skill": "sound-to-letter correspondence",
+    "difficulty": "primary",
+    "description": "Approved live Azure phonics worksheet section for phonological spelling errors."
+  },
+  {
+    "catalogueMode": "live",
+    "worksheetId": "azure-b15823b02f293b1c",
+    "title": "Spelling-pattern focused practice",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "targetCategories": ["orthographic"],
+    "skill": "letter sequence and spelling patterns",
+    "difficulty": "primary",
+    "description": "Approved live Azure spelling worksheet section for orthographic spelling errors."
+  },
+  {
+    "catalogueMode": "live",
+    "worksheetId": "azure-8eeb9dcf260e49fb",
+    "title": "Morphology focused practice",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "targetCategories": ["morphological"],
+    "skill": "prefixes, suffixes, and base words",
+    "difficulty": "primary",
+    "description": "Approved live Azure morphology worksheet section for word-part errors."
+  },
+  {
+    "catalogueMode": "live",
+    "worksheetId": "azure-d790b0b4deae69a7",
+    "title": "Sentence punctuation focused practice",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "targetCategories": ["punctuation"],
+    "skill": "sentence punctuation editing",
+    "difficulty": "primary",
+    "description": "Approved live Azure sentence worksheet section for punctuation errors."
+  },
+  {
+    "catalogueMode": "live",
+    "worksheetId": "azure-3613968427e6e9d2",
+    "title": "Subject and sentence editing focused practice",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "targetCategories": ["capitalisation", "unsure"],
+    "skill": "sentence editing and review",
+    "difficulty": "primary",
+    "description": "Approved live Azure sentence-editing section for capitalisation or uncertain errors pending a more specific catalogue mapping."
+  }
+]

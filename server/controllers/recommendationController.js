@@ -134,7 +134,10 @@ async function generateAndSaveSampleWorksheets(sampleId) {
   const startedAt = Date.now();
   logAction('sample-worksheets-start', { sampleId });
   assertObjectId(sampleId);
-  const sample = await Sample.findById(sampleId).populate('student', 'currentGrade');
+  const sample = await Sample.findById(sampleId).populate(
+    'student',
+    'currentGrade programme band programmeYear term week'
+  );
   if (!sample) throw new AppError(404, 'SAMPLE_NOT_FOUND', 'Sample not found.');
   sample.recommendedWorksheets = await recommendWorksheets(sample);
   sample.recommendationsGeneratedAt = new Date();

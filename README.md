@@ -127,7 +127,7 @@ and server test files.
 
 ```text
 node performance/mock-mode-smoke.mjs
-```
+``` 
 
 This starts the same synthetic E2E API fixture and reports p50/p95/max latency for stable
 authenticated API routes. It is not a live-AI load test.

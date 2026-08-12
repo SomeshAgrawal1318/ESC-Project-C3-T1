@@ -1,5 +1,6 @@
 import { AppError } from '../utils/appError.js';
-import { levelFromGrade, recommendationEngine } from './recommendationEngine.js';
+import { recommendationEngine } from './recommendationEngine.js';
+import { buildRecommendationContext } from './studentContext.js';
 
 const ANALYSED_STATUSES = new Set(['ANALYSED', 'REVIEWED']);
 
@@ -28,10 +29,7 @@ export async function generateReport(student, samples, engine = recommendationEn
   }
 
   const strategies = await engine.createInterventionStrategies(
-    {
-      level: levelFromGrade(student.currentGrade),
-      errors,
-    },
+    buildRecommendationContext(student, errors),
     4
   );
   return {

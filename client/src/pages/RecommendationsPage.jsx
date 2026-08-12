@@ -203,14 +203,21 @@ export default function RecommendationsPage() {
                       <span className="eyebrow">Recommended worksheet</span>
                       <h4>{worksheet.title}</h4>
                       <p>{worksheet.rationale}</p>
-                      {worksheet.pdfPages && (
-                        <small>Suggested source pages: {worksheet.pdfPages}</small>
+                      {Number.isInteger(worksheet.pageStart) &&
+                      Number.isInteger(worksheet.pageEnd) ? (
+                        <small>
+                          Suggested pages: {worksheet.pageStart}–{worksheet.pageEnd}
+                        </small>
+                      ) : (
+                        worksheet.pdfPages && (
+                          <small>Suggested source pages: {worksheet.pdfPages}</small>
+                        )
                       )}
                     </div>
                     {worksheet.available ? (
                       <a
                         className="btn btn--secondary"
-                        href={worksheetFileUrl(worksheet.worksheetId)}
+                        href={`${worksheetFileUrl(worksheet.worksheetId)}${worksheet.pageStart ? `#page=${worksheet.pageStart}` : ''}`}
                         target="_blank"
                         rel="noreferrer"
                       >

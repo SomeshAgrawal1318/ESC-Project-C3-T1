@@ -282,6 +282,10 @@
   color: var(--muted);
   background: var(--surface);
 }
+.grade--placement {
+  color: var(--muted);
+  border-color: rgba(74, 124, 89, 0.28);
+}
 .profile__actions {
   display: flex;
   gap: 10px;
@@ -3445,4 +3449,3 @@
   margin: 4px 0 0;
   color: var(--muted);
 }
-

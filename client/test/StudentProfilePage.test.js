@@ -34,10 +34,25 @@ function renderProfile(studentId = 's1') {
   );
 }
 
-test('renders the student header and enables trends/recommendations once a sample is analysed', async () => {
-  studentResult = { studentId: 's1', name: 'Wei Jie Lim', currentGrade: 'Primary 4' };
+test('renders the student header, placement, and enables trends/recommendations once a sample is analysed', async () => {
+  studentResult = {
+    studentId: 's1',
+    name: 'Wei Jie Lim',
+    currentGrade: 'Primary 4',
+    programme: 'SLP',
+    band: 'B',
+    programmeYear: 1,
+    term: 1,
+    week: 4,
+  };
   samplesResult = [
-    { sampleId: 'a', title: 'Journal 1', uploadedAt: '2026-08-01', analysisStatus: 'ANALYSED', imageCount: 1 },
+    {
+      sampleId: 'a',
+      title: 'Journal 1',
+      uploadedAt: '2026-08-01',
+      analysisStatus: 'ANALYSED',
+      imageCount: 1,
+    },
   ];
   renderProfile();
 
@@ -46,6 +61,7 @@ test('renders the student header and enables trends/recommendations once a sampl
   // the student fetch, so "Wei Jie Lim" alone isn't enough to synchronize on.
   await waitFor(() => screen.getByText('Journal 1'));
   assert.ok(screen.getByText('Primary 4'));
+  assert.ok(screen.getByText('SLP / Band B / Y1 / T1 / W4'));
 
   const trendsLink = screen.getByText('View error trends').closest('a');
   assert.equal(trendsLink.getAttribute('href'), '/students/s1/trends');
@@ -56,7 +72,13 @@ test('renders the student header and enables trends/recommendations once a sampl
 test('disables trends/recommendations until a sample has been analysed', async () => {
   studentResult = { studentId: 's1', name: 'Wei Jie Lim', currentGrade: 'Primary 4' };
   samplesResult = [
-    { sampleId: 'a', title: 'Journal 1', uploadedAt: '2026-08-01', analysisStatus: 'UPLOADED', imageCount: 1 },
+    {
+      sampleId: 'a',
+      title: 'Journal 1',
+      uploadedAt: '2026-08-01',
+      analysisStatus: 'UPLOADED',
+      imageCount: 1,
+    },
   ];
   renderProfile();
 
