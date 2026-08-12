@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 
@@ -15,6 +17,8 @@ import { AppError } from './utils/appError.js';
 // 404 catch-all in one place means the two can no longer drift apart, the
 // way app.js and server.js each independently ended up doing before.
 const app = express();
+const publicDirectory = fileURLToPath(new URL('./public', import.meta.url));
+const frontendEntry = path.join(publicDirectory, 'index.html');
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
@@ -25,6 +29,17 @@ app.use('/api/students', requireAuth, students);
 app.use('/api/worksheets', requireAuth, worksheets);
 app.use('/api/recommendation', requireAuth, recommendation);
 app.use('/api/auth', auth);
+app.use('/api', (req, res, next) => {
+  next(new AppError(404, 'ROUTE_NOT_FOUND', 'API route not found.'));
+});
+
+app.use(express.static(publicDirectory));
+app.get(/^(?!\/api(?:\/|$)).*/, (req, res, next) => {
+  res.sendFile(frontendEntry, (error) => {
+    if (error) next(error);
+  });
+});
+
 app.use((req, res, next) => {
   next(new AppError(404, 'ROUTE_NOT_FOUND', 'API route not found.'));
 });

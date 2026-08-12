@@ -8,3 +8,4 @@ server/samples/
 samples/
 evaluation/debug-private/
 *.log
+deployment.zip
