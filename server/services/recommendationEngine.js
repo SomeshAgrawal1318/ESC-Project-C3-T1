@@ -619,13 +619,17 @@ export class RecommendationEngine {
       0,
       5
     );
+    // `||`, not `??`: a .env line present but left blank (e.g.
+    // GEMINI_RECOMMENDATION_API_KEY=) loads as '', which `??` does NOT
+    // treat as nullish - that silently broke the documented "falls back to
+    // GEMINI_API_KEY" behavior for anyone who left it blank as instructed.
     this.apiKey =
-      options.apiKey ?? process.env.GEMINI_RECOMMENDATION_API_KEY ?? process.env.GEMINI_API_KEY;
+      options.apiKey || process.env.GEMINI_RECOMMENDATION_API_KEY || process.env.GEMINI_API_KEY;
     this.model =
-      options.model ??
-      process.env.GEMINI_MODEL_NAME ??
-      process.env.GEMINI_RECOMMENDATION_MODEL ??
-      process.env.GEMINI_MODEL ??
+      options.model ||
+      process.env.GEMINI_MODEL_NAME ||
+      process.env.GEMINI_RECOMMENDATION_MODEL ||
+      process.env.GEMINI_MODEL ||
       'gemini-flash-latest';
     this.useMocks =
       options.useMocks ?? (process.env.RECOMMENDATION_USE_MOCKS ?? 'true') !== 'false';
