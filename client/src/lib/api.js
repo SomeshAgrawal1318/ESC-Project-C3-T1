@@ -7,9 +7,6 @@
 //   VITE_API_URL          base origin for the API (default "/api")
 //   VITE_API_TIMEOUT_MS   fail API calls instead of leaving screens in skeleton state
 //   VITE_DEBUG_API=true   include endpoint/status details in UI errors and console logs
-//   VITE_API_URL          base origin for the API (default "/api")
-//   VITE_API_TIMEOUT_MS   fail API calls instead of leaving screens in skeleton state
-//   VITE_DEBUG_API=true   include endpoint/status details in UI errors and console logs
 //
 // Students AND samples routes are live now — the old mockData.js is gone.
 // ------------------------------------------------------------------
@@ -32,59 +29,9 @@ function debugMessage(message, details) {
     .join(', ');
   return extra ? `${message} (${extra})` : message;
 }
-const DEBUG_API = import.meta.env.VITE_DEBUG_API === 'true';
-const API_TIMEOUT_MS = Number.parseInt(import.meta.env.VITE_API_TIMEOUT_MS ?? '12000', 10);
-
-function apiDebug(message, details = {}) {
-  if (DEBUG_API) console.info(`[api] ${message}`, details);
-}
-
-function debugMessage(message, details) {
-  if (!DEBUG_API) return message;
-  const extra = Object.entries(details)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${key}=${value}`)
-    .join(', ');
-  return extra ? `${message} (${extra})` : message;
-}
 
 async function request(path, { method = 'GET', body } = {}) {
   const token = getToken();
-  const url = `${BASE}${path}`;
-  const controller = new AbortController();
-  const timeout =
-    Number.isFinite(API_TIMEOUT_MS) && API_TIMEOUT_MS > 0
-      ? window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
-      : null;
-  let res;
-  apiDebug('request-start', { method, url });
-  try {
-    res = await fetch(url, {
-      method,
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...(body !== undefined && { 'Content-Type': 'application/json' }),
-      },
-      ...(body !== undefined && { body: JSON.stringify(body) }),
-    });
-  } catch (error) {
-    const timedOut = error.name === 'AbortError';
-    apiDebug('request-failed', { method, url, reason: timedOut ? 'timeout' : error.message });
-    throw new Error(
-      debugMessage(timedOut ? 'API request timed out' : 'API request failed', {
-        method,
-        url,
-        timeoutMs: timedOut ? API_TIMEOUT_MS : undefined,
-        reason: timedOut ? undefined : error.message,
-      }),
-      { cause: error }
-    );
-  } finally {
-    if (timeout) window.clearTimeout(timeout);
-  }
-  apiDebug('response', { method, url, status: res.status });
   const url = `${BASE}${path}`;
   const controller = new AbortController();
   const timeout =
@@ -331,18 +278,7 @@ export function uploadSample(studentId, { title, taskType, files }) {
   const token = getToken();
   return fetch(`${BASE}/samples/${studentId}`, {
     method: 'POST',
-    // No Content-Type here - browser writes its own multipart boundary -
-    // but requireAuth still needs the same Bearer header every other
-    // authenticated call sends, or this 401s before createSample ever runs.
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: form,
-  }).then(async (res) => {
-  const token = getToken();
-  return fetch(`${BASE}/samples/${studentId}`, {
-    method: 'POST',
-    headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
     body: form,
   }).then(async (res) => {
     if (!res.ok) {

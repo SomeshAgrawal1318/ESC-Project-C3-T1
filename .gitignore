@@ -5,4 +5,5 @@ dist/
 .hermes/
 server/uploads/
 server/samples/
+samples/
 *.log

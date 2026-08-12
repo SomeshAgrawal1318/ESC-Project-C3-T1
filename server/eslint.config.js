@@ -4,7 +4,7 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['node_modules']),
+  globalIgnores(['node_modules', 'public']),
   {
     files: ['**/*.js'],
     extends: [js.configs.recommended, eslintConfigPrettier],

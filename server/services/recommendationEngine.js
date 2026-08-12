@@ -291,14 +291,19 @@ export function parseKnowledgeDocumentMetadata(document) {
   const content = document.content ?? '';
   const source = scalarFrontmatter(content, 'source_file') ?? document.blobPath ?? '';
   const inferred = inferMetadataFromSourcePath(source);
+  const resourceId = scalarFrontmatter(content, 'resource_id');
+  const title = scalarFrontmatter(content, 'title');
+  const summary = scalarFrontmatter(content, 'summary');
+  const targetSkills = arrayFrontmatter(content, 'target_skills');
+  const addressesErrorTypes = arrayFrontmatter(content, 'addresses_error_types');
   return {
     ...document,
     metadata: {
-      resourceId: scalarFrontmatter(content, 'resource_id'),
-      title: scalarFrontmatter(content, 'title'),
-      summary: scalarFrontmatter(content, 'summary'),
-      targetSkills: arrayFrontmatter(content, 'target_skills'),
-      addressesErrorTypes: arrayFrontmatter(content, 'addresses_error_types'),
+      ...(resourceId && { resourceId }),
+      ...(title && { title }),
+      ...(summary && { summary }),
+      ...(targetSkills.length > 0 && { targetSkills }),
+      ...(addressesErrorTypes.length > 0 && { addressesErrorTypes }),
       documentType:
         scalarFrontmatter(content, 'documentType') ??
         fallbackDocumentType(document.blobPath, content),
@@ -331,7 +336,7 @@ export function filterCandidateResources(documents, input, limit = 15) {
       if (input.level && metadata.level === input.level) compatibility += 10;
       if (input.programmeYear && metadata.year === input.programmeYear) compatibility += 10;
       if (input.term && metadata.term === input.term) compatibility += 10;
-      
+
       if (input.week && metadata.week) {
         const distance = Math.abs(metadata.week - input.week);
         if (distance === 0) compatibility += 5;
@@ -353,10 +358,29 @@ export function rankKnowledgeDocuments(documents, input, options = 12) {
     .filter(
       (document) => !config.documentType || document.metadata.documentType === config.documentType
     )
+    .filter((document) => {
+      const metadata = document.metadata;
+      if (input.programme && metadata.programme && metadata.programme !== input.programme) return false;
+      if (input.level && metadata.level && metadata.level !== input.level) return false;
+      return true;
+    })
     .map((document) => {
+      const metadata = document.metadata;
+      let compatibility = 0;
+      if (input.programme && metadata.programme === input.programme) compatibility += 10;
+      if (input.band && metadata.band === input.band) compatibility += 10;
+      if (input.level && metadata.level === input.level) compatibility += 10;
+      if (input.programmeYear && metadata.year === input.programmeYear) compatibility += 10;
+      if (input.term && metadata.term === input.term) compatibility += 10;
+      if (input.week && metadata.week) {
+        const distance = Math.abs(metadata.week - input.week);
+        if (distance === 0) compatibility += 5;
+        else if (distance <= 2) compatibility += 3;
+        else if (distance <= 4) compatibility += 1;
+      }
       return {
         ...document,
-        compatibility: 0,
+        compatibility,
         score: terms.reduce(
           (score, term) =>
             score +
@@ -373,6 +397,7 @@ export function rankKnowledgeDocuments(documents, input, options = 12) {
     .sort(
       (left, right) =>
         right.score - left.score ||
+        right.compatibility - left.compatibility ||
         left.blobPath.localeCompare(right.blobPath)
     )
     .slice(0, Math.max(1, limit));
@@ -548,28 +573,27 @@ export class AzureKnowledgeSource {
 
   // Rank whole Markdown documents locally and return only the best evidence to Gemini.
   async contextFor(input, limit = DEFAULT_CONTEXT_DOCUMENTS) {
-    const terms = retrievalTerms(input);
-    const ranked = (await this.documents())
-      .map((document) => ({
-        ...document,
-        score: terms.reduce(
-          (score, term) =>
-            score + (((document.searchText || "").includes(term)) ? term.split(' ').length : 0),
-          0
-        ),
-      }))
-      .filter((document) => document.score > 0)
-      .sort(
-        (left, right) => right.score - left.score || left.blobPath.localeCompare(right.blobPath)
-      )
-      .slice(0, Math.max(1, limit));
-    logEvent(this.logger, 'azure-context-selected', {
-      queryTerms: terms.length,
-      documents: ranked.length,
+    const documents = await this.documents();
+    const resources = rankKnowledgeDocuments(documents, input, {
+      documentType: 'resource',
+      limit,
     });
-    return ranked
-      .map((document, index) => `SOURCE ${index + 1}\n${document.content}`)
-      .join('\n\n---\n\n');
+    const teacherKnowledge = rankKnowledgeDocuments(documents, input, {
+      documentType: 'teacher_knowledge',
+      limit,
+    });
+    logEvent(this.logger, 'azure-context-selected', {
+      queryTerms: retrievalTerms(input).length,
+      documents: resources.length + teacherKnowledge.length,
+    });
+    return [
+      ...resources.map(
+        (document, index) => `RESOURCE CANDIDATE ${index + 1}\n${document.content}`
+      ),
+      ...teacherKnowledge.map(
+        (document, index) => `TEACHER KNOWLEDGE ${index + 1}\n${document.content}`
+      ),
+    ].join('\n\n---\n\n');
   }
 }
 
