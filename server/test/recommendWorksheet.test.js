@@ -8,6 +8,14 @@ const sample = {
   _id: new mongoose.Types.ObjectId(),
   status: 'ANALYSED',
   taskType: 'ESSAY',
+  student: {
+    currentGrade: 'Secondary 1',
+    programme: 'SLP',
+    band: 'B',
+    programmeYear: 1,
+    term: 1,
+    week: 4,
+  },
   errors: [
     {
       written: 'pali',
@@ -58,6 +66,26 @@ test('one sample returns no more than three worksheets based on active errors', 
   assert.equal(
     received.input.errors.some((error) => 'sampleId' in error),
     false
+  );
+  assert.deepEqual(
+    {
+      level: received.input.level,
+      gradeYear: received.input.gradeYear,
+      programme: received.input.programme,
+      band: received.input.band,
+      programmeYear: received.input.programmeYear,
+      term: received.input.term,
+      week: received.input.week,
+    },
+    {
+      level: 'secondary',
+      gradeYear: 1,
+      programme: 'SLP',
+      band: 'B',
+      programmeYear: 1,
+      term: 1,
+      week: 4,
+    }
   );
   assert.equal(worksheets.length, 3);
 });

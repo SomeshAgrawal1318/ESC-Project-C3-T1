@@ -58,6 +58,15 @@ export default function StudentProfilePage() {
   const { student } = state;
   const hasAnalysedSamples = samplesInfo?.hasAnalysedSamples ?? false;
   const firstName = student.name.split(' ')[0];
+  const placement = [
+    student.programme,
+    student.band && `Band ${student.band}`,
+    student.programmeYear && `Y${student.programmeYear}`,
+    student.term && `T${student.term}`,
+    student.week && `W${student.week}`,
+  ]
+    .filter(Boolean)
+    .join(' / ');
 
   // The upload flow (screens 2a/2b) lives on its own route.
   const uploadTo = `/students/${studentId}/upload`;
@@ -71,6 +80,7 @@ export default function StudentProfilePage() {
           <span className="eyebrow">Student profile</span>
           <h1 className="profile__name">{student.name}</h1>
           <span className="grade">{student.currentGrade}</span>
+          {placement && <span className="grade grade--placement">{placement}</span>}
         </div>
 
         <div className="profile__actions">

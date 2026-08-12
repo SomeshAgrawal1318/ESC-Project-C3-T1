@@ -1,5 +1,6 @@
 import { AppError } from '../utils/appError.js';
-import { levelFromGrade, recommendationEngine } from './recommendationEngine.js';
+import { recommendationEngine } from './recommendationEngine.js';
+import { buildRecommendationContext } from './studentContext.js';
 
 const ANALYSED_STATUSES = new Set(['ANALYSED', 'REVIEWED']);
 
@@ -29,12 +30,8 @@ export async function recommendWorksheets(sample, engine = recommendationEngine)
   if (errors.length === 0) {
     throw new AppError(422, 'NO_ACTIVE_ERRORS', 'This sample has no active errors.');
   }
-  const currentGrade = sample.student?.currentGrade;
   const worksheets = await engine.findWorksheets(
-    {
-      level: levelFromGrade(currentGrade),
-      errors,
-    },
+    buildRecommendationContext(sample.student, errors),
     3
   );
   return worksheets.slice(0, 3);

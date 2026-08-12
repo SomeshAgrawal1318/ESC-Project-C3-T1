@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   AzureKnowledgeSource,
   buildAzureBlobUrl,
+  rankKnowledgeDocuments,
   RecommendationEngine,
 } from '../services/recommendationEngine.js';
 
@@ -139,7 +140,9 @@ test('Azure knowledge retrieval caches the canonical wiki and selects relevant c
       );
     }
     if (pathname.endsWith('/wiki/phonics.md')) {
-      return new Response('# Phonics\nSilent-e and long-vowel spelling practice.');
+      return new Response(
+        '---\ndocumentType: "resource"\n---\n# Phonics\nSilent-e and long-vowel spelling practice.'
+      );
     }
     if (pathname.endsWith('/wiki/morphology.md')) {
       return new Response('# Morphology\nPrefixes, suffixes, and base words.');
@@ -160,11 +163,35 @@ test('Azure knowledge retrieval caches the canonical wiki and selects relevant c
   const first = await source.contextFor(input, 1);
   const second = await source.contextFor(input, 1);
 
-  assert.match(first, /SOURCE 1/);
+  assert.match(first, /RESOURCE CANDIDATE 1/);
   assert.match(first, /# Phonics/);
   assert.doesNotMatch(first, /wiki\//, 'private blob paths must not enter Gemini context');
   assert.equal(second, first);
   assert.equal(requests.length, 3, 'manifest and documents should be fetched only once');
+});
+
+test('knowledge ranking exposes stable document identities for evaluation', () => {
+  const documents = [
+    {
+      blobPath: 'wiki/morphology.md',
+      content: '# Morphology\nPrefixes and suffixes.',
+      searchText: 'wiki morphology prefixes and suffixes',
+    },
+    {
+      blobPath: 'wiki/phonics.md',
+      content: '# Phonics\nLong vowel spelling practice.',
+      searchText: 'wiki phonics long vowel spelling practice',
+    },
+  ];
+
+  const ranked = rankKnowledgeDocuments(
+    documents,
+    { errors: [{ category: 'unsure', written: 'bote', intended: 'boat', note: 'long vowel' }] },
+    3
+  );
+
+  assert.equal(ranked[0].blobPath, 'wiki/phonics.md');
+  assert.ok(ranked[0].score > 0);
 });
 
 test('Azure reads apply a timeout signal and reject oversized blobs', async () => {

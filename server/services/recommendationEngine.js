@@ -195,6 +195,189 @@ function retrievalTerms(input) {
 }
 
 // Lazily loads the canonical Azure wiki once, then serves ranked context from memory.
+
+function numberFromPattern(text, pattern) {
+  const match = text.match(pattern);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+function cleanPathText(value) {
+  return String(value)
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z])([0-9])/gi, '$1 $2')
+    .replace(/([0-9])([a-z])/gi, '$1 $2');
+}
+
+export function inferMetadataFromSourcePath(sourcePath) {
+  const segments = String(sourcePath)
+    .split(/[\\/]+/)
+    .map((segment) => cleanPathText(segment).toLowerCase());
+  const filename = segments.at(-1) ?? '';
+  const folders = segments.slice(0, -1).join(' ');
+  return mergeMetadata(parsePathSegment(folders), parsePathSegment(filename));
+}
+
+function parsePathSegment(text) {
+  return {
+    programme: text.includes('ell mlp') ? 'ELL-MLP' : text.includes('slp') ? 'SLP' : null,
+    band: text.match(/\bband\s*([abc])\b/)?.[1]?.toUpperCase() ?? null,
+    level: /\b(sec|secondary)\b/.test(text)
+      ? 'secondary'
+      : /\b(pri|primary|p\s*[0-9]{1,2})\b/.test(text)
+        ? 'primary'
+        : null,
+    year: numberFromPattern(text, /\b(?:year|y)\s*([0-9]{1,2})\b/),
+    term: numberFromPattern(text, /\b(?:term|t)\s*([1-4])\b/),
+    week: numberFromPattern(text, /\b(?:week|wk|w)\s*([0-9]{1,2})\b/),
+  };
+}
+
+function mergeMetadata(...items) {
+  return items.reduce(
+    (merged, item) => ({
+      programme: item.programme ?? merged.programme,
+      band: item.band ?? merged.band,
+      level: item.level ?? merged.level,
+      year: item.year ?? merged.year,
+      term: item.term ?? merged.term,
+      week: item.week ?? merged.week,
+    }),
+    { programme: null, band: null, level: null, year: null, term: null, week: null }
+  );
+}
+
+function coalesce(...values) {
+  return values.find((value) => value !== null && value !== undefined && value !== '') ?? null;
+}
+
+function fallbackDocumentType(blobPath, content) {
+  if (String(blobPath).includes('/resources/')) return 'resource';
+  return scalarFrontmatter(content, 'category') === 'resource' ? 'resource' : 'teacher_knowledge';
+}
+
+function frontmatterBlock(content) {
+  return String(content).match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
+}
+
+function arrayFrontmatter(content, key) {
+  const block = frontmatterBlock(content);
+  const match = block.match(new RegExp(`^${key}:\\s*\\[(.*?)\\]`, 'm'));
+  if (match && match[1]) {
+    return match[1].split(',')
+      .map(s => s.trim().replace(/^["'](.*)["']$/, '$1').trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function scalarFrontmatter(content, key) {
+  const match = frontmatterBlock(content).match(
+    new RegExp(`^${key}:\\s*(?:"([^"]*)"|'([^']*)'|([^\n#]*))`, 'm')
+  );
+  const value = match?.[1] ?? match?.[2] ?? match?.[3];
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed && trimmed !== 'null' ? trimmed : null;
+}
+
+function integerFrontmatter(content, key) {
+  const value = scalarFrontmatter(content, key);
+  if (value == null) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function parseKnowledgeDocumentMetadata(document) {
+  const content = document.content ?? '';
+  const source = scalarFrontmatter(content, 'source_file') ?? document.blobPath ?? '';
+  const inferred = inferMetadataFromSourcePath(source);
+  return {
+    ...document,
+    metadata: {
+      resourceId: scalarFrontmatter(content, 'resource_id'),
+      title: scalarFrontmatter(content, 'title'),
+      summary: scalarFrontmatter(content, 'summary'),
+      targetSkills: arrayFrontmatter(content, 'target_skills'),
+      addressesErrorTypes: arrayFrontmatter(content, 'addresses_error_types'),
+      documentType:
+        scalarFrontmatter(content, 'documentType') ??
+        fallbackDocumentType(document.blobPath, content),
+      programme: coalesce(scalarFrontmatter(content, 'programme'), inferred.programme),
+      band: coalesce(scalarFrontmatter(content, 'band'), inferred.band),
+      level: coalesce(scalarFrontmatter(content, 'level'), inferred.level),
+      year: coalesce(integerFrontmatter(content, 'year'), inferred.year),
+      term: coalesce(integerFrontmatter(content, 'term'), inferred.term),
+      week: coalesce(integerFrontmatter(content, 'week'), inferred.week),
+      resourceType: scalarFrontmatter(content, 'resource_type'),
+    },
+  };
+}
+
+export function filterCandidateResources(documents, input, limit = 15) {
+  return documents
+    .map(parseKnowledgeDocumentMetadata)
+    .filter((document) => document.metadata.documentType === 'resource')
+    .filter((document) => {
+      const metadata = document.metadata;
+      if (input.programme && metadata.programme && metadata.programme !== input.programme) return false;
+      if (input.level && metadata.level && metadata.level !== input.level) return false;
+      return true;
+    })
+    .map((document) => {
+      const metadata = document.metadata;
+      let compatibility = 0;
+      if (input.programme && metadata.programme === input.programme) compatibility += 10;
+      if (input.band && metadata.band === input.band) compatibility += 10;
+      if (input.level && metadata.level === input.level) compatibility += 10;
+      if (input.programmeYear && metadata.year === input.programmeYear) compatibility += 10;
+      if (input.term && metadata.term === input.term) compatibility += 10;
+      
+      if (input.week && metadata.week) {
+        const distance = Math.abs(metadata.week - input.week);
+        if (distance === 0) compatibility += 5;
+        else if (distance <= 2) compatibility += 3;
+        else if (distance <= 4) compatibility += 1;
+      }
+      return { ...document, compatibility };
+    })
+    .sort((a, b) => b.compatibility - a.compatibility || a.blobPath.localeCompare(b.blobPath))
+    .slice(0, limit);
+}
+
+export function rankKnowledgeDocuments(documents, input, options = 12) {
+  const config = typeof options === 'number' ? { limit: options } : options;
+  const limit = config.limit ?? 12;
+  const terms = retrievalTerms(input);
+  return documents
+    .map(parseKnowledgeDocumentMetadata)
+    .filter(
+      (document) => !config.documentType || document.metadata.documentType === config.documentType
+    )
+    .map((document) => {
+      return {
+        ...document,
+        compatibility: 0,
+        score: terms.reduce(
+          (score, term) =>
+            score +
+            ((
+              document.searchText ?? normalise(`${document.blobPath} ${document.content}`)
+            ).includes(term)
+              ? term.split(' ').length
+              : 0),
+          0
+        ),
+      };
+    })
+    .filter((document) => document.score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.blobPath.localeCompare(right.blobPath)
+    )
+    .slice(0, Math.max(1, limit));
+}
+
 export class AzureKnowledgeSource {
   constructor(options = {}) {
     this.config = {
@@ -371,7 +554,7 @@ export class AzureKnowledgeSource {
         ...document,
         score: terms.reduce(
           (score, term) =>
-            score + (document.searchText.includes(term) ? term.split(' ').length : 0),
+            score + (((document.searchText || "").includes(term)) ? term.split(' ').length : 0),
           0
         ),
       }))
@@ -836,7 +1019,7 @@ export class RecommendationEngine {
           (category) =>
             !ERROR_CATEGORIES.includes(category) ||
             !observedCategories.has(category) ||
-            !approved.targetCategories.includes(category)
+            !(approved.targetCategories && approved.targetCategories.includes(category))
         )
       ) {
         throw invalidModelOutput(

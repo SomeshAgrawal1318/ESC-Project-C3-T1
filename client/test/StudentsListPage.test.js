@@ -87,12 +87,37 @@ test('Add student form posts trimmed fields and prepends the new student to the 
   fireEvent.change(form.getByPlaceholderText('e.g. Primary 4'), {
     target: { value: '  Primary 2  ' },
   });
+  fireEvent.change(form.getByPlaceholderText('e.g. SLP'), {
+    target: { value: ' SLP ' },
+  });
+  fireEvent.change(form.getByPlaceholderText('A, B, or C'), {
+    target: { value: ' b ' },
+  });
+  fireEvent.change(form.getByLabelText('Programme year'), {
+    target: { value: '1' },
+  });
+  fireEvent.change(form.getByLabelText('Term'), {
+    target: { value: '1' },
+  });
+  fireEvent.change(form.getByPlaceholderText('e.g. 4'), {
+    target: { value: '4' },
+  });
   fireEvent.click(form.getByRole('button', { name: 'Add student' }));
 
   await waitFor(() => screen.getByText('New Kid'));
-  assert.deepEqual(createStudentCalls.at(-1), { name: 'New Kid', currentGrade: 'Primary 2' });
+  assert.deepEqual(createStudentCalls.at(-1), {
+    name: 'New Kid',
+    currentGrade: 'Primary 2',
+    programme: 'SLP',
+    band: 'B',
+    programmeYear: 1,
+    term: 1,
+    week: 4,
+  });
 
   // Prepended, not appended — the new student is the first card in the grid.
-  const names = screen.getAllByText(/./, { selector: '.student-card__name' }).map((n) => n.textContent);
+  const names = screen
+    .getAllByText(/./, { selector: '.student-card__name' })
+    .map((n) => n.textContent);
   assert.equal(names[0], 'New Kid');
 });
