@@ -61,7 +61,7 @@ export async function invokeGemini({
           responseMimeType: "application/json",
         },
       }),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(540000),
     },
   );
   const body = await checkedJson(response);
@@ -88,6 +88,7 @@ export async function invokeOpenRouter({
       body: JSON.stringify({
         model,
         temperature: 0,
+        max_tokens: 4096,
         messages: [
           {
             role: "user",
@@ -129,26 +130,34 @@ export async function invokeCloudflare({
   }
   const apiToken = requireEnv("CLOUDFLARE_API_TOKEN", env);
   const accountId = requireEnv("CLOUDFLARE_ACCOUNT_ID", env);
+  const imageUrl = `data:${images[0].mimeType};base64,${images[0].data.toString("base64")}`;
   const response = await fetchImpl(
-    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/v1/chat/completions`,
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`,
     {
       method: "POST",
       headers: {
-        authorization: `Bearer ${apiToken}`,
+        authorization: "Bearer " + apiToken,
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        image: Array.from(images[0].data),
         max_tokens: 4096,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
         temperature: 0,
       }),
       signal: AbortSignal.timeout(120000),
     },
   );
   const body = await checkedJson(response);
-  const content = body?.choices?.[0]?.message?.content;
+  const content =
+    body?.result?.response || body?.choices?.[0]?.message?.content;
   if (content && typeof content === "object") return content;
   return parseModelJson(content);
 }

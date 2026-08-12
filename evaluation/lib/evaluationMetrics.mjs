@@ -14,12 +14,100 @@ export async function jsonFiles(directory) {
   }
 }
 
+function normaliseText(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase();
+}
+
+function surfaceText(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .trim();
+}
+
 function errorKey(error) {
-  return `${String(error?.written ?? "")
-    .trim()
-    .toLowerCase()}::${String(error?.intended ?? "")
-    .trim()
-    .toLowerCase()}`;
+  return `${normaliseText(error?.written)}::${normaliseText(error?.intended)}`;
+}
+
+function words(value) {
+  return normaliseText(value).match(/[\p{L}\p{N}']+/gu) ?? [];
+}
+
+function containsWords(container, candidate) {
+  if (candidate.length === 0 || candidate.length > container.length)
+    return false;
+  return container.some((_, index) =>
+    candidate.every((word, offset) => container[index + offset] === word),
+  );
+}
+
+function sameOrNestedPhrase(left, right) {
+  const leftWords = words(left);
+  const rightWords = words(right);
+  return (
+    containsWords(leftWords, rightWords) || containsWords(rightWords, leftWords)
+  );
+}
+
+function proposesCorrection(error) {
+  const written = surfaceText(error?.written);
+  const intended = surfaceText(error?.intended);
+  return written.length > 0 && intended.length > 0 && written !== intended;
+}
+
+function identifiesOverlappingError(actual, predicted) {
+  if (!sameOrNestedPhrase(actual.written, predicted.written)) return false;
+  if (normaliseText(actual.written) === normaliseText(predicted.written))
+    return true;
+
+  if (
+    new Set(["capitalisation", "punctuation"]).has(predicted.category) &&
+    surfaceText(predicted.written) !== surfaceText(predicted.intended)
+  ) {
+    return true;
+  }
+
+  const predictedWrittenWords = new Set(words(predicted.written));
+  const predictedIntendedWords = new Set(words(predicted.intended));
+  const overlappingActualWords = words(actual.written).filter((word) =>
+    predictedWrittenWords.has(word),
+  );
+  return overlappingActualWords.some(
+    (word) => !predictedIntendedWords.has(word),
+  );
+}
+
+export function correctionMatchScore(
+  actual,
+  predicted,
+  matchingMode = "strict",
+) {
+  const exact = errorKey(actual) === errorKey(predicted);
+  if (matchingMode === "strict") return exact ? 2 : 0;
+  if (
+    !new Set(["lenient-category-aware", "recognition-partial-credit"]).has(
+      matchingMode,
+    )
+  ) {
+    throw new Error(`Unsupported matching mode: ${matchingMode}`);
+  }
+
+  const sameCategory = actual.category === predicted.category;
+  const equivalentSpans =
+    sameOrNestedPhrase(actual.written, predicted.written) &&
+    sameOrNestedPhrase(actual.intended, predicted.intended);
+
+  if (matchingMode === "lenient-category-aware") {
+    if (!sameCategory) return 0;
+    if (exact) return 2;
+    return equivalentSpans ? 1 : 0;
+  }
+
+  if (sameCategory && (exact || equivalentSpans)) return 2;
+  if (!proposesCorrection(predicted)) return 0;
+  return identifiesOverlappingError(actual, predicted) ? 1 : 0;
 }
 
 function ratio(numerator, denominator) {
@@ -34,6 +122,7 @@ export function guardrailProfileFor(prediction) {
 export async function evaluatePredictionDirectory({
   truthDirectory,
   predictionsDirectory,
+  matchingMode = "strict",
 }) {
   const truthFiles = await jsonFiles(truthDirectory);
   const metrics = {
@@ -45,6 +134,8 @@ export async function evaluatePredictionDirectory({
     truePositives: 0,
     falsePositives: 0,
     falseNegatives: 0,
+    fullMatches: 0,
+    partialMatches: 0,
     categoryMatches: 0,
     latencyTotalMs: 0,
     latencyCount: 0,
@@ -53,6 +144,7 @@ export async function evaluatePredictionDirectory({
     actualByCategory: {},
     predictedByCategory: {},
     correctByCategory: {},
+    perSample: {},
   };
 
   for (const truthFile of truthFiles) {
@@ -62,6 +154,17 @@ export async function evaluatePredictionDirectory({
       metrics.actualByCategory[error.category] =
         (metrics.actualByCategory[error.category] || 0) + 1;
     }
+    const sampleMetrics = {
+      groundTruthErrors: truth.errors.length,
+      predictedErrors: 0,
+      truePositives: 0,
+      falsePositives: 0,
+      falseNegatives: 0,
+      fullMatches: 0,
+      partialMatches: 0,
+      latencyMs: null,
+    };
+    metrics.perSample[truth.sampleId] = sampleMetrics;
     const predictionFile = path.join(
       predictionsDirectory,
       `${truth.sampleId}.json`,
@@ -74,6 +177,7 @@ export async function evaluatePredictionDirectory({
       if (error.code === "ENOENT") {
         metrics.missingPredictionFiles += 1;
         metrics.falseNegatives += truth.errors.length;
+        sampleMetrics.falseNegatives += truth.errors.length;
         continue;
       }
       throw error;
@@ -85,34 +189,58 @@ export async function evaluatePredictionDirectory({
       metrics.latencyTotalMs += prediction.latencyMs;
       metrics.latencyCount += 1;
       metrics.latencies.push(prediction.latencyMs);
+      sampleMetrics.latencyMs = prediction.latencyMs;
     }
 
     const remaining = [...truth.errors];
+    sampleMetrics.predictedErrors = (prediction.errors || []).length;
     for (const predicted of prediction.errors || []) {
       metrics.predictedByCategory[predicted.category] =
         (metrics.predictedByCategory[predicted.category] || 0) + 1;
-      const matchIndex = remaining.findIndex(
-        (actual) => errorKey(actual) === errorKey(predicted),
-      );
+      let matchIndex = -1;
+      let matchScore = 0;
+      remaining.forEach((actual, index) => {
+        const score = correctionMatchScore(actual, predicted, matchingMode);
+        if (score > matchScore) {
+          matchIndex = index;
+          matchScore = score;
+        }
+      });
       if (matchIndex < 0) {
         metrics.falsePositives += 1;
+        sampleMetrics.falsePositives += 1;
         continue;
       }
 
       const [actual] = remaining.splice(matchIndex, 1);
-      metrics.truePositives += 1;
+      const credit =
+        matchingMode === "recognition-partial-credit" ? matchScore / 2 : 1;
+      metrics.truePositives += credit;
+      sampleMetrics.truePositives += credit;
+      metrics.falsePositives += 1 - credit;
+      sampleMetrics.falsePositives += 1 - credit;
+      metrics.falseNegatives += 1 - credit;
+      sampleMetrics.falseNegatives += 1 - credit;
+      if (credit === 1) {
+        metrics.fullMatches += 1;
+        sampleMetrics.fullMatches += 1;
+      } else {
+        metrics.partialMatches += 1;
+        sampleMetrics.partialMatches += 1;
+      }
       const actualCategory = actual.category;
       const predictedCategory = predicted.category;
       metrics.confusion[actualCategory] ||= {};
       metrics.confusion[actualCategory][predictedCategory] =
-        (metrics.confusion[actualCategory][predictedCategory] || 0) + 1;
+        (metrics.confusion[actualCategory][predictedCategory] || 0) + credit;
       if (actualCategory === predictedCategory) {
-        metrics.categoryMatches += 1;
+        metrics.categoryMatches += credit;
         metrics.correctByCategory[actualCategory] =
-          (metrics.correctByCategory[actualCategory] || 0) + 1;
+          (metrics.correctByCategory[actualCategory] || 0) + credit;
       }
     }
     metrics.falseNegatives += remaining.length;
+    sampleMetrics.falseNegatives += remaining.length;
   }
 
   metrics.precision = ratio(
@@ -143,5 +271,20 @@ export async function evaluatePredictionDirectory({
       : sortedLatencies[
           Math.max(0, Math.ceil(sortedLatencies.length * 0.95) - 1)
         ];
+  for (const sample of Object.values(metrics.perSample)) {
+    sample.precision = ratio(
+      sample.truePositives,
+      sample.truePositives + sample.falsePositives,
+    );
+    sample.recall = ratio(
+      sample.truePositives,
+      sample.truePositives + sample.falseNegatives,
+    );
+    sample.f1 =
+      sample.precision + sample.recall === 0
+        ? 0
+        : (2 * sample.precision * sample.recall) /
+          (sample.precision + sample.recall);
+  }
   return metrics;
 }

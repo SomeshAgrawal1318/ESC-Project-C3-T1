@@ -6,4 +6,5 @@ dist/
 server/uploads/
 server/samples/
 samples/
+evaluation/debug-private/
 *.log

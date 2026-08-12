@@ -80,6 +80,19 @@ reads both predictions and human-vetted truth.
 node evaluation/scripts/compare-models.mjs
 ```
 
+For a lenient, category-aware comparison and breakdown by handwriting, text length, and sample
+format, pass the completed run IDs to the stratified scorer:
+
+```bash
+node evaluation/scripts/analyse-sample-types.mjs \
+  <gemini-run-id> <qwen-run-id> <cloudflare-run-id>
+```
+
+This matcher still requires the ground-truth category. It accepts exact correction pairs and
+whole-word nested spans, such as `run` → `runs` matching `He run` → `He runs`. It does not use
+unbounded fuzzy spelling similarity. The generated report is
+`evaluation/reports/lenient-sample-type-analysis.md`.
+
 These scripts are evaluation utilities, not deterministic CI tests. They report meaningful metrics
 only when `ground-truth-vetted/` contains human-reviewed labels and the selected predictions
 directory contains matching JSON files.
