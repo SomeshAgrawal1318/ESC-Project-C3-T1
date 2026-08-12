@@ -4,7 +4,9 @@
 // Every function here maps to a route in server/routes/, so the pages
 // never touch fetch() or URLs themselves.
 //
-//   VITE_API_URL   base origin for the API (default "/api")
+//   VITE_API_URL          base origin for the API (default "/api")
+//   VITE_API_TIMEOUT_MS   fail API calls instead of leaving screens in skeleton state
+//   VITE_DEBUG_API=true   include endpoint/status details in UI errors and console logs
 //
 // Students AND samples routes are live now — the old mockData.js is gone.
 // ------------------------------------------------------------------
@@ -12,18 +14,59 @@
 import { getToken, clearSession } from './session.js';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
+const DEBUG_API = import.meta.env.VITE_DEBUG_API === 'true';
+const API_TIMEOUT_MS = Number.parseInt(import.meta.env.VITE_API_TIMEOUT_MS ?? '12000', 10);
+
+function apiDebug(message, details = {}) {
+  if (DEBUG_API) console.info(`[api] ${message}`, details);
+}
+
+function debugMessage(message, details) {
+  if (!DEBUG_API) return message;
+  const extra = Object.entries(details)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${key}=${value}`)
+    .join(', ');
+  return extra ? `${message} (${extra})` : message;
+}
 
 async function request(path, { method = 'GET', body } = {}) {
   const token = getToken();
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: {
-      Accept: 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(body !== undefined && { 'Content-Type': 'application/json' }),
-    },
-    ...(body !== undefined && { body: JSON.stringify(body) }),
-  });
+  const url = `${BASE}${path}`;
+  const controller = new AbortController();
+  const timeout =
+    Number.isFinite(API_TIMEOUT_MS) && API_TIMEOUT_MS > 0
+      ? window.setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+      : null;
+  let res;
+  apiDebug('request-start', { method, url });
+  try {
+    res = await fetch(url, {
+      method,
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+      },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    });
+  } catch (error) {
+    const timedOut = error.name === 'AbortError';
+    apiDebug('request-failed', { method, url, reason: timedOut ? 'timeout' : error.message });
+    throw new Error(
+      debugMessage(timedOut ? 'API request timed out' : 'API request failed', {
+        method,
+        url,
+        timeoutMs: timedOut ? API_TIMEOUT_MS : undefined,
+        reason: timedOut ? undefined : error.message,
+      }),
+      { cause: error }
+    );
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
+  }
+  apiDebug('response', { method, url, status: res.status });
   if (!res.ok) {
     let payload;
     try {
@@ -45,7 +88,9 @@ async function request(path, { method = 'GET', body } = {}) {
       clearSession();
       window.location.assign('/login');
     }
-    const error = new Error(detail || `Request failed (${res.status})`);
+    const error = new Error(
+      debugMessage(detail || `Request failed (${res.status})`, { method, url, status: res.status })
+    );
     error.status = res.status;
     throw error;
   }

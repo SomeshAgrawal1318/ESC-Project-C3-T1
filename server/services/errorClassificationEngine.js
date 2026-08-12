@@ -32,6 +32,7 @@ import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { ERROR_CATEGORIES, Sample } from "../models/sample.js";
 import { buildPrompt } from "./errorClassificationPrompt.js";
+import { preprocessImageForAnalysis } from "./imagePreprocessor.js";
 
 // Confidence threshold that drives the "uncertain - AI needs your judgement"
 // state. 0.6 is picked so a roughly coin-flip guess (0.5) always gets a human
@@ -343,8 +344,9 @@ async function runRealAnalysis(sample, config) {
     } catch {
       throw new Error(`Could not read the uploaded image at "${page.imagePath}"`);
     }
+    const processedImage = await preprocessImageForAnalysis(imageBytes);
     imageParts.push({
-      inlineData: { mimeType: mimeTypeFor(page.imagePath), data: imageBytes.toString("base64") },
+      inlineData: { mimeType: "image/png", data: processedImage.toString("base64") },
     });
   }
 

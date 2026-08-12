@@ -17,8 +17,14 @@ export function saveSession(account) {
 export function getSession() {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : null;
+    const session = raw ? JSON.parse(raw) : null;
+    if (session && !session.token) {
+      clearSession();
+      return null;
+    }
+    return session;
   } catch {
+    clearSession();
     return null;
   }
 }

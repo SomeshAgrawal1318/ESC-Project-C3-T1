@@ -10,8 +10,10 @@ dotenv.config();
 // it printed with mode "mock" and azureConfigured false even with a
 // correct .env, because RECOMMENDATION_USE_MOCKS and the Azure vars were
 // all undefined at the moment that singleton's constructor ran.
-const { default: connectDB } = await import('./config/dbConnection.js');
-const { default: app } = await import('./app.js');
+const [{ default: connectDB }, { default: app }] = await Promise.all([
+  import('./config/dbConnection.js'),
+  import('./app.js'),
+]);
 
 const port = process.env.PORT || 5000;
 

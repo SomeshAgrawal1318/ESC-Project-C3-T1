@@ -23,7 +23,11 @@ export default function RecommendationsPage() {
   // ANALYSED/REVIEWED samples in one request.
   useEffect(() => {
     let live = true;
-    Promise.all([getStudent(studentId), getLatestRecommendations(studentId), getStudentTrends(studentId)])
+    Promise.all([
+      getStudent(studentId),
+      getLatestRecommendations(studentId),
+      getStudentTrends(studentId),
+    ])
       .then(([student, report, trends]) => {
         if (!student) throw new Error('Student not found.');
         if (live) setState({ status: 'ready', student, report, trends });
@@ -156,7 +160,9 @@ export default function RecommendationsPage() {
             // 5c(a): nothing to reason over at all yet.
             <>
               <h2>No error report yet</h2>
-              <p>Recommendations are based on analysed writing samples — upload one to get started.</p>
+              <p>
+                Recommendations are based on analysed writing samples — upload one to get started.
+              </p>
               <Button variant="primary" icon="upload" to={`/students/${studentId}/upload`}>
                 Upload writing sample
               </Button>
@@ -203,14 +209,21 @@ export default function RecommendationsPage() {
                       <span className="eyebrow">Recommended worksheet</span>
                       <h4>{worksheet.title}</h4>
                       <p>{worksheet.rationale}</p>
-                      {worksheet.pdfPages && (
-                        <small>Suggested source pages: {worksheet.pdfPages}</small>
+                      {Number.isInteger(worksheet.pageStart) &&
+                      Number.isInteger(worksheet.pageEnd) ? (
+                        <small>
+                          Suggested pages: {worksheet.pageStart}–{worksheet.pageEnd}
+                        </small>
+                      ) : (
+                        worksheet.pdfPages && (
+                          <small>Suggested source pages: {worksheet.pdfPages}</small>
+                        )
                       )}
                     </div>
                     {worksheet.available ? (
                       <a
                         className="btn btn--secondary"
-                        href={worksheetFileUrl(worksheet.worksheetId)}
+                        href={`${worksheetFileUrl(worksheet.worksheetId)}${worksheet.pageStart ? `#page=${worksheet.pageStart}` : ''}`}
                         target="_blank"
                         rel="noreferrer"
                       >
