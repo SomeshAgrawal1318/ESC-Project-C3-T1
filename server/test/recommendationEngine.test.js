@@ -323,12 +323,12 @@ test('recommendation prompt combines approved mappings with retrieved Azure cont
   assert.equal(result[0].pdfPages, '12-14');
 });
 
-test('worksheet selection rejects categories unsupported by observed evidence', async () => {
+test('worksheet selection sanitizes Gemini categories to approved observed evidence', async () => {
   const engine = new RecommendationEngine({
     approvedWorksheets: TEST_WORKSHEETS,
     approvedSections: TEST_SECTIONS,
     useMocks: false,
-    apiKey: 'unit-test-value',
+    apiKey: 'unit-...ue',
   });
   engine.callGemini = async () => ({
     worksheets: [
@@ -342,13 +342,13 @@ test('worksheet selection rejects categories unsupported by observed evidence', 
     ],
   });
 
-  await assert.rejects(
-    engine.findWorksheets({
-      level: 'primary',
-      errors: [{ id: 'error-1', category: 'phonological', written: 'hop' }],
-    }),
-    (error) => error.code === 'RECOMMENDATION_OUTPUT_INVALID'
-  );
+  const worksheets = await engine.findWorksheets({
+    level: 'primary',
+    errors: [{ id: 'error-1', category: 'phonological', written: 'hop' }],
+  });
+
+  assert.equal(worksheets.length, 1);
+  assert.deepEqual(worksheets[0].targetCategories, ['phonological']);
 });
 
 test('worksheet selection resolves private paths from the approved catalogue, not Gemini', async () => {

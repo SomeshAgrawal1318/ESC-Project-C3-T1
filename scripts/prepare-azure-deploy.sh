@@ -7,7 +7,7 @@ public_dir="$repo_root/server/public"
 deployment_zip="$repo_root/deployment.zip"
 
 npm ci --prefix "$client_dir"
-VITE_API_URL=/api npm run build --prefix "$client_dir"
+VITE_API_URL=/api VITE_API_TIMEOUT_MS=60000 npm run build --prefix "$client_dir"
 
 rm -rf "$public_dir"
 mkdir -p "$public_dir"

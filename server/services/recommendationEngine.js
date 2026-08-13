@@ -263,8 +263,14 @@ function arrayFrontmatter(content, key) {
   const block = frontmatterBlock(content);
   const match = block.match(new RegExp(`^${key}:\\s*\\[(.*?)\\]`, 'm'));
   if (match && match[1]) {
-    return match[1].split(',')
-      .map(s => s.trim().replace(/^["'](.*)["']$/, '$1').trim())
+    return match[1]
+      .split(',')
+      .map((s) =>
+        s
+          .trim()
+          .replace(/^["'](.*)["']$/, '$1')
+          .trim()
+      )
       .filter(Boolean);
   }
   return [];
@@ -324,7 +330,8 @@ export function filterCandidateResources(documents, input, limit = 15) {
     .filter((document) => document.metadata.documentType === 'resource')
     .filter((document) => {
       const metadata = document.metadata;
-      if (input.programme && metadata.programme && metadata.programme !== input.programme) return false;
+      if (input.programme && metadata.programme && metadata.programme !== input.programme)
+        return false;
       if (input.level && metadata.level && metadata.level !== input.level) return false;
       return true;
     })
@@ -360,7 +367,8 @@ export function rankKnowledgeDocuments(documents, input, options = 12) {
     )
     .filter((document) => {
       const metadata = document.metadata;
-      if (input.programme && metadata.programme && metadata.programme !== input.programme) return false;
+      if (input.programme && metadata.programme && metadata.programme !== input.programme)
+        return false;
       if (input.level && metadata.level && metadata.level !== input.level) return false;
       return true;
     })
@@ -587,9 +595,7 @@ export class AzureKnowledgeSource {
       documents: resources.length + teacherKnowledge.length,
     });
     return [
-      ...resources.map(
-        (document, index) => `RESOURCE CANDIDATE ${index + 1}\n${document.content}`
-      ),
+      ...resources.map((document, index) => `RESOURCE CANDIDATE ${index + 1}\n${document.content}`),
       ...teacherKnowledge.map(
         (document, index) => `TEACHER KNOWLEDGE ${index + 1}\n${document.content}`
       ),
@@ -1036,16 +1042,23 @@ export class RecommendationEngine {
           'Gemini returned a worksheet or page range outside the approved section catalogue.'
         );
       }
-      if (
-        !Array.isArray(worksheet.targetCategories) ||
-        worksheet.targetCategories.length === 0 ||
-        worksheet.targetCategories.some(
-          (category) =>
-            !ERROR_CATEGORIES.includes(category) ||
-            !observedCategories.has(category) ||
-            !(approved.targetCategories && approved.targetCategories.includes(category))
-        )
-      ) {
+      const approvedObservedCategories = (approved.targetCategories ?? []).filter(
+        (category) => ERROR_CATEGORIES.includes(category) && observedCategories.has(category)
+      );
+      const targetCategories = [
+        ...new Set(
+          Array.isArray(worksheet.targetCategories)
+            ? worksheet.targetCategories.filter(
+                (category) =>
+                  ERROR_CATEGORIES.includes(category) &&
+                  observedCategories.has(category) &&
+                  approvedObservedCategories.includes(category)
+              )
+            : []
+        ),
+      ];
+      if (targetCategories.length === 0) targetCategories.push(...approvedObservedCategories);
+      if (targetCategories.length === 0) {
         throw invalidModelOutput(
           'Gemini returned worksheet categories unsupported by the evidence.'
         );
@@ -1057,7 +1070,7 @@ export class RecommendationEngine {
         pageStart: approved.pageStart,
         pageEnd: approved.pageEnd,
         pdfPages: approved.pdfPages,
-        targetCategories: [...new Set(worksheet.targetCategories)],
+        targetCategories,
         rationale: generatedText(worksheet.rationale, 'worksheet rationale', 600),
         available: approved.available !== false,
       };
