@@ -1033,7 +1033,35 @@ export class RecommendationEngine {
       throw invalidModelOutput('Gemini returned an invalid worksheet list.');
     }
     const observedCategories = new Set(input.errors.map((error) => error.category));
-    const worksheets = result.worksheets.slice(0, safeLimit).map((worksheet) => {
+    const toClientWorksheet = (approved, targetCategories, rationale) => ({
+      worksheetId: approved.worksheetId,
+      title: approved.title,
+      pdfPath: approved.pdfPath,
+      pageStart: approved.pageStart,
+      pageEnd: approved.pageEnd,
+      pdfPages: approved.pdfPages,
+      targetCategories,
+      rationale,
+      available: approved.available !== false,
+    });
+    const fallbackWorksheets = () =>
+      parseWorksheetIndex(approvedKnowledge)
+        .map((approved) => ({
+          approved,
+          targetCategories: (approved.targetCategories ?? []).filter(
+            (category) => ERROR_CATEGORIES.includes(category) && observedCategories.has(category)
+          ),
+        }))
+        .filter((item) => item.targetCategories.length > 0)
+        .slice(0, safeLimit)
+        .map(({ approved, targetCategories }) =>
+          toClientWorksheet(
+            approved,
+            targetCategories,
+            approved.description || 'Matches an observed error pattern.'
+          )
+        );
+    let worksheets = result.worksheets.slice(0, safeLimit).flatMap((worksheet) => {
       const approved = approvedByRange.get(
         `${worksheet.worksheetId}:${worksheet.pageStart}:${worksheet.pageEnd}`
       );
@@ -1058,23 +1086,19 @@ export class RecommendationEngine {
         ),
       ];
       if (targetCategories.length === 0) targetCategories.push(...approvedObservedCategories);
-      if (targetCategories.length === 0) {
-        throw invalidModelOutput(
-          'Gemini returned worksheet categories unsupported by the evidence.'
-        );
-      }
-      return {
-        worksheetId: approved.worksheetId,
-        title: approved.title,
-        pdfPath: approved.pdfPath,
-        pageStart: approved.pageStart,
-        pageEnd: approved.pageEnd,
-        pdfPages: approved.pdfPages,
-        targetCategories,
-        rationale: generatedText(worksheet.rationale, 'worksheet rationale', 600),
-        available: approved.available !== false,
-      };
+      if (targetCategories.length === 0) return [];
+      return [
+        toClientWorksheet(
+          approved,
+          targetCategories,
+          generatedText(worksheet.rationale, 'worksheet rationale', 600)
+        ),
+      ];
     });
+    if (worksheets.length === 0) worksheets = fallbackWorksheets();
+    if (worksheets.length === 0) {
+      throw invalidModelOutput('Gemini returned worksheet categories unsupported by the evidence.');
+    }
     logEvent(this.logger, 'worksheet-selection-complete', {
       mode: 'gemini',
       worksheets: worksheets.map((item) => item.worksheetId),

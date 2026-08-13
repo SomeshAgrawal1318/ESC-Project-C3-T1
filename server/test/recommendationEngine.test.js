@@ -351,6 +351,55 @@ test('worksheet selection sanitizes Gemini categories to approved observed evide
   assert.deepEqual(worksheets[0].targetCategories, ['phonological']);
 });
 
+test('worksheet selection falls back when Gemini chooses an approved section with no evidence overlap', async () => {
+  const engine = new RecommendationEngine({
+    approvedWorksheets: [
+      ...TEST_WORKSHEETS,
+      {
+        worksheetId: 'comma-practice',
+        title: 'Comma practice',
+        pdfPath: '_raw/punctuation.pdf',
+        errorPatterns: ['punctuation'],
+        description: 'Use for punctuation errors.',
+      },
+    ],
+    approvedSections: [
+      ...TEST_SECTIONS,
+      {
+        worksheetId: 'comma-practice',
+        pageStart: 2,
+        pageEnd: 4,
+        targetCategories: ['punctuation'],
+        skill: 'comma usage',
+        difficulty: 'primary',
+        description: 'Three focused pages of comma practice.',
+      },
+    ],
+    useMocks: false,
+    apiKey: 'unit-test-value',
+  });
+  engine.callGemini = async () => ({
+    worksheets: [
+      {
+        worksheetId: 'comma-practice',
+        pageStart: 2,
+        pageEnd: 4,
+        targetCategories: ['punctuation'],
+        rationale: 'Unsupported selection for the observed evidence.',
+      },
+    ],
+  });
+
+  const worksheets = await engine.findWorksheets({
+    level: 'primary',
+    errors: [{ id: 'error-1', category: 'phonological', written: 'hop' }],
+  });
+
+  assert.equal(worksheets.length, 1);
+  assert.equal(worksheets[0].worksheetId, 'long-vowel-practice');
+  assert.deepEqual(worksheets[0].targetCategories, ['phonological']);
+});
+
 test('worksheet selection resolves private paths from the approved catalogue, not Gemini', async () => {
   const engine = new RecommendationEngine({
     approvedWorksheets: TEST_WORKSHEETS,
