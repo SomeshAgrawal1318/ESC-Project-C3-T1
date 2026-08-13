@@ -188,6 +188,53 @@ describe("validateAnalysisResult", () => {
   });
 });
 
+test("Gemini response schema constrains confidence, coordinates, and page indexes", async () => {
+  let request;
+  const ai = {
+    models: {
+      async generateContent(value) {
+        request = value;
+        return {
+          text: JSON.stringify({
+            illegibleNote: "",
+            errors: [
+              {
+                written: "teh",
+                intended: "the",
+                category: "orthographic",
+                confidenceScore: 0.9,
+                locationOnScan: { page: 1, x: 0.1, y: 0.1, z: 0.1, w: 0.1 },
+              },
+            ],
+          }),
+        };
+      },
+    },
+  };
+
+  await callModelWithRetry(
+    ai,
+    [],
+    { modelName: "test-model", timeoutMs: 100, maxRetries: 0, retryBaseMs: 1 },
+    2
+  );
+
+  const errorSchema = request.config.responseSchema.properties.errors.items.properties;
+  assert.deepEqual(errorSchema.confidenceScore, { type: "number", minimum: 0, maximum: 1 });
+  assert.deepEqual(errorSchema.locationOnScan.properties.page, {
+    type: "integer",
+    minimum: 0,
+    maximum: 1,
+  });
+  for (const key of ["x", "y", "z", "w"]) {
+    assert.deepEqual(errorSchema.locationOnScan.properties[key], {
+      type: "number",
+      minimum: 0,
+      maximum: 1,
+    });
+  }
+});
+
 describe("confidence threshold", () => {
   test("defaults to CONFIDENCE_THRESHOLD_DEFAULT when unset", () => {
     delete process.env.ERROR_CONFIDENCE_THRESHOLD;

@@ -80,7 +80,7 @@ function readConfig() {
     // retired for new API keys (gemini-2.5-flash already 404s), and this
     // project needs to keep working past any one model's lifetime.
     modelName: process.env.GEMINI_MODEL_NAME || "gemini-flash-latest",
-    timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS) || 30000,
+    timeoutMs: Number(process.env.GEMINI_TIMEOUT_MS) || 90000,
     maxRetries: Number(process.env.GEMINI_MAX_RETRIES) || 2,
     retryBaseMs: Number(process.env.GEMINI_RETRY_BASE_MS) || 500,
   };
@@ -194,16 +194,16 @@ const RESPONSE_SCHEMA = {
           written: { type: "string" },
           intended: { type: "string" },
           category: { type: "string", enum: ERROR_CATEGORIES },
-          confidenceScore: { type: "number" },
+          confidenceScore: { type: "number", minimum: 0, maximum: 1 },
           note: { type: "string" },
           locationOnScan: {
             type: "object",
             properties: {
-              page: { type: "integer" },
-              x: { type: "number" },
-              y: { type: "number" },
-              z: { type: "number" },
-              w: { type: "number" },
+              page: { type: "integer", minimum: 0 },
+              x: { type: "number", minimum: 0, maximum: 1 },
+              y: { type: "number", minimum: 0, maximum: 1 },
+              z: { type: "number", minimum: 0, maximum: 1 },
+              w: { type: "number", minimum: 0, maximum: 1 },
             },
             required: ["page", "x", "y", "z", "w"],
           },
@@ -214,6 +214,12 @@ const RESPONSE_SCHEMA = {
   },
   required: ["illegibleNote", "errors"],
 };
+
+function responseSchemaForPageCount(pageCount) {
+  const schema = structuredClone(RESPONSE_SCHEMA);
+  schema.properties.errors.items.properties.locationOnScan.properties.page.maximum = Math.max(pageCount - 1, 0);
+  return schema;
+}
 
 function withTimeout(promise, ms) {
   let timer;
@@ -306,7 +312,7 @@ async function callModelWithRetry(ai, parts, config, pageCount) {
           contents: [{ role: "user", parts }],
           config: {
             responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
+            responseSchema: responseSchemaForPageCount(pageCount),
           },
         }),
         config.timeoutMs

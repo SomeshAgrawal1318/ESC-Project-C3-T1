@@ -18,7 +18,7 @@ import { getSample } from '../lib/api.js';
 import { statusFor } from '../lib/status.js';
 
 const POLL_INTERVAL_MS = 2000;
-const MAX_ATTEMPTS = 30; // ~1 minute of polling before giving up
+const MAX_ATTEMPTS = 90; // ~3 minutes: live vision analysis can legitimately take over a minute
 
 // status: 'polling' | 'complete' | 'failed' | 'timeout'
 // resetKey: bump it (e.g. a counter) to restart the attempt ceiling for the
