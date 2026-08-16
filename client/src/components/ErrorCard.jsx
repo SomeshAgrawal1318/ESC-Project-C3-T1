@@ -12,7 +12,7 @@
 //
 // `written` is printed exactly as the child wrote it and is never corrected,
 // spellchecked or paraphrased anywhere here. That is a product invariant
-// (CLAUDE.md, DESIGN.md §10), not a styling choice.
+// (AGENTS.md, DESIGN.md §10), not a styling choice.
 
 import { useState } from 'react';
 import Button from './Button.jsx';

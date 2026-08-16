@@ -57,7 +57,7 @@ async function toPageFiles(file) {
 // Serialising samples for the client
 // ------------------------------------------------------------------
 // A sample document holds filesystem paths (pages[].imagePath), and the
-// project rule is that raw paths NEVER leave the server (see CLAUDE.md).
+// project rule is that raw paths NEVER leave the server (see AGENTS.md).
 // So every route in this file answers with this shape instead of the raw
 // Mongoose document. The field names are the ones the client already uses
 // (client/src/lib/api.js).

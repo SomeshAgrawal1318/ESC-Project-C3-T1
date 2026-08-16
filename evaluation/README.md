@@ -11,11 +11,24 @@ evaluation/
   ground-truth-vetted/      # human-vetted JSON; counts as ground truth
   predictions/              # model outputs grouped by model/pipeline
   reports/                  # generated accuracy/speed summaries
+  retrieval/                # knowledge-retrieval pilot inputs/outputs (own README.md)
+  lib/                      # shared modules: evaluationMetrics, evaluationPrompt,
+                             # modelProviders, retrievalPilot
+  test/                     # modelEvaluation.test.mjs, retrievalPilot.test.mjs
   schemas/ground-truth.schema.json
   scripts/validate-ground-truth.mjs
   scripts/evaluate-error-detection.mjs
   scripts/run-model-evaluation.mjs
   scripts/compare-models.mjs
+  scripts/generate-model-predictions.mjs
+  scripts/analyse-sample-types.mjs
+  scripts/run-retrieval-pilot.mjs
+  scripts/run-contextual-retrieval-pilot.mjs
+  scripts/export-manual-gemini-pilot.mjs
+  scripts/score-manual-gemini-pilot.mjs
+  scripts/build-manual-gemini-prompts.mjs
+  scripts/import-historical-predictions.mjs
+  scripts/probe-cloudflare-direct-vision.mjs
 ```
 
 ## Ground-truth rule

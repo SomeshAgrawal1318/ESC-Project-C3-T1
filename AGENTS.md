@@ -28,9 +28,9 @@ This is not an npm workspace. Run commands from the package they belong to:
 - `lexipath_brand_assets_v2/`: approved logos and brand tokens.
 
 Reference artifacts at the root include `paths.txt`, the wireframes, API-route documentation,
-the class diagram, and work-allocation material. They describe the original design and can be
-stale. When documentation and running code disagree, confirm the intended behavior and update
-the relevant documentation with the implementation.
+and work-allocation material. They describe the original design and can be stale. When
+documentation and running code disagree, confirm the intended behavior and update the relevant
+documentation with the implementation.
 
 ## Working conventions
 
@@ -53,7 +53,11 @@ the relevant documentation with the implementation.
 
 ## Current product boundaries
 
-- Upload, analysis, and review are implemented end to end.
-- Authentication is not implemented; routes are currently public.
-- Recommendations are not implemented beyond a server stub and client placeholder.
-- The client trends page is still a placeholder, although the server has a trends endpoint.
+- Upload, analysis, review, trends, recommendations, and authentication are all implemented end
+  to end.
+- `requireAuth` (`server/middleware/requireAuth.js`) gates every feature route
+  (`/api/students`, `/api/samples`, `/api/worksheets`, `/api/recommendation`); only `/api/auth`
+  itself is mounted without it, since login has to be reachable before a session exists.
+- Known limitations are real gaps, not missing features: no per-teacher data scoping (any
+  signed-in account can read/modify every student), no rate limiting on login, and no
+  crash-recovery for an in-flight analysis job if the server restarts mid-run.

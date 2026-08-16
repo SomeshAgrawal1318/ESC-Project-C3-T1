@@ -137,7 +137,7 @@ password: Pass@123
 Two terminals:
 
 ```bash
-cd server && npm start     # nodemon server.js — restarts on file changes, http://localhost:5000
+cd server && npm run dev   # nodemon server.js — restarts on file changes, http://localhost:5000
 ```
 
 ```bash

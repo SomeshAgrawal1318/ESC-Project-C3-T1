@@ -19,9 +19,14 @@ server.js -> routes -> controllers -> services/models -> middleware/errorHandler
 
 ## Implemented route groups
 
+- `/api/auth`: login, forgot/reset password, change password, account. The only router mounted
+  without `requireAuth`, since login has to be reachable before a session exists.
 - `/api/students`: list, create, fetch one, list a student's samples, and fetch trends.
 - `/api/samples`: list, upload, fetch one, serve images, mark reviewed, and update errors.
-- `/api/recommendation`: placeholder only.
+- `/api/worksheets`: proxy a worksheet PDF from Azure.
+- `/api/recommendation`: placeholder only, not the real thing — actual recommendation generation
+  is under `/api/students/:studentId/recommendations` and `/api/samples/:sampleId/recommendations`
+  (`recommendationController.js`, `recommendationEngine.js`).
 
 Read the router and controller before changing a route. The root `paths.txt` is an older design
 document and differs from the implementation in status names and response envelopes.
@@ -47,9 +52,12 @@ For date-only trend query parameters:
 
 ## Environment and uploads
 
-`server/.env` is local and must not be read into output or committed. The server uses
-`MONGODB_URI`, `GEMINI_API_KEY`, and `PORT`, plus optional Gemini retry/model settings documented
-in `README.md`.
+`server/.env` is local and must not be read into output or committed. Beyond `MONGODB_URI`,
+`GEMINI_API_KEY`, and `PORT`, the server also reads `JWT_SECRET` (required — login throws
+without it), `JWT_EXPIRES_IN`, `CLIENT_URL`, `RESEND_API_KEY`/`EMAIL_FROM` (password-reset
+email), `USE_MOCK_AI`, `RECOMMENDATION_USE_MOCKS`, `NODE_ENV`, the `AZURE_*` group (worksheet
+storage), and `GEMINI_RECOMMENDATION_*` settings — see `.env.example` for the full list with
+defaults, and `README.md` for the Gemini retry/model settings.
 
 Uploads are stored under `samples/<studentId>/`. Treat everything there as sensitive and do not
 use real uploads as fixtures. Tests should create synthetic data or mock persistence.

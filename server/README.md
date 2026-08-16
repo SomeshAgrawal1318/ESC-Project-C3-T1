@@ -175,8 +175,9 @@ message the real path uses for an unreadable file.
 | `GEMINI_API_KEY`             | (empty)                            | Gemini API key. Leave blank to force mock mode. Never sent to the client.                                               |
 | `USE_MOCK_AI`                | `true` if no API key, else `false` | Explicit override for mock vs real mode.                                                                                |
 | `GEMINI_MODEL_NAME`          | `gemini-flash-latest`              | Gemini model used for the vision call. The `-latest` alias is deliberate: pinned versions get retired for new API keys. |
-| `GEMINI_TIMEOUT_MS`          | `30000`                            | Per-attempt timeout before the request is treated as failed.                                                            |
+| `GEMINI_TIMEOUT_MS`          | `90000`                            | Per-attempt timeout before the request is treated as failed. This engine's own default is 90000ms (image analysis is slow); the recommendation engine reads the same variable but defaults to 30000ms if unset. |
 | `GEMINI_MAX_RETRIES`         | `2`                                | Additional attempts after a timeout/error/malformed response, with exponential backoff.                                 |
+| `GEMINI_RETRY_BASE_MS`       | `500`                              | Base backoff delay before a retry; doubles each attempt, quadrupled again for rate-limit (429) errors specifically.     |
 | `ERROR_CONFIDENCE_THRESHOLD` | `0.6`                              | Confidence score below which a detected error is flagged "uncertain" for the educator.                                  |
 
 ### Integration point for Person 2 (Sample Upload)

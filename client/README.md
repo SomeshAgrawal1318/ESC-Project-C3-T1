@@ -101,9 +101,12 @@ Use `npm run format` only when you intentionally want Prettier to rewrite files.
 
 - `src/main.jsx`: route definitions.
 - `src/App.jsx`: persistent application shell.
-- `src/pages/`: routed screens.
-- `src/components/`: shared UI components.
+- `src/pages/`: routed screens, including the auth flow (`LoginPage`, `ForgotPasswordPage`,
+  `ResetPasswordPage`, `AccountPage`).
+- `src/components/`: shared UI components, including `RequireAuth`, the route guard that
+  redirects to login when there's no session.
 - `src/lib/api.js`: client API boundary.
+- `src/lib/session.js`: client-side session/token storage.
 - `src/lib/status.js` and `src/lib/categories.js`: display rules for backend values.
 - `src/index.css` and `src/App.css`: design tokens and application styles.
 - `/styleguide`: rendered component and design-system reference.
