@@ -1,7 +1,7 @@
 # Worksheet page-scoping deviations
 
 This file records the only necessary implementation deviation from Phase 7 in
-`PLAYWRIGHT_E2E_AND_EVALUATION_EXECUTION_PLAN.md`.
+`docs/archive/PLAYWRIGHT_E2E_AND_EVALUATION_EXECUTION_PLAN.md`.
 
 ## Private live catalogue override
 
